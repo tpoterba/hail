@@ -568,6 +568,13 @@ class GenotypeBuilder(v: Variant) {
       setFakeRef()
   }
 
+  def getGT: Int = if (hasGT) gt else -1
+  def getAD: Array[Int] = if (Genotype.flagHasAD(flags)) ad else null
+  def getDP: Int = if (Genotype.flagHasDP(flags)) dp else -1
+  def getGQ: Int = if (Genotype.flagHasGQ(flags)) gq else -1
+  def getPL: Array[Int] = if (Genotype.flagHasPL(flags)) pl else null
+  def getFR: Boolean = Genotype.flagFakeRef(flags)
+
   def write(b: mutable.ArrayBuilder[Byte]) {
     val hasGT = Genotype.flagHasGT(isBiallelic, flags)
 

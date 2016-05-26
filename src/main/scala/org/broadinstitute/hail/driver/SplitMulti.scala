@@ -77,7 +77,7 @@ object SplitMulti extends Command {
       }.toArray
 
     val splitGenotypeBuilders = splitVariants.map { case (sv, _) => new GenotypeBuilder(sv) }
-    val splitGenotypeStreamBuilders = splitVariants.map { case (sv, _) => new GenotypeStreamBuilder(sv, compress) }
+    val splitGenotypeStreamBuilders = splitVariants.map { case (sv, _) => new GenotypeStreamBuilder(sv) }
 
     for (g <- it) {
 

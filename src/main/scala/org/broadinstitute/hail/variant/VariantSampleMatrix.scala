@@ -692,12 +692,16 @@ class RichVDS(vds: VariantDataset) {
     val vaSignature = vds.vaSignature
     val vaRequiresConversion = vaSignature.requiresConversion
 
+
+//    println(makeSchema())
     val rowRDD = vds.rdd
       .map {
         case (v, va, gs) =>
-          Row.fromSeq(Array(v.toRow,
+          val r = Row.fromSeq(Array(v.toRow,
             if (vaRequiresConversion) vaSignature.makeSparkWritable(va) else va,
             gs.toGenotypeStream(v, compress).toRow))
+//          println(r.getAs[Row](2).toSeq.map(_.asInstanceOf[Array[_]].take(3): IndexedSeq[Any]))
+          r
       }
     sqlContext.createDataFrame(rowRDD, makeSchema())
       .write.parquet(dirname + "/rdd.parquet")
