@@ -10,7 +10,7 @@ import org.broadinstitute.hail.variant.Variant
 
 import scala.collection.mutable
 
-object VariantTSVAnnotator extends TSVAnnotator {
+object VariantTableAnnotator extends TSVAnnotator {
   def apply(sc: SparkContext, files: Array[String], vColumns: Array[String], declaredSig: Map[String, Type],
     missing: String, delim: String): (RDD[(Variant, Annotation)], Type) = {
 
@@ -94,7 +94,7 @@ object VariantTSVAnnotator extends TSVAnnotator {
         }
     }
 
-    val rdd = sc.textFiles(files)
+    val rdd = sc.textFilesLines(files)
         .filter(_.value != header)
         .mapPartitions {
           iter =>
