@@ -90,7 +90,7 @@ object ExportVariantsCass extends Command {
     if (header.isEmpty)
       fatal("column names required in condition")
 
-    val columns = header.get.split("\t")
+    val columns = header.get
     val address = options.address
 
     val query =

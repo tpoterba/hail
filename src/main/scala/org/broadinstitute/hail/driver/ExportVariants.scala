@@ -52,9 +52,10 @@ object ExportVariants extends Command {
     ec.set(2, vds.globalAnnotation)
     aggregationEC.set(5, vds.globalAnnotation)
 
-    val (header, fs) = if (cond.endsWith(".columns"))
-      ExportTSV.parseColumnsFile(ec, cond, vds.sparkContext.hadoopConfiguration)
-    else
+    val (header, fs) = if (cond.endsWith(".columns")) {
+      val (h, fs) = ExportTSV.parseColumnsFile(ec, cond, vds.sparkContext.hadoopConfiguration)
+      (Some(h), fs)
+    } else
       Parser.parseExportArgs(cond, ec)
 
     val variantAggregations = Aggregators.buildVariantaggregations(vds, aggregationEC)
@@ -66,7 +67,7 @@ object ExportVariants extends Command {
         val sb = new StringBuilder()
         it.map { case (v, va, gs) =>
 
-          variantAggregations.foreach { f => f(v, va, gs)}
+          variantAggregations.foreach { f => f(v, va, gs) }
           sb.clear()
 
           ec.setAll(v, va)
@@ -74,7 +75,7 @@ object ExportVariants extends Command {
           fs.iterator.foreachBetween { f => sb.tsvAppend(f()) }(() => sb.append("\t"))
           sb.result()
         }
-      }.writeTable(output, header)
+      }.writeTable(output, header.map(_.mkString("\t")))
 
     state
   }

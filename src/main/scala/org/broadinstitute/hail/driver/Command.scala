@@ -59,6 +59,7 @@ object ToplevelCommands {
   register(ExportVariantsSolr)
   register(ExportVCF)
   register(FilterGenotypes)
+  register(FilterExportTrios)
   register(FamSummary)
   register(FilterSamples)
   register(FilterVariants)

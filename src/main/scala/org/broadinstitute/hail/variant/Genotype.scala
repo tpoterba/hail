@@ -40,6 +40,8 @@ class GTPair(val p: Int) extends AnyVal {
     (if (j != 0) 1 else 0) + (if (k != 0) 1 else 0)
 }
 
+case class CompleteGenotype(gt: Int, ad: Array[Int], dp: Int, gq: Int, pl: Array[Int])
+
 class Genotype(private val _gt: Int,
   private val _ad: Array[Int],
   private val _dp: Int,
@@ -55,6 +57,14 @@ class Genotype(private val _gt: Int,
     assert(ad.forall(a => a.length == v.nAlleles))
     assert(pl.forall(a => a.length == v.nGenotypes))
   }
+
+  def toCompleteGenotype: Option[CompleteGenotype] =
+    gt.flatMap(gt =>
+      ad.flatMap(ad =>
+        dp.flatMap(dp =>
+          gq.flatMap(gq =>
+            pl.flatMap(pl =>
+              Some(CompleteGenotype(gt, ad, dp, gq, pl)))))))
 
   def copy(gt: Option[Int] = this.gt,
     ad: Option[Array[Int]] = this.ad,
@@ -494,10 +504,10 @@ object Genotype {
       callRate <- Gen.choose(0d, 1d)
     )
       yield {
-//        println(s"variant = ${v}")
-//        println(s"nAlleles = ${v.nAlleles}, weights = ${frequencies.mkString(",")}")
+        //        println(s"variant = ${v}")
+        //        println(s"nAlleles = ${v.nAlleles}, weights = ${frequencies.mkString(",")}")
         for (gt <- Gen.option(Gen.choose2WithWeights(frequencies)
-          .map { case (gti, gtj) => parseGts(gti, gtj)}, callRate);
+          .map { case (gti, gtj) => parseGts(gti, gtj) }, callRate);
              ad <- Gen.option(Gen.buildableOfN[Array[Int], Int](v.nAlleles,
                Gen.choose(0, 50)));
              dp <- Gen.choose(0, 30).map(d => ad.map(o => o.sum + d));

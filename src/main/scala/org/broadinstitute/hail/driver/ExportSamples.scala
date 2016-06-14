@@ -53,9 +53,10 @@ object ExportSamples extends Command {
     ec.set(2, vds.globalAnnotation)
     aggregationEC.set(5, vds.globalAnnotation)
 
-    val (header, fs) = if (cond.endsWith(".columns"))
-      ExportTSV.parseColumnsFile(ec, cond, vds.sparkContext.hadoopConfiguration)
-    else
+    val (header, fs) = if (cond.endsWith(".columns")) {
+      val (h, fs) = ExportTSV.parseColumnsFile(ec, cond, vds.sparkContext.hadoopConfiguration)
+      (Some(h), fs)
+    } else
       Parser.parseExportArgs(cond, ec)
 
     val aggregatorA = aggregationEC.a
@@ -77,7 +78,7 @@ object ExportSamples extends Command {
       sb.result()
     }
 
-    writeTable(output, hConf, lines, header)
+    writeTable(output, hConf, lines, header.map(_.mkString("\t")))
 
     state
   }

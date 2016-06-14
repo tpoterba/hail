@@ -49,7 +49,7 @@ object ExportVariantsSolr extends Command {
     if (header.isEmpty)
       fatal("column names required in condition")
 
-    val columns = header.get.split("\t")
+    val columns = header.get
     val url = options.url
 
     val sampleIdsBc = sc.broadcast(vds.sampleIds)

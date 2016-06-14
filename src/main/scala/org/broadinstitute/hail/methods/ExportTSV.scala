@@ -12,7 +12,7 @@ object ExportTSV {
   def parseColumnsFile(
     ec: EvalContext,
     path: String,
-    hConf: hadoop.conf.Configuration): (Option[String], Array[() => Option[Any]]) = {
+    hConf: hadoop.conf.Configuration): (Array[String], Array[() => Option[Any]]) = {
     val pairs = readFile(path, hConf) { reader =>
       Source.fromInputStream(reader)
         .getLines()
@@ -25,11 +25,11 @@ object ExportTSV {
         }.toArray
     }
 
-    val header = pairs.map(_._1).mkString("\t")
+    val header = pairs.map(_._1)
     val fs = pairs.map { case (_, e) =>
       Parser.parse(e, ec)._2
     }
 
-    (Some(header), fs)
+    (header, fs)
   }
 }
