@@ -158,9 +158,9 @@ object CalculateDeNovo {
               sb += '\t'
               sb.append(momId)
               sb += '\t'
-              triosBc.value(i).sex.getOrElse("NA")
+              sb.append(triosBc.value(i).sex.getOrElse("NA"))
               sb += '\t'
-              triosBc.value(i).pheno.getOrElse("NA")
+              sb.append(triosBc.value(i).pheno.getOrElse("NA"))
               sb += '\t'
               sb.append(identifier)
               sb += '\t'
