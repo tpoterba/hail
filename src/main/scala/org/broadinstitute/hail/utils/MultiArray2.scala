@@ -43,7 +43,7 @@ class MultiArray2[T](val n1: Int,
   def columnIndices: Iterable[Int] = for (j <- 0 until n2) yield j
 
   def apply(i: Int, j: Int): T = {
-    require(i >= 0 && i < n1 && j >= 0 && j < n2)
+    require(i >= 0 && i < n1 && j >= 0 && j < n2, s"i=$i, j=$j, n1=$n1, n2 = $n2")
     a(i*n2 + j)
   }
 

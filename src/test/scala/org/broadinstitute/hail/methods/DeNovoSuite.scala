@@ -49,7 +49,7 @@ class DeNovoSuite extends SparkSuite {
     val f1 = tmpDir.createTempFile("fam", ".fam")
     ped.write(f1, hadoopConf)
     var s = State(sc, sqlContext, vds.annotateVariants(sc.parallelize(map),TDouble, List("pop")).copy(wasSplit = true))
-    FilterExportTriosSamocha.run(s, Array("--fam", f1, "--pop-freq", "va.pop", "-o", "/tmp/out.txt"))
+    FilterExportTriosSamocha.run(s, Array("--fam", f1, "--pop-freq", "va.pop", "-o", "/tmp/out.txt", "-e", "dadgt = father.geno, dadgt = proband.geno, dadgt = mother.geno))
 
 //
 //    s"$dnCallerPath " !

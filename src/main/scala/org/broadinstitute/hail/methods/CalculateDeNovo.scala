@@ -190,9 +190,9 @@ object CalculateDeNovo {
                 ec.set(0, v)
                 ec.set(1, va)
                 ec.set(2, localGlobal)
-                ec.set(3, Annotation(arr(0, i), annotationMap.value(kidId), kidId))
-                ec.set(4, Annotation(arr(1, i), annotationMap.value(dadId), dadId))
-                ec.set(5, Annotation(arr(2, i), annotationMap.value(momId), momId))
+                ec.set(3, Annotation(arr(i, 0), annotationMap.value(kidId), kidId))
+                ec.set(4, Annotation(arr(i, 1), annotationMap.value(dadId), dadId))
+                ec.set(5, Annotation(arr(i, 2), annotationMap.value(momId), momId))
                 fs.foreach { f =>
                   sb += '\t'
                   sb.tsvAppend(f())
