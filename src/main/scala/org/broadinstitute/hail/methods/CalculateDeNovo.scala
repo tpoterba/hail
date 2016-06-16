@@ -36,7 +36,7 @@ object CalculateDeNovo {
     val nSamplesDiscarded = preTrios.size - trios.size
     val nTrios = trios.size
 
-    val rsidQuerier = vds.vaSignature.getAsOption[String]("rsid")
+    val rsidQuerier = vds.vaSignature.getAsOption[String]("va.rsid")
       .map(o => vds.queryVA("rsid")._2)
       .getOrElse((a: Annotation) => None)
 
