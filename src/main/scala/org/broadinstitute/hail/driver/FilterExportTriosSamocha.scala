@@ -74,7 +74,7 @@ object FilterExportTriosSamocha extends Command {
     hadoopDelete(options.output, state.hadoopConf, recursive = true)
     val resultRDD = CalculateDeNovo(vds, ped.completeTrios, popFrequencyFDouble, additionalOutput.map(o => (o._1, o._3)))
     resultRDD.writeTable(options.output, header =
-      Some((CalculateDeNovo.HEADER ++ additionalOutput.map(_._2)).mkString("\t")))
+      Some((CalculateDeNovo.HEADER ++ additionalOutput.map(_._2).getOrElse(Array.empty[String])).mkString("\t")))
     state
 
   }
