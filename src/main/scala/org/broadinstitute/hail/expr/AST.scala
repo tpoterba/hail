@@ -107,7 +107,7 @@ object Type {
 }
 
 abstract class Type extends BaseType {
-  def getAsOption[T](fields: String*)(implicit ct: ClassTag[T]): Option[T] = {
+  def getAsOption[T <: Type](fields: String*)(implicit ct: ClassTag[T]): Option[T] = {
     getOption(fields: _*)
       .flatMap { t =>
         if (ct.runtimeClass.isInstance(t))

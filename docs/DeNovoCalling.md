@@ -1,6 +1,6 @@
 # Calling _de novo_ variation with Hail
 
-Hail has implemented Kaitlin Samocha's _de novo_ calling pipeline internally.  We have replicated the core functionality of the program, but have extended it to take advantage of Hail's infrastructure and annotation systems.  
+Hail has implemented Kaitlin Samocha's _de novo_ calling pipeline as a command-level module.  We have replicated the core functionality of the program, but have extended its flexibility to take advantage of Hail's infrastructure and annotation systems.  
 
  - `filterexporttrios samocha`
  - `filterexporttrios expr`

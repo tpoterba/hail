@@ -3,6 +3,7 @@ package org.broadinstitute.hail.methods
 import org.apache.spark.rdd.RDD
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.variant._
+import org.broadinstitute.hail.expr._
 import org.broadinstitute.hail.annotations._
 import org.broadinstitute.hail.expr.EvalContext
 import org.broadinstitute.hail.utils.MultiArray2
@@ -36,8 +37,8 @@ object CalculateDeNovo {
     val nSamplesDiscarded = preTrios.size - trios.size
     val nTrios = trios.size
 
-    val rsidQuerier = vds.vaSignature.getAsOption[String]("va.rsid")
-      .map(o => vds.queryVA("rsid")._2)
+    val rsidQuerier = vds.vaSignature.getOption("rsid")
+      .map(o => vds.queryVA("va.rsid")._2)
       .getOrElse((a: Annotation) => None)
 
     if (nSamplesDiscarded > 0)
@@ -75,11 +76,15 @@ object CalculateDeNovo {
                 }
               }
             gt.nNonRefAlleles.map(o => (1, o)).getOrElse((0, 0))
-        }.reduce[(Int, Int)] { case ((x1, x2), (y1, y2)) => (x1 + y1, x2 + y2)}
+        }.reduce[(Int, Int)] { case ((x1, x2), (y1, y2)) => (x1 + y1, x2 + y2) }
 
         val datasetFrequency = nAltAlleles.toDouble / (nCalled * 2)
 
         val popFrequency = popFreqFn(va).getOrElse(0d)
+        if (popFrequency < 0 || popFrequency > 1)
+          fatal(
+            s"""invalid population frequency value `$popFrequency' for variant $v
+                |  Population prior must fall between 0 and 1.""".stripMargin)
 
         val frequency = math.max(math.max(datasetFrequency, popFrequency), MIN_PRIOR)
 
@@ -112,7 +117,7 @@ object CalculateDeNovo {
             val kidDp = kidGt.dp
             val dpRatio = kidDp.toDouble / (momGt.dp + dadGt.dp)
 
-
+            // Below is the core calling algorithm
             val genotypeAnnotation = if (v.altAllele.isIndel) {
               if ((pTrueDeNovo > 0.99) && (kidAdRatio > 0.3) && (nAltAlleles == 1))
                 Some("HIGH_indel")
