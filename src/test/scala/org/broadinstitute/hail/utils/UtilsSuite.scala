@@ -1,11 +1,11 @@
 package org.broadinstitute.hail.utils
 
-import org.broadinstitute.hail.SparkSuite
-import org.broadinstitute.hail.SpanningIterator
-import org.scalatest.testng.TestNGSuite
-import org.testng.annotations.Test
-
 import org.broadinstitute.hail.Utils._
+import org.broadinstitute.hail.check.Arbitrary._
+import org.broadinstitute.hail.check.{Gen, Prop}
+import org.broadinstitute.hail.variant._
+import org.broadinstitute.hail.{SpanningIterator, SparkSuite}
+import org.testng.annotations.Test
 
 class UtilsSuite extends SparkSuite {
   @Test def testD_==() {
@@ -31,29 +31,29 @@ class UtilsSuite extends SparkSuite {
   @Test def testAreDistinct() {
     assert(Array().areDistinct())
     assert(Array(1).areDistinct())
-    assert(Array(1,2).areDistinct())
-    assert(!Array(1,1).areDistinct())
-    assert(!Array(1,2,1).areDistinct())
+    assert(Array(1, 2).areDistinct())
+    assert(!Array(1, 1).areDistinct())
+    assert(!Array(1, 2, 1).areDistinct())
   }
 
   @Test def testIsIncreasing() {
     assert(Seq[Int]().isIncreasing)
     assert(Seq(1).isIncreasing)
-    assert(Seq(1,2).isIncreasing)
-    assert(! Seq(1,1).isIncreasing)
-    assert(! Seq(1,2,1).isIncreasing)
+    assert(Seq(1, 2).isIncreasing)
+    assert(!Seq(1, 1).isIncreasing)
+    assert(!Seq(1, 2, 1).isIncreasing)
 
-    assert(Array(1,2).isIncreasing)
+    assert(Array(1, 2).isIncreasing)
   }
 
   @Test def testIsSorted() {
     assert(Seq[Int]().isSorted)
     assert(Seq(1).isSorted)
-    assert(Seq(1,2).isSorted)
-    assert(Seq(1,1).isSorted)
-    assert(! Seq(1,2,1).isSorted)
+    assert(Seq(1, 2).isSorted)
+    assert(Seq(1, 1).isSorted)
+    assert(!Seq(1, 2, 1).isSorted)
 
-    assert(Array(1,1).isSorted)
+    assert(Array(1, 1).isSorted)
   }
 
   @Test def testHadoopStripCodec() {
@@ -77,7 +77,7 @@ class UtilsSuite extends SparkSuite {
     val pairRDD3 = sc.parallelize(Array(1, 2, 3, 4)).map { i => (i, i * i) }
     val pairRDD4 = sc.parallelize(Array(1, 2)).map { i => (i, i) }
     val join2 = pairRDD3.joinDistinct(pairRDD4)
-    
+
     assert(join2.collect() sameElements answer2)
     assert(join2.count() == 2)
   }
@@ -107,5 +107,42 @@ class UtilsSuite extends SparkSuite {
 
   def span[K, V](tuples: List[(K, V)]) = {
     new SpanningIterator(tuples.iterator).toIterable.toList
+  }
+
+  @Test def testLeftJoinIterators() {
+    val g = for (uniqueInts <- Gen.buildableOf[Set, Int](Gen.choose(0, 1000)).map(set => set.toIndexedSeq.sorted);
+      toZip <- Gen.buildableOfN[IndexedSeq, String](uniqueInts.size, arbitrary[String])
+    ) yield {
+      uniqueInts.zip(toZip)
+    }
+
+    val p = Prop.forAll(g, g) { case (it1, it2) =>
+      val m2 = it2.toMap
+
+      val join = it1.iterator.sortedLeftJoinDistinct(it2.iterator).toIndexedSeq
+
+      val check1 = it1 == join.map { case (k, (v1, _)) => (k, v1) }
+      val check2 = join.forall { case (k, (_, v2)) => v2 == m2.get(k) }
+
+      check1 && check2
+    }
+
+    p.check() // important to keep size at ~1000 to get reasonable levels of match and no match
+  }
+
+  @Test def testKeySortIterator() {
+    val g = for (chr <- Gen.oneOf("1", "2");
+      pos <- Gen.choose(1, 25);
+      ref <- genDNAString;
+      alt <- genDNAString.filter(_ != ref)) yield Variant(chr, pos, ref, alt)
+    val p = Prop.forAll(Gen.buildableOf[IndexedSeq, Variant](g).map(_.map(v => (v, ())).sortBy(_._1.locus))) { it =>
+      val arraySort = it.sortBy(_._1)
+      val locusSort = it.sortBy(_._1.locus)
+      val itSort = it.iterator.localKeySort[Locus].toIndexedSeq
+
+      arraySort == itSort
+    }
+
+    p.check()
   }
 }

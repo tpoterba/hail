@@ -13,7 +13,7 @@ import org.apache.hadoop.io.{BytesWritable, NullWritable}
 import org.apache.spark.Partitioner._
 import org.apache.spark.mllib.linalg.distributed.IndexedRow
 import org.apache.spark.mllib.linalg.{DenseVector => SDenseVector, SparseVector => SSparseVector, Vector => SVector}
-import org.apache.spark.rdd.RDD
+import org.apache.spark.rdd.{OrderedLeftJoinRDD, _}
 import org.apache.spark.sql.{PartitionedDataFrameReader, Row, SQLContext}
 import org.apache.spark.{AccumulableParam, Partitioner, SparkContext}
 import org.broadinstitute.hail.Utils._
@@ -26,11 +26,11 @@ import org.broadinstitute.hail.variant.Variant
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
+import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable.ListBuffer
 import scala.collection.{TraversableOnce, mutable}
 import scala.io.Source
-import scala.language.implicitConversions
-import scala.language.higherKinds
+import scala.language.{higherKinds, implicitConversions}
 import scala.reflect.ClassTag
 import scala.util.Random
 
@@ -450,35 +450,56 @@ class RichRDDByteArray(val r: RDD[Array[Byte]]) extends AnyVal {
   }
 }
 
-class RichPairRDD[K, V](val r: RDD[(K, V)]) extends AnyVal {
+class RichPairRDD[K, V](val rdd: RDD[(K, V)]) extends AnyVal {
 
-  def forall(p: ((K, V)) => Boolean)(implicit kct: ClassTag[K], vct: ClassTag[V]): Boolean = r.map(p).fold(true)(_ && _)
+  def forall(p: ((K, V)) => Boolean)(implicit kct: ClassTag[K], vct: ClassTag[V]): Boolean = rdd.map(p).fold(true)(_ && _)
 
-  def exists(p: ((K, V)) => Boolean)(implicit kct: ClassTag[K], vct: ClassTag[V]): Boolean = r.map(p).fold(false)(_ || _)
+  def exists(p: ((K, V)) => Boolean)(implicit kct: ClassTag[K], vct: ClassTag[V]): Boolean = rdd.map(p).fold(false)(_ || _)
+
+  def mapValuesWithKey[W](f: (K, V) => W): RDD[(K, W)] = rdd.mapPartitions(_.map { case (k, v) => (k, f(k, v)) },
+    preservesPartitioning = true)
+
+  def flatMapValuesWithKey[W](f: (K, V) => TraversableOnce[W]): RDD[(K, W)] = rdd.mapPartitions(_.flatMap { case (k, v) =>
+    f(k, v).map(w => (k, w))
+  }, preservesPartitioning = true)
 
   def spanByKey()(implicit kct: ClassTag[K], vct: ClassTag[V]): RDD[(K, Iterable[V])] =
-    r.mapPartitions(p => new SpanningIterator(p))
+    rdd.mapPartitions(p => new SpanningIterator(p))
 
   def leftOuterJoinDistinct[W](other: RDD[(K, W)])
-    (implicit kt: ClassTag[K], vt: ClassTag[V], ord: Ordering[K] = null): RDD[(K, (V, Option[W]))] = leftOuterJoinDistinct(other, defaultPartitioner(r, other))
+    (implicit kt: ClassTag[K], vt: ClassTag[V], ord: Ordering[K] = null): RDD[(K, (V, Option[W]))] = leftOuterJoinDistinct(other, defaultPartitioner(rdd, other))
 
   def leftOuterJoinDistinct[W](other: RDD[(K, W)], partitioner: Partitioner)
     (implicit kt: ClassTag[K], vt: ClassTag[V], ord: Ordering[K] = null) = {
-    r.cogroup(other, partitioner).flatMapValues { pair =>
+    rdd.cogroup(other, partitioner).flatMapValues { pair =>
       val w = pair._2.headOption
       pair._1.map((_, w))
     }
   }
 
+  def toOrderedRDD[T](reducedRepresentation: Option[RDD[K]] = None)
+    (implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]): OrderedRDD[T, K, V] =
+    OrderedRDD[T, K, V](rdd, reducedRepresentation)
+
   def joinDistinct[W](other: RDD[(K, W)])
-    (implicit kt: ClassTag[K], vt: ClassTag[V], ord: Ordering[K] = null): RDD[(K, (V, W))] = joinDistinct(other, defaultPartitioner(r, other))
+    (implicit kt: ClassTag[K], vt: ClassTag[V], ord: Ordering[K] = null): RDD[(K, (V, W))] = joinDistinct(other, defaultPartitioner(rdd, other))
 
   def joinDistinct[W](other: RDD[(K, W)], partitioner: Partitioner)
     (implicit kt: ClassTag[K], vt: ClassTag[V], ord: Ordering[K] = null) = {
-    r.cogroup(other, partitioner).flatMapValues { pair =>
+    rdd.cogroup(other, partitioner).flatMapValues { pair =>
       for (v <- pair._1.iterator; w <- pair._2.iterator.take(1)) yield (v, w)
     }
   }
+
+  def orderedLeftJoinDistinct[T, V2](other: RDD[(K, V2)])(implicit ev: (K) => T, tOrd: Ordering[T], kOrd1: Ordering[K],
+    tct: ClassTag[T], kct: ClassTag[K]): RDD[(K, (V, Option[V2]))] =
+    new OrderedLeftJoinRDD[T, K, V, V2](OrderedRDD[T, K, V](rdd), OrderedRDD[T, K, V2](other))
+
+  def orderedLeftJoinTransformedDistinct[T, K2, V2](other: RDD[(K2, V2)])(implicit ev: (K) => T, ev2: (K2) => T,
+    tOrd: Ordering[T], kOrd1: Ordering[K], kOrd2: Ordering[K2], tct: ClassTag[T],
+    kct1: ClassTag[K], kct2: ClassTag[K2]): RDD[(K, (V, Option[V2]))] =
+    new OrderedLeftJoinTransformedRDD(OrderedRDD[T, K, V](rdd), OrderedRDD[T, K2, V2](other))
+
 }
 
 class RichIndexedRow(val r: IndexedRow) extends AnyVal {
@@ -573,6 +594,68 @@ class RichPairTraversableOnce[K, V](val t: TraversableOnce[(K, V)]) extends AnyV
     }
     m
   }
+}
+
+class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
+
+  def localKeySort[T](implicit ord: Ordering[T], kOrd: Ordering[K], ev: (K) => T): Iterator[(K, V)] = {
+    lazyKSorted[T](it)
+  }
+
+  /**
+    * Precondition: the iterator is T-sorted. Moreover, ev must be monotonic. We lazily K-sort each block of
+    * T-equivalent elements.
+    */
+  private def lazyKSorted[T](it: Iterator[(K, V)])
+    (implicit tOrd: Ordering[T], kOrd: Ordering[K], ev: (K) => T): Iterator[(K, V)] =
+  if (it.isEmpty)
+    Iterator.empty
+  else {
+    val nextValue = it.next
+    val t = ev(nextValue._1)
+    val (tEquivalents, greater) = it.span({ case (k, _) => tOrd.equiv(t, ev(k)) })
+    val kSorted = (Iterator(nextValue) ++ tEquivalents).toSeq.sortBy(_._1)
+    // NB: ++ is lazy in its second argument
+    kSorted.iterator ++ lazyKSorted[T](greater)
+  }
+
+  def sortedLeftJoinDistinct[V2](other: Iterator[(K, V2)])
+    (implicit ordering: Ordering[K]): Iterator[(K, (V, Option[V2]))] =
+    sortedTransformedLeftJoinDistinct(other)
+
+  def sortedTransformedLeftJoinDistinct[T, K2, V2](other: Iterator[(K2, V2)])
+    (implicit ordering: Ordering[T], ev1: (K) => T, ev2: (K2) => T): Iterator[(K, (V, Option[V2]))] = {
+    import ordering._
+
+    if (other.isEmpty)
+      it.map { case (k, v) => (k, (v, None)) }
+    else {
+      val (_1, _2) = other.next()
+      var t2 = ev2(_1)
+      var v2 = _2
+
+      for ((k, v1) <- it) yield {
+        val t = ev1(k)
+        if (t2 > t)
+          (k, (v1, None))
+        else if (t2 == t)
+          (k, (v1, Some(v2)))
+        else {
+          while (t2 < t && other.hasNext) {
+            val (_1, _2) = other.next()
+            t2 = ev2(_1)
+            v2 = _2
+          }
+          if (t2 == t)
+            (k, (v1, Some(v2)))
+          else
+            (k, (v1, None))
+        }
+      }
+    }
+  }
+
+
 }
 
 class RichIterator[T](val it: Iterator[T]) extends AnyVal {
@@ -1304,6 +1387,8 @@ object Utils extends Logging {
 
   implicit def richIterator[T](it: Iterator[T]): RichIterator[T] = new RichIterator[T](it)
 
+  implicit def toRichSortedPairIterator[K, V](it: Iterator[(K, V)]): RichPairIterator[K, V] = new RichPairIterator(it)
+
   implicit def richBoolean(b: Boolean): RichBoolean = new RichBoolean(b)
 
   implicit def accumulableMapInt[K]: AccumulableParam[mutable.Map[K, Int], K] = new AccumulableParam[mutable.Map[K, Int], K] {
@@ -1356,6 +1441,17 @@ object Utils extends Logging {
     b.result()
   }
 
+  def anyFailAllFail[C[_], T](ts: TraversableOnce[Option[T]])(implicit cbf: CanBuildFrom[Nothing, T, C[T]]): Option[C[T]] = {
+    val b = cbf()
+    for (t <- ts) {
+      if (t.isEmpty)
+        return None
+      else
+        b += t.get
+    }
+    Some(b.result())
+  }
+
   class SerializableHadoopConfiguration(@transient var value: hadoop.conf.Configuration) extends Serializable {
     private def writeObject(out: ObjectOutputStream) {
       out.defaultWriteObject()
@@ -1367,4 +1463,5 @@ object Utils extends Logging {
       value.readFields(in)
     }
   }
+
 }
