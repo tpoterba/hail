@@ -147,14 +147,14 @@ object VariantSampleMatrix {
       }
 
     val partitioner = readObjectFile(dirname + "partitioner", sqlContext.sparkContext.hadoopConfiguration) { in =>
-      OrderedPartitioner.read[Variant, (Annotation, Iterable[Genotype])](in)(rdd)
+      OrderedPartitioner.read[Locus, Variant](in)
     }
 
     new VariantSampleMatrix[Genotype](
       if (skipGenotypes) metadata.copy(sampleIds = IndexedSeq.empty[String],
         sampleAnnotations = IndexedSeq.empty[Annotation])
       else metadata,
-      new OrderedRDD[Variant, (Annotation, Iterable[Genotype])](rdd, partitioner))
+      new OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](rdd, partitioner))
   }
 
   def kuduRowType(vaSignature: Type): Type = TStruct("variant" -> Variant.t,

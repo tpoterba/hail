@@ -8,7 +8,7 @@ import org.broadinstitute.hail.SparkSuite
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.check.Arbitrary._
 import org.broadinstitute.hail.check.{Gen, Prop}
-import org.broadinstitute.hail.variant.Variant
+import org.broadinstitute.hail.variant.{Locus, Variant}
 import org.testng.annotations.Test
 
 class OrderedRDDSuite extends SparkSuite {
@@ -29,17 +29,12 @@ class OrderedRDDSuite extends SparkSuite {
       val rdd1 = OrderedRDD(sc.parallelize(it1, nPar1)).cache()
       val rdd2 = OrderedRDD(sc.parallelize(it2, nPar2)).cache()
 
-      println(s"""rdd1: ${rdd1.getPartitions.size}, ${rdd1.getPartitions.toIndexedSeq}""")
-      println(s"""rdd2: ${rdd2.getPartitions.size}, ${rdd2.getPartitions.toIndexedSeq}""")
-
       val join: IndexedSeq[(Variant, (String, Option[String]))] = rdd1.orderedLeftJoinDistinct(rdd2).collect().toIndexedSeq
-      //      println(join)
-      //      println(join.size, join.count { case (v, (i1, i2)) => i2.isDefined })
 
       val check1 = it1 == join.map { case (k, (v1, _)) => (k, v1) }
       val check2 = join.forall { case (k, (_, v2)) => v2 == m2.get(k) }
       val check3 = rdd1.leftOuterJoinDistinct(rdd2).collect().toMap == join.toMap
-      println(check1, check2, check3)
+
       check1 && check2 && check3
     }
 
@@ -52,7 +47,6 @@ class OrderedRDDSuite extends SparkSuite {
 
     val p = Prop.forAll(g) { case (nPar, it) =>
       val rdd = OrderedRDD(sc.parallelize(it, nPar))
-
       val schema = StructType(Array(
         StructField("variant", Variant.schema, nullable = false),
         StructField("str", StringType, nullable = false)))
@@ -71,11 +65,10 @@ class OrderedRDDSuite extends SparkSuite {
         .map(r => (Variant.fromRow(r.getAs[Row](0)), r.getAs[String](1)))
 
       val readBackPartitioner = readObjectFile(tmpPartitioner, hadoopConf) { in =>
-        OrderedPartitioner.read[Variant, String](in)(rddReadBack)
+        OrderedPartitioner.read[Locus, Variant](in)
       }
 
-      val orderedRddRB = new OrderedRDD[Variant, String](rddReadBack, readBackPartitioner)
-
+      val orderedRddRB = new OrderedRDD[Locus, Variant, String](rddReadBack, readBackPartitioner)
 
       orderedRddRB.zipPartitions(rdd) { case (it1, it2) =>
         it1.zip(it2)
@@ -84,7 +77,7 @@ class OrderedRDDSuite extends SparkSuite {
         .forall { case (v1, v2) => v1 == v2 }
     }
 
-    p.check(size = 1000)
+    p.check(size = 100)
 
   }
 }

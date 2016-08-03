@@ -14,7 +14,7 @@ import org.apache.hadoop.io.{BytesWritable, NullWritable}
 import org.apache.spark.Partitioner._
 import org.apache.spark.mllib.linalg.distributed.IndexedRow
 import org.apache.spark.mllib.linalg.{DenseVector => SDenseVector, SparseVector => SSparseVector, Vector => SVector}
-import org.apache.spark.rdd.{OrderedRDD, OrderedRDDLeftJoin, RDD}
+import org.apache.spark.rdd._
 import org.apache.spark.sql.{PartitionedDataFrameReader, Row, SQLContext}
 import org.apache.spark.{AccumulableParam, Partitioner, SparkContext}
 import org.broadinstitute.hail.Utils._
@@ -214,7 +214,7 @@ class RichIterable[T](val i: Iterable[T]) extends Serializable {
 
 class RichArrayBuilderOfByte(val b: mutable.ArrayBuilder[Byte]) extends AnyVal {
   def writeULEB128(x0: Int) {
-    require(x0 >= 0, s"tried to write negative ULEB value `${x0}'")
+    require(x0 >= 0, s"tried to write negative ULEB value `${ x0 }'")
 
     var x = x0
     var more = true
@@ -363,7 +363,7 @@ class RichRDD[T](val r: RDD[T]) extends AnyVal {
     val (_, dt) = time {
       hadoopCopyMerge(filesToMerge, filename, hConf, deleteTmpFiles)
     }
-    info(s"while writing:\n    $filename\n  merge time: ${formatTime(dt)}")
+    info(s"while writing:\n    $filename\n  merge time: ${ formatTime(dt) }")
 
     if (deleteTmpFiles) {
       hadoopDelete(tmpFileName + ".header" + headerExt, hConf, recursive = false)
@@ -476,11 +476,14 @@ class RichPairRDD[K, V](val r: RDD[(K, V)]) extends AnyVal {
     }
   }
 
-  def toOrderedRDD(implicit ordering: Ordering[K], tct: ClassTag[K], vct1: ClassTag[V]): OrderedRDD[K, V] = OrderedRDD(r)
+  def orderedLeftJoinDistinct[T, V2](other: RDD[(K, V2)])
+    (implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]): RDD[(K, (V, Option[V2]))] = {
+    OrderedLeftJoinRDD[T, K, V, V2](r, other)
+  }
 
-  def orderedLeftJoinDistinct[W](other: RDD[(K, W)])
-    (implicit ordering: Ordering[K], tct: ClassTag[K], vct1: ClassTag[V], vct2: ClassTag[W]): RDD[(K, (V, Option[W]))] = {
-    OrderedRDDLeftJoin(r, other)
+  def orderedLeftKeyJoinDistinct[T, V2](other: RDD[(T, V2)])(implicit ev: (K) => T,
+    tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]): RDD[(K, (V, Option[V2]))] = {
+    OrderedLeftPartitionKeyJoinRDD[T, K, V, V2](r, other)
   }
 }
 
@@ -610,6 +613,40 @@ class RichSortedPairIterator[K, V1](val it: Iterator[(K, V1)]) extends AnyVal {
       }
     }
   }
+
+  def sortedTransformedLeftJoinDistinct[T, V2](other: Iterator[(T, V2)])
+    (implicit ordering: Ordering[T], ev: (K) => T): Iterator[(K, (V1, Option[V2]))] = {
+    import ordering._
+
+    if (other.isEmpty)
+      it.map { case (k, v) => (k, (v, None)) }
+    else {
+      val (_1, _2) = other.next()
+      var t2 = _1
+      var v2 = _2
+
+      for ((k, v1) <- it) yield {
+        val t = ev(k)
+        if (t2 > t)
+          (k, (v1, None))
+        else if (t2 == t)
+          (k, (v1, Some(v2)))
+        else {
+          while (t2 < t && other.hasNext) {
+            val (_1, _2) = other.next()
+            t2 = _1
+            v2 = _2
+          }
+          if (t2 == t)
+            (k, (v1, Some(v2)))
+          else
+            (k, (v1, None))
+        }
+      }
+    }
+  }
+
+
 }
 
 class RichIterator[T](val it: Iterator[T]) extends AnyVal {
@@ -1135,11 +1172,11 @@ object Utils extends Logging {
 
       log.error(
         s"""
-           |$file${position.map(ln => ":" + (ln + 1)).getOrElse("")}: $msg
+           |$file${ position.map(ln => ":" + (ln + 1)).getOrElse("") }: $msg
            |  offending line: $line""".stripMargin)
       fatal(
         s"""
-           |$file${position.map(ln => ":" + (ln + 1)).getOrElse("")}: $msg
+           |$file${ position.map(ln => ":" + (ln + 1)).getOrElse("") }: $msg
            |  offending line: $lineToPrint""".stripMargin)
     }
   }
@@ -1263,15 +1300,15 @@ object Utils extends Logging {
   def formatSpace(ds: Long) = {
     val absds = ds.abs
     if (absds < 1e3)
-      s"${ds}B"
+      s"${ ds }B"
     else if (absds < 1e6)
-      s"${ds.toDouble / 1e3}KB"
+      s"${ ds.toDouble / 1e3 }KB"
     else if (absds < 1e9)
-      s"${ds.toDouble / 1e6}MB"
+      s"${ ds.toDouble / 1e6 }MB"
     else if (absds < 1e12)
-      s"${ds.toDouble / 1e9}GB"
+      s"${ ds.toDouble / 1e9 }GB"
     else
-      s"${ds.toDouble / 1e12}TB"
+      s"${ ds.toDouble / 1e12 }TB"
   }
 
   def someIf[T](p: Boolean, x: => T): Option[T] =
@@ -1359,7 +1396,7 @@ object Utils extends Logging {
     if (str.matches( """\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*"""))
       str
     else
-      s"`${StringEscapeUtils.escapeString(str, backticked = true)}`"
+      s"`${ StringEscapeUtils.escapeString(str, backticked = true) }`"
   }
 
   def uriPath(uri: String): String = new URI(uri).getPath
