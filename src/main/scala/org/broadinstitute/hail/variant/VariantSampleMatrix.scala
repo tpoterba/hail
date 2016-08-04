@@ -146,7 +146,7 @@ object VariantSampleMatrix {
             row.getGenotypeStream(v, 2)))
       }
 
-    val partitioner = readObjectFile(dirname + "partitioner", sqlContext.sparkContext.hadoopConfiguration) { in =>
+    val partitioner = readObjectFile(dirname + "/partitioner", sqlContext.sparkContext.hadoopConfiguration) { in =>
       OrderedPartitioner.read[Locus, Variant](in)
     }
 
@@ -843,7 +843,7 @@ class RichVDS(vds: VariantDataset) {
 
     val ordered = OrderedRDD(vds.rdd)
 
-    writeObjectFile(dirname + "partitioner", vds.sparkContext.hadoopConfiguration) { out =>
+    writeObjectFile(dirname + "/partitioner", vds.sparkContext.hadoopConfiguration) { out =>
       ordered.orderedPartitioner.write(out)
     }
 
