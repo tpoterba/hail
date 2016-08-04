@@ -24,7 +24,7 @@ object OrderedRDD {
         println(s"in ORDD apply: ev = ${ ev(Variant("CHROM", 100, "A", "T").asInstanceOf[K]) }")
 
         val ranges = calculateKeyRanges[T](rdd.map { case (k, _) => ev(k) })
-        val partitioner = OrderedPartitioner[T, K](ranges, ev)
+        val partitioner = OrderedPartitioner[T, K](ranges)
         new OrderedRDD[T, K, V](new ShuffledRDD[K, V, V](rdd, partitioner).setKeyOrdering(kOrd), partitioner)
     }
   }

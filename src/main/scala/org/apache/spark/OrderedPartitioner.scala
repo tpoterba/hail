@@ -17,8 +17,7 @@ import scala.reflect.ClassTag
   */
 case class OrderedPartitioner[T: Ordering : ClassTag, K: Ordering : ClassTag](
   rangeBounds: Array[T],
-  f: (K) => T,
-  private var ascending: Boolean = true)
+  private var ascending: Boolean = true)(implicit f: (K) => T)
   extends Partitioner {
 
   //  println("MADE NEW PARTITIONER")
@@ -87,6 +86,6 @@ object OrderedPartitioner {
     kct: ClassTag[K]): OrderedPartitioner[T, K] = {
     val ascending = in.readBoolean()
     val rangeBounds = in.readObject().asInstanceOf[Array[T]]
-    OrderedPartitioner(rangeBounds, ev, ascending)
+    OrderedPartitioner(rangeBounds, ascending)
   }
 }
