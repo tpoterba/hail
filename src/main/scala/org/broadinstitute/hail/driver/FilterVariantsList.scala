@@ -58,20 +58,14 @@ object FilterVariantsList extends Command {
 
     state.copy(
       vds = vds.copy(
-        rdd =
-          if (keep)
-            in
-              .joinDistinct(variants)
-              .map { case (v, ((va, gs), _)) => (v, (va, gs)) }
-          else
-            in
-              .leftOuterJoinDistinct(variants)
-              .flatMap {
-                case (v, ((va, gs), Some(_))) =>
-                  None
-                case (v, ((va, gs), None)) =>
-                  Some((v, (va, gs)))
-              }
+        rdd = in
+          .orderedLeftJoinDistinct(variants)
+          .flatMap {
+            case (v, ((va, gs), Some(_))) =>
+              if (keep) Some((v, (va, gs))) else None
+            case (v, ((va, gs), None)) =>
+              if (keep) None else Some((v, (va, gs)))
+          }
       ))
   }
 }

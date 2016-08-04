@@ -683,7 +683,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
   def annotateLoci(lociRDD: RDD[(Locus, Annotation)], newSignature: Type, inserter: Inserter): VariantSampleMatrix[T] = {
     val newRDD = rdd
       .map { case (v, (va, gs)) => (v.locus, (v, va, gs)) }
-      .leftOuterJoinDistinct(lociRDD)
+      .orderedLeftKeyJoinDistinct(lociRDD)
       .map { case (l, ((v, va, gs), annotation)) => (v, (inserter(va, annotation), gs)) }
     copy(rdd = newRDD, vaSignature = newSignature)
   }

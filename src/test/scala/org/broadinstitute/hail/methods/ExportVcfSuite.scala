@@ -82,7 +82,7 @@ class ExportVcfSuite extends SparkSuite {
       Source.fromInputStream(s)
         .getLines()
         .filter(line => !line.isEmpty && line(0) != '#')
-        .map(line => line.split("\t")).take(5).map(a => new Coordinate(a(0), a(1).toInt, a(3), a(4))).toArray
+        .map(line => line.split("\t")).take(5).map(a => Coordinate(a(0), a(1).toInt, a(3), a(4))).toArray
     }
 
     val sortedCoordinates = coordinates.sortWith { case (c1, c2) => c1.compare(c2) < 0 }

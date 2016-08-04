@@ -13,7 +13,7 @@ import org.testng.annotations.Test
 
 class OrderedRDDSuite extends SparkSuite {
 
-  val g = for (uniqueInts <- Gen.buildableOf[Set[Variant], Variant](Gen.choose(1, 1000).map(i => Variant("16", i, "A", "T")))
+  val g = for (uniqueInts <- Gen.buildableOf[Set[Variant], Variant](Gen.choose(1, 100).map(i => Variant("16", i, "A", "T")))
     .map(set => set.toIndexedSeq.sorted).filter(_.nonEmpty);
                toZip <- Gen.buildableOfN[IndexedSeq[String], String](uniqueInts.size, arbitrary[String]);
                nPar <- Gen.choose(1, 10).map(i => Math.min(i, uniqueInts.size))
@@ -38,7 +38,7 @@ class OrderedRDDSuite extends SparkSuite {
       check1 && check2 && check3
     }
 
-    p.check(size = 1000) // important to keep size at ~1000 to get reasonable levels of match and no match
+    p.check(size = 100) // important to keep size at ~1000 to get reasonable levels of match and no match
   }
 
   @Test def testWriteRead() {
