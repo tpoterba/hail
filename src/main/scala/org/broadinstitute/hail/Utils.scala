@@ -452,6 +452,13 @@ class RichRDDByteArray(val r: RDD[Array[Byte]]) extends AnyVal {
 
 class RichPairRDD[K, V](val r: RDD[(K, V)]) extends AnyVal {
 
+  def mapValuesWithKey[W](f: (K, V) => W): RDD[(K, W)] = r.mapPartitions(_.map { case (k, v) => (k, f(k, v)) },
+    preservesPartitioning = true)
+
+  def flatMapValuesWithKey[W](f: (K, V) => TraversableOnce[W]): RDD[(K, W)] = r.mapPartitions(_.flatMap { case (k, v) =>
+    f(k, v).map(w => (k, w))
+  }, preservesPartitioning = true)
+
   def spanByKey()(implicit kct: ClassTag[K], vct: ClassTag[V]): RDD[(K, Iterable[V])] =
     r.mapPartitions(p => new SpanningIterator(p))
 

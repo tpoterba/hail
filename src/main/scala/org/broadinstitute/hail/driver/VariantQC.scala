@@ -249,7 +249,7 @@ object VariantQC extends Command {
     val (newVAS, insertQC) = vds.vaSignature.insert(VariantQCCombiner.signature, "qc")
     state.copy(
       vds = vds.copy(
-        rdd = vds.rdd.zipPartitions(r) { case (it, jt) =>
+        rdd = vds.rdd.zipPartitions(r, preservesPartitioning = true) { case (it, jt) =>
           // if upstream operation is a recomputed shuffle, order of elements may disagree
           val ia = it.toArray.sortWith { case ((v1, _), (v2, _)) => v1 < v2 }
           val ja = jt.toArray.sortWith { case ((v1, _), (v2, _)) => v1 < v2 }

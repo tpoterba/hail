@@ -150,11 +150,16 @@ object VariantSampleMatrix {
       OrderedPartitioner.read[Locus, Variant](in)
     }
 
+    val oRDD = new OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](rdd, partitioner)
+    println("in read:")
+    println(oRDD.partitioner)
+    println(oRDD.getClass.getName)
+
     new VariantSampleMatrix[Genotype](
       if (skipGenotypes) metadata.copy(sampleIds = IndexedSeq.empty[String],
         sampleAnnotations = IndexedSeq.empty[Annotation])
       else metadata,
-      new OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](rdd, partitioner))
+      oRDD)
   }
 
   def kuduRowType(vaSignature: Type): Type = TStruct("variant" -> Variant.t,
@@ -302,9 +307,9 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
 
   def nPartitions: Int = rdd.partitions.length
 
-  def variants: RDD[Variant] = rdd.map(_._1)
+  def variants: RDD[Variant] = rdd.keys
 
-  def variantsAndAnnotations: RDD[(Variant, Annotation)] = rdd.map { case (v, (va, gs)) => (v, va) }
+  def variantsAndAnnotations: RDD[(Variant, Annotation)] = rdd.mapValuesWithKey { case (v, (va, gs)) => va }
 
   def nVariants: Long = variants.count()
 
@@ -330,10 +335,10 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     (implicit uct: ClassTag[U]): VariantSampleMatrix[U] = {
     val localSampleIdsBc = sampleIdsBc
     val localSampleAnnotationsBc = sampleAnnotationsBc
-    copy(rdd = rdd.map { case (v, (va, gs)) =>
-      (v, (va, localSampleIdsBc.value.lazyMapWith2[Annotation, T, U](localSampleAnnotationsBc.value, gs, {
+    copy(rdd = rdd.mapValuesWithKey { case (v, (va, gs)) =>
+      (va, localSampleIdsBc.value.lazyMapWith2[Annotation, T, U](localSampleAnnotationsBc.value, gs, {
         case (s, sa, g) => f(v, va, s, sa, g)
-      })))
+      }))
     })
   }
 
@@ -376,7 +381,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
   }
 
   def mapAnnotations(f: (Variant, Annotation, Iterable[T]) => Annotation): VariantSampleMatrix[T] =
-    copy[T](rdd = rdd.map { case (v, (va, gs)) => (v, (f(v, va, gs), gs)) })
+    copy[T](rdd = rdd.mapValuesWithKey { case (v, (va, gs)) => (f(v, va, gs), gs) })
 
   def flatMap[U](f: T => TraversableOnce[U])(implicit uct: ClassTag[U]): RDD[U] =
     flatMapWithKeys((v, s, g) => f(g))
@@ -407,8 +412,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
   def dropSamples(): VariantSampleMatrix[T] =
     copy(sampleIds = IndexedSeq.empty[String],
       sampleAnnotations = IndexedSeq.empty[Annotation],
-      rdd = rdd.map { case (v, (va, gs)) =>
-        (v, (va, Iterable.empty[T]))
+      rdd = rdd.mapValues { case (va, gs) => (va, Iterable.empty[T])
       })
 
   // FIXME see if we can remove broadcasts elsewhere in the code
@@ -422,8 +426,8 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
       sampleAnnotations = sampleAnnotations.zipWithIndex
         .filter { case (sa, i) => mask(i) }
         .map(_._1),
-      rdd = rdd.map { case (v, (va, gs)) =>
-        (v, (va, gs.lazyFilterWith(maskBc.value, (g: T, m: Boolean) => m)))
+      rdd = rdd.mapValues { case (va, gs) =>
+        (va, gs.lazyFilterWith(maskBc.value, (g: T, m: Boolean) => m))
       })
   }
 
@@ -490,7 +494,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     val localSampleAnnotationsBc = sampleAnnotationsBc
 
     rdd
-      .mapPartitions { (it: Iterator[(Variant, (Annotation, Iterable[T]))]) =>
+      .mapPartitions({ (it: Iterator[(Variant, (Annotation, Iterable[T]))]) =>
         val serializer = SparkEnv.get.serializer.newInstance()
         it.map { case (v, (va, gs)) =>
           val zeroValue = serializer.deserialize[U](ByteBuffer.wrap(zeroArray))
@@ -499,7 +503,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
               seqOp(acc, v, va, s, sa, g)
             })
         }
-      }
+      }, preservesPartitioning = true)
 
     /*
         rdd
@@ -540,7 +544,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
   }
 
   def foldByVariant(zeroValue: T)(combOp: (T, T) => T): RDD[(Variant, T)] =
-    rdd.map { case (v, (va, gs)) => (v, gs.foldLeft(zeroValue)((acc, g) => combOp(acc, g))) }
+    rdd.mapValues { case (va, gs) => gs.foldLeft(zeroValue)((acc, g) => combOp(acc, g)) }
 
   def same(that: VariantSampleMatrix[T]): Boolean = {
     val metadataSame = metadata == that.metadata
@@ -621,17 +625,17 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     val localSampleAnnotationsBc = sampleAnnotationsBc
 
     copy(vaSignature = newVAS,
-      rdd = rdd.map {
+      rdd = rdd.mapValuesWithKey {
         case (v, (va, gs)) =>
           val serializer = SparkEnv.get.serializer.newInstance()
           val zeroValue = serializer.deserialize[U](ByteBuffer.wrap(zeroArray))
 
-          (v, (mapOp(va, gs.iterator
+          (mapOp(va, gs.iterator
             .zip(localSampleIdsBc.value.iterator
               .zip(localSampleAnnotationsBc.value.iterator)).foldLeft(zeroValue) {
             case (acc, (g, (s, sa))) =>
               seqOp(acc, v, va, s, sa, g)
-          }), gs))
+          }), gs)
       })
   }
 
@@ -639,8 +643,8 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     path: List[String]): VariantSampleMatrix[T] = {
     val isBc = sparkContext.broadcast(is)
     val (newSignature, inserter) = insertVA(TBoolean, path)
-    copy(rdd = rdd.map { case (v, (va, gs)) =>
-      (v, (inserter(va, Some(isBc.value.contains(Locus(v.contig, v.start)))), gs))
+    copy(rdd = rdd.mapValuesWithKey { case (v, (va, gs)) =>
+      (inserter(va, Some(isBc.value.contains(Locus(v.contig, v.start)))), gs)
     },
       vaSignature = newSignature)
   }
@@ -656,7 +660,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     val (newSignature, inserter) = insertVA(
       if (all) TSet(t) else t,
       path)
-    copy(rdd = rdd.map { case (v, (va, gs)) =>
+    copy(rdd = rdd.mapValuesWithKey { case (v, (va, gs)) =>
       val queries = isBc.value.query(v.locus)
       val toIns = if (all)
         Some(queries.map(mBc.value))
@@ -666,7 +670,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
         else
           Some(mBc.value(queries.head))
       }
-      (v, (inserter(va, toIns), gs))
+      (inserter(va, toIns), gs)
     },
       vaSignature = newSignature)
   }
@@ -674,17 +678,16 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
   def annotateVariants(otherRDD: RDD[(Variant, Annotation)], newSignature: Type,
     inserter: Inserter): VariantSampleMatrix[T] = {
     val newRDD = rdd.orderedLeftJoinDistinct(otherRDD)
-      .map { case (v, ((va, gs), annotation)) =>
-        (v, (inserter(va, annotation), gs))
+      .mapValues { case ((va, gs), annotation) =>
+        (inserter(va, annotation), gs)
       }
     copy(rdd = newRDD, vaSignature = newSignature)
   }
 
   def annotateLoci(lociRDD: RDD[(Locus, Annotation)], newSignature: Type, inserter: Inserter): VariantSampleMatrix[T] = {
     val newRDD = rdd
-      .map { case (v, (va, gs)) => (v.locus, (v, va, gs)) }
       .orderedLeftKeyJoinDistinct(lociRDD)
-      .map { case (l, ((v, va, gs), annotation)) => (v, (inserter(va, annotation), gs)) }
+      .mapValues { case ((va, gs), annotation) => (inserter(va, annotation), gs) }
     copy(rdd = newRDD, vaSignature = newSignature)
   }
 
@@ -793,6 +796,10 @@ class RichVDS(vds: VariantDataset) {
   def makeSchemaForKudu(): StructType =
     makeSchema().add(StructField("sample_group", StringType, nullable = false))
 
+  def makeOrderedRDD(compress: Boolean = false): OrderedRDD[Locus, Variant, (Annotation, GenotypeStream)] = {
+    OrderedRDD(vds.rdd.mapValuesWithKey { case (v, (va, gs)) => (va, gs.toGenotypeStream(v, compress))})
+  }
+
   private def writeMetadata(sqlContext: SQLContext, dirname: String, compress: Boolean = true) = {
     if (!dirname.endsWith(".vds") && !dirname.endsWith(".vds/"))
       fatal(s"output path ending in `.vds' required, found `$dirname'")
@@ -841,7 +848,7 @@ class RichVDS(vds: VariantDataset) {
     val vaSignature = vds.vaSignature
     val vaRequiresConversion = SparkAnnotationImpex.requiresConversion(vaSignature)
 
-    val ordered = OrderedRDD(vds.rdd)
+    val ordered = makeOrderedRDD()
 
     writeObjectFile(dirname + "/partitioner", vds.sparkContext.hadoopConfiguration) { out =>
       ordered.orderedPartitioner.write(out)
@@ -852,7 +859,7 @@ class RichVDS(vds: VariantDataset) {
         case (v, (va, gs)) =>
           Row.fromSeq(Array(v.toRow,
             if (vaRequiresConversion) SparkAnnotationImpex.exportAnnotation(va, vaSignature) else va,
-            gs.toGenotypeStream(v, compress).toRow))
+            gs.toRow))
       }
     sqlContext.createDataFrame(rowRDD, makeSchema())
       .write.parquet(dirname + "/rdd.parquet")
@@ -919,16 +926,16 @@ class RichVDS(vds: VariantDataset) {
       val (newSignatures2, f2) = vds1.deleteVA("aIndex")
       vds1.copy(wasSplit = false,
         vaSignature = newSignatures2,
-        rdd = vds1.rdd.map {
+        rdd = vds1.rdd.mapValuesWithKey {
           case (v, (va, gs)) =>
-            (v, (f2(f1(va)), gs.lazyMap(g => g.copy(fakeRef = false))))
+            (f2(f1(va)), gs.lazyMap(g => g.copy(fakeRef = false)))
         })
     } else
       vds
   }
 
   def withGenotypeStream(compress: Boolean = false): VariantDataset =
-    vds.copy(rdd = vds.rdd.map { case (v, (va, gs)) =>
-      (v, (va, gs.toGenotypeStream(v, compress = compress)))
+    vds.copy(rdd = vds.rdd.mapValuesWithKey { case (v, (va, gs)) =>
+      (va, gs.toGenotypeStream(v, compress = compress))
     })
 }

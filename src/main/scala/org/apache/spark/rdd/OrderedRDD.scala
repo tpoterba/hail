@@ -8,13 +8,18 @@ import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
 import scala.util.hashing._
 
+case class SimplePartition(index: Int) extends Partition
 
 object OrderedRDD {
   def apply[T, K, V](rdd: RDD[(K, V)])(implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K],
     tct: ClassTag[T], kct: ClassTag[K]): OrderedRDD[T, K, V] = {
     rdd.partitioner match {
-      case Some(p: OrderedPartitioner[T, K]) => new OrderedRDD(rdd, p)
+      case Some(p: OrderedPartitioner[T, K]) =>
+        println("found ordered partitioner")
+        new OrderedRDD(rdd, p)
       case _ =>
+        println("didn't find ordered partitioner")
+        println(rdd.getClass.getName)
         val ranges = calculateKeyRanges[T](rdd.map { case (k, v) => ev(k) })
         val partitioner = OrderedPartitioner[T, K](ranges, ev)
         new OrderedRDD[T, K, V](new ShuffledRDD[K, V, V](rdd, partitioner).setKeyOrdering(kOrd), partitioner)
@@ -67,13 +72,15 @@ object OrderedRDD {
 class OrderedRDD[T, K, V](rdd: RDD[(K, V)], p: OrderedPartitioner[T, K])
   (implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]) extends RDD[(K, V)](rdd) {
 
+  println(s"constructed ordered rdd from parent ${ rdd.getClass.getName }")
+
   def orderedPartitioner = p
 
   override val partitioner: Option[Partitioner] = Some(p)
 
   def getPartitions: Array[Partition] = rdd.partitions
 
-  def compute(split: Partition, context: TaskContext): Iterator[(K, V)] = rdd.compute(split, context)
+  override def compute(split: Partition, context: TaskContext): Iterator[(K, V)] = rdd.iterator(split, context)
 
   override def getPreferredLocations(split: Partition): Seq[String] = rdd.preferredLocations(split)
 }
@@ -119,20 +126,27 @@ class OrderedLeftJoinRDD[T, K, V1, V2](rdd1: OrderedRDD[T, K, V1], rdd2: Ordered
 
   override val partitioner: Option[Partitioner] = rdd1.partitioner
 
-  lazy val p1 = rdd1.orderedPartitioner
-  lazy val p2 = rdd2.orderedPartitioner
+  val p1 = rdd1.orderedPartitioner
+  val p2 = rdd2.orderedPartitioner
 
-  val localPartitions = rdd1.getPartitions.indices.map(OrderedJoinPartition).map(_.asInstanceOf[Partition]).toArray
+  val r2Partitions = rdd2.partitions // FIXME wtf
+  println(s"rdd2 partitions: ${rdd2.partitions.mkString(",")}")
 
-  def getPartitions: Array[Partition] = localPartitions
+  def getPartitions: Array[Partition] = rdd1.partitions
 
   override def getPreferredLocations(split: Partition): Seq[String] = rdd1.preferredLocations(split)
 
-  def compute(split: Partition, context: TaskContext): Iterator[(K, (V1, Option[V2]))] = {
-    val left = rdd1.compute(split, context)
+  override def compute(split: Partition, context: TaskContext): Iterator[(K, (V1, Option[V2]))] = {
+    val left = rdd1.iterator(split, context)
+    println("______________________________________________")
+    println("DEPS=" + OrderedDependency.getDependencies(p1, p2)(split.index))
+    println("______________________________________________")
+
     val right = OrderedDependency.getDependencies(p1, p2)(split.index)
       .iterator
-      .flatMap(i => rdd2.compute(rdd2.partitions(i), context))
+      .flatMap(i => {
+        rdd2.iterator(r2Partitions(i), context)
+      })
 
     left.sortedLeftJoinDistinct(right)
   }
@@ -153,20 +167,18 @@ class OrderedLeftPartitionKeyJoinRDD[T, K, V1, V2](rdd1: OrderedRDD[T, K, V1],
 
   override val partitioner: Option[Partitioner] = rdd1.partitioner
 
-  lazy val p1 = rdd1.orderedPartitioner
-  lazy val p2 = rdd2.orderedPartitioner
+  val p1 = rdd1.orderedPartitioner
+  val p2 = rdd2.orderedPartitioner
 
-  val localPartitions = rdd1.getPartitions.indices.map(OrderedJoinPartition).map(_.asInstanceOf[Partition]).toArray
-
-  def getPartitions: Array[Partition] = localPartitions
+  def getPartitions: Array[Partition] = rdd1.partitions
 
   override def getPreferredLocations(split: Partition): Seq[String] = rdd1.preferredLocations(split)
 
-  def compute(split: Partition, context: TaskContext): Iterator[(K, (V1, Option[V2]))] = {
-    val left = rdd1.compute(split, context)
+  override def compute(split: Partition, context: TaskContext): Iterator[(K, (V1, Option[V2]))] = {
+    val left = rdd1.iterator(split, context)
     val right = OrderedDependency.getDependencies(p1, p2)(split.index)
       .iterator
-      .flatMap(i => rdd2.compute(rdd2.partitions(i), context))
+      .flatMap(i => rdd2.iterator(rdd2.partitions(i), context))
 
     left.sortedTransformedLeftJoinDistinct(right)
   }
