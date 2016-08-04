@@ -101,11 +101,11 @@ class PartitionedParquetRelation(paths: Array[String],
             }
           }
 
-          println("JOBID=" + jobId)
+//          println("JOBID=" + jobId)
 //          val jobContext = newJobContext(getConf(isDriverSide = true), jobId)
           val jobContext: JobContext = newJobContext(getJob().getConfiguration, jobId)
           val rawSplits = inputFormat.getSplits(jobContext)
-          println("RAWSPLITS=" + rawSplits)
+//          println("RAWSPLITS=" + rawSplits)
 
           Array.tabulate[SparkPartition](rawSplits.size) { i =>
             new SqlNewHadoopPartition(id, i, rawSplits(i).asInstanceOf[InputSplit with Writable])
@@ -129,14 +129,11 @@ class PartitionedParquetInputFormat[T] extends ParquetInputFormat[T] {
 
   override def getSplits(job: JobContext): JList[InputSplit] = {
     val splits: JList[InputSplit] = new java.util.ArrayList[InputSplit]
-    println("STATUS=" + listStatus(job))
     val files: JList[FileStatus] = listStatus(job)
     import scala.collection.JavaConverters._
-    println("FILES=" + files)
 
     val sorted = files.asScala.toArray.sortBy(fs => getPartNumber(fs.getPath.getName)).toList
     for (file <- sorted) {
-      println(file)
       val path: Path = file.getPath
       val length: Long = file.getLen
       if (length != 0) {
@@ -145,13 +142,10 @@ class PartitionedParquetInputFormat[T] extends ParquetInputFormat[T] {
           blkLocations = (file.asInstanceOf[LocatedFileStatus]).getBlockLocations
         } else {
           val fs: FileSystem = path.getFileSystem(job.getConfiguration)
-          println("FS=" + fs)
+//          println("FS=" + fs)
           blkLocations = fs.getFileBlockLocations(file, 0, length)
-          println("BLOCK_LOCS=" + blkLocations.mkString(","))
+//          println("BLOCK_LOCS=" + blkLocations.mkString(","))
         }
-        println("TRYING TO MAKE SPLIT")
-        println(makeSplit(path, 0, length, blkLocations(0).getHosts, blkLocations(0).getCachedHosts))
-        println("MADE SPLIT")
 
         splits.add(makeSplit(path, 0, length, blkLocations(0).getHosts, blkLocations(0).getCachedHosts))
       } else {

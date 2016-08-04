@@ -2,6 +2,7 @@ package org.apache.spark.rdd
 
 import org.apache.spark._
 import org.broadinstitute.hail.Utils._
+import org.broadinstitute.hail.variant.Variant
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -20,7 +21,9 @@ object OrderedRDD {
       case _ =>
         println("didn't find ordered partitioner")
         println(rdd.getClass.getName)
-        val ranges = calculateKeyRanges[T](rdd.map { case (k, v) => ev(k) })
+        println(s"in ORDD apply: ev = ${ ev(Variant("CHROM", 100, "A", "T").asInstanceOf[K]) }")
+
+        val ranges = calculateKeyRanges[T](rdd.map { case (k, _) => ev(k) })
         val partitioner = OrderedPartitioner[T, K](ranges, ev)
         new OrderedRDD[T, K, V](new ShuffledRDD[K, V, V](rdd, partitioner).setKeyOrdering(kOrd), partitioner)
     }
@@ -73,6 +76,7 @@ class OrderedRDD[T, K, V](rdd: RDD[(K, V)], p: OrderedPartitioner[T, K])
   (implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]) extends RDD[(K, V)](rdd) {
 
   println(s"constructed ordered rdd from parent ${ rdd.getClass.getName }")
+  println(s"in ORDD: ev = ${ ev(Variant("CHROM", 100, "A", "T").asInstanceOf[K]) }")
 
   def orderedPartitioner = p
 
@@ -90,25 +94,28 @@ case class OneDependency[T](rdd: RDD[T]) extends Dependency[T]
 case class OrderedJoinPartition(index: Int) extends Partition
 
 object OrderedDependency {
-  def getDependencies[T](p1: OrderedPartitioner[T, _], p2: OrderedPartitioner[T, _])(partitionId: Int): Seq[Int] = {
+  def getDependencies[T](p1: OrderedPartitioner[T, _], p2: OrderedPartitioner[T, _])(partitionId: Int): (Int, Int) = {
 
     val lastPartition = if (partitionId == p1.rangeBounds.length)
       p2.numPartitions - 1
     else
-      p2.getPartition(p1.rangeBounds(partitionId))
+      p2.getPartitionT(p1.rangeBounds(partitionId))
 
     if (partitionId == 0)
-      0 to lastPartition
+      (0, lastPartition)
     else {
-      val startPartition = p2.getPartition(p1.rangeBounds(partitionId - 1))
-      startPartition to lastPartition
+      val startPartition = p2.getPartitionT(p1.rangeBounds(partitionId - 1))
+      (startPartition, lastPartition)
     }
   }
 }
 
 class OrderedDependency[T, K1, K2, V](p1: OrderedPartitioner[T, K1], p2: OrderedPartitioner[T, K2],
   rdd: RDD[(K2, V)]) extends NarrowDependency[(K2, V)](rdd) {
-  override def getParents(partitionId: Int): Seq[Int] = OrderedDependency.getDependencies(p1, p2)(partitionId)
+  override def getParents(partitionId: Int): Seq[Int] = {
+    val (start, end) = OrderedDependency.getDependencies(p1, p2)(partitionId)
+    start until end
+  }
 }
 
 object OrderedLeftJoinRDD {
@@ -126,11 +133,11 @@ class OrderedLeftJoinRDD[T, K, V1, V2](rdd1: OrderedRDD[T, K, V1], rdd2: Ordered
 
   override val partitioner: Option[Partitioner] = rdd1.partitioner
 
-  val p1 = rdd1.orderedPartitioner
-  val p2 = rdd2.orderedPartitioner
+  private def p1 = rdd1.orderedPartitioner
+
+  private def p2 = rdd2.orderedPartitioner
 
   val r2Partitions = rdd2.partitions // FIXME wtf
-  println(s"rdd2 partitions: ${rdd2.partitions.mkString(",")}")
 
   def getPartitions: Array[Partition] = rdd1.partitions
 
@@ -138,17 +145,18 @@ class OrderedLeftJoinRDD[T, K, V1, V2](rdd1: OrderedRDD[T, K, V1], rdd2: Ordered
 
   override def compute(split: Partition, context: TaskContext): Iterator[(K, (V1, Option[V2]))] = {
     val left = rdd1.iterator(split, context)
-    println("______________________________________________")
-    println("DEPS=" + OrderedDependency.getDependencies(p1, p2)(split.index))
-    println("______________________________________________")
-
-    val right = OrderedDependency.getDependencies(p1, p2)(split.index)
-      .iterator
-      .flatMap(i => {
-        rdd2.iterator(r2Partitions(i), context)
-      })
-
-    left.sortedLeftJoinDistinct(right)
+    if (left.isEmpty)
+      Iterator.empty
+    else {
+      val first = left.next()
+      val rightStart = p2.getPartition(first._1)
+      val right = (rightStart to OrderedDependency.getDependencies(p1, p2)(split.index)._2)
+        .iterator
+        .flatMap(i => {
+          rdd2.iterator(r2Partitions(i), context)
+        })
+      (Iterator(first) ++ left).sortedLeftJoinDistinct(right)
+    }
   }
 }
 
@@ -167,20 +175,33 @@ class OrderedLeftPartitionKeyJoinRDD[T, K, V1, V2](rdd1: OrderedRDD[T, K, V1],
 
   override val partitioner: Option[Partitioner] = rdd1.partitioner
 
-  val p1 = rdd1.orderedPartitioner
-  val p2 = rdd2.orderedPartitioner
+  private def p1 = rdd1.orderedPartitioner
+
+  private def p2 = rdd2.orderedPartitioner
+
+  val r2Partitions = rdd2.partitions // FIXME wtf
 
   def getPartitions: Array[Partition] = rdd1.partitions
 
   override def getPreferredLocations(split: Partition): Seq[String] = rdd1.preferredLocations(split)
 
   override def compute(split: Partition, context: TaskContext): Iterator[(K, (V1, Option[V2]))] = {
-    val left = rdd1.iterator(split, context)
-    val right = OrderedDependency.getDependencies(p1, p2)(split.index)
-      .iterator
-      .flatMap(i => rdd2.iterator(rdd2.partitions(i), context))
 
-    left.sortedTransformedLeftJoinDistinct(right)
+    val left = rdd1.iterator(split, context)
+
+    if (left.isEmpty)
+      Iterator.empty
+    else {
+      val first = left.next()
+      val rightStart = p2.getPartition(first._1)
+      val right = (rightStart to OrderedDependency.getDependencies(p1, p2)(split.index)._2)
+        .iterator
+        .flatMap(i => {
+          rdd2.iterator(r2Partitions(i), context)
+        })
+
+      (Iterator(first) ++ left).sortedTransformedLeftJoinDistinct(right)
+    }
   }
 
 }

@@ -26,14 +26,18 @@ class OrderedRDDSuite extends SparkSuite {
     val p = Prop.forAll(g, g) { case ((nPar1, it1), (nPar2, it2)) =>
       val m2 = it2.toMap
 
-      val rdd1 = OrderedRDD(sc.parallelize(it1, nPar1)).cache()
-      val rdd2 = OrderedRDD(sc.parallelize(it2, nPar2)).cache()
+      val rdd1 = OrderedRDD[Locus, Variant, String](sc.parallelize(it1, nPar1)).cache()
+      val rdd2 = OrderedRDD[Locus, Variant, String](sc.parallelize(it2, nPar2)).cache()
 
-      val join: IndexedSeq[(Variant, (String, Option[String]))] = rdd1.orderedLeftJoinDistinct(rdd2).collect().toIndexedSeq
+      val join: IndexedSeq[(Variant, (String, Option[String]))] = rdd1.orderedLeftJoinDistinct[Locus, String](rdd2).collect().toIndexedSeq
 
       val check1 = it1 == join.map { case (k, (v1, _)) => (k, v1) }
       val check2 = join.forall { case (k, (_, v2)) => v2 == m2.get(k) }
       val check3 = rdd1.leftOuterJoinDistinct(rdd2).collect().toMap == join.toMap
+
+      println(check1, check2, check3)
+      println(join.toMap)
+      println(rdd1.leftOuterJoinDistinct(rdd2).collect().toMap)
 
       check1 && check2 && check3
     }

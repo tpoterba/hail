@@ -609,6 +609,7 @@ class RichSortedPairIterator[K, V1](val it: Iterator[(K, V1)]) extends AnyVal {
         else {
           while (k2 < k && other.hasNext) {
             val (_1, _2) = other.next()
+            assert(_1 >= k2)
             k2 = _1
             v2 = _2
           }

@@ -151,9 +151,6 @@ object VariantSampleMatrix {
     }
 
     val oRDD = new OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](rdd, partitioner)
-    println("in read:")
-    println(oRDD.partitioner)
-    println(oRDD.getClass.getName)
 
     new VariantSampleMatrix[Genotype](
       if (skipGenotypes) metadata.copy(sampleIds = IndexedSeq.empty[String],
@@ -677,7 +674,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
 
   def annotateVariants(otherRDD: RDD[(Variant, Annotation)], newSignature: Type,
     inserter: Inserter): VariantSampleMatrix[T] = {
-    val newRDD = rdd.orderedLeftJoinDistinct(otherRDD)
+    val newRDD = rdd.orderedLeftJoinDistinct[Locus, Annotation](otherRDD)
       .mapValues { case ((va, gs), annotation) =>
         (inserter(va, annotation), gs)
       }

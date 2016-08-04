@@ -1,15 +1,11 @@
 package org.apache.spark
 
-import java.io.{IOException, ObjectInputStream, ObjectOutputStream}
+import java.io.{ObjectInputStream, ObjectOutputStream}
 
-import org.apache.spark.rdd.{PartitionPruningRDD, RDD}
-import org.apache.spark.serializer.JavaSerializer
-import org.apache.spark.util.{CollectionsUtils, Utils}
+import org.apache.spark.util.CollectionsUtils
+import org.broadinstitute.hail.variant.Variant
 
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
 import scala.reflect.ClassTag
-import scala.util.hashing._
 
 /**
   * A [[org.apache.spark.Partitioner]] that partitions sortable records by range into roughly
@@ -25,6 +21,9 @@ case class OrderedPartitioner[T: Ordering : ClassTag, K: Ordering : ClassTag](
   private var ascending: Boolean = true)
   extends Partitioner {
 
+  //  println("MADE NEW PARTITIONER")
+  //  println(f(Variant("chr", 1, "a", "t").asInstanceOf[K]))
+
   def write(out: ObjectOutputStream) {
     out.writeBoolean(ascending)
     out.writeObject(rangeBounds)
@@ -36,17 +35,18 @@ case class OrderedPartitioner[T: Ordering : ClassTag, K: Ordering : ClassTag](
 
   var binarySearch: ((Array[T], T) => Int) = CollectionsUtils.makeBinarySearch[T]
 
-  def getPartition(key: Any): Int = {
-    val k = f(key.asInstanceOf[K])
+  def getPartition(key: Any): Int = getPartitionT(f(key.asInstanceOf[K]))
+
+  def getPartitionT(key: T): Int = {
     var partition = 0
     if (rangeBounds.length <= 128) {
       // If we have less than 128 partitions naive search
-      while (partition < rangeBounds.length && ordering.gt(k, rangeBounds(partition))) {
+      while (partition < rangeBounds.length && ordering.gt(key, rangeBounds(partition))) {
         partition += 1
       }
     } else {
       // Determine which binary search method to use only once.
-      partition = binarySearch(rangeBounds, k)
+      partition = binarySearch(rangeBounds, key)
       // binarySearch either returns the match location or -[insertion point]-1
       if (partition < 0) {
         partition = -partition - 1
@@ -83,7 +83,8 @@ case class OrderedPartitioner[T: Ordering : ClassTag, K: Ordering : ClassTag](
 }
 
 object OrderedPartitioner {
-  def read[T: Ordering : ClassTag, K : Ordering : ClassTag](in: ObjectInputStream)(implicit ev: (K) => T): OrderedPartitioner[T, K] = {
+  def read[T, K](in: ObjectInputStream)(implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T],
+    kct: ClassTag[K]): OrderedPartitioner[T, K] = {
     val ascending = in.readBoolean()
     val rangeBounds = in.readObject().asInstanceOf[Array[T]]
     OrderedPartitioner(rangeBounds, ev, ascending)
