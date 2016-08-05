@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import org.apache.spark.rdd.{OrderedRDD, RDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{PartitionedDataFrameReader, Row, SQLContext}
-import org.apache.spark.{OrderedPartitioner, SparkContext, SparkEnv}
+import org.apache.spark.{OneToOneDependency, OrderedPartitioner, SparkContext, SparkEnv}
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.annotations._
 import org.broadinstitute.hail.check.Gen
@@ -583,6 +583,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
               |  left:  $wasSplit
               |  right: ${ that.wasSplit }""".stripMargin)
     }
+
     metadataSame &&
       rdd
         .fullOuterJoin(that.rdd)
@@ -794,7 +795,7 @@ class RichVDS(vds: VariantDataset) {
     makeSchema().add(StructField("sample_group", StringType, nullable = false))
 
   def makeOrderedRDD(compress: Boolean = false): OrderedRDD[Locus, Variant, (Annotation, GenotypeStream)] = {
-    OrderedRDD(vds.rdd.mapValuesWithKey { case (v, (va, gs)) => (va, gs.toGenotypeStream(v, compress))})
+    OrderedRDD(vds.rdd.mapValuesWithKey { case (v, (va, gs)) => (va, gs.toGenotypeStream(v, compress)) })
   }
 
   private def writeMetadata(sqlContext: SQLContext, dirname: String, compress: Boolean = true) = {

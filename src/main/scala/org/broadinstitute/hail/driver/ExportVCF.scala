@@ -192,7 +192,9 @@ object ExportVCF extends Command {
                     case _ => sb.append(v)
                   }
                 }
-              } { sb += ';' }
+              } {
+                sb += ';'
+              }
           }
 
         case None =>
@@ -212,12 +214,7 @@ object ExportVCF extends Command {
       }
     }
 
-    val kvRDD = vds.rdd.map { case (v, (a, gs)) =>
-      (v, (a, gs.toGenotypeStream(v, compress = false)))
-    }
-    kvRDD.persist(StorageLevel.MEMORY_AND_DISK)
-    kvRDD
-      .repartitionAndSortWithinPartitions(new RangePartitioner[Variant, (Annotation, Iterable[Genotype])](vds.rdd.partitions.length, kvRDD))
+    val kvRDD = vds.makeOrderedRDD()
       .mapPartitions { it: Iterator[(Variant, (Annotation, Iterable[Genotype]))] =>
         val sb = new StringBuilder
         it.map { case (v, (va, gs)) =>
@@ -226,7 +223,6 @@ object ExportVCF extends Command {
           sb.result()
         }
       }.writeTable(options.output, Some(header), deleteTmpFiles = true)
-    kvRDD.unpersist()
     state
   }
 

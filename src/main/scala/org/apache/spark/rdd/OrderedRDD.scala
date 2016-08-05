@@ -2,7 +2,6 @@ package org.apache.spark.rdd
 
 import org.apache.spark._
 import org.broadinstitute.hail.Utils._
-import org.broadinstitute.hail.variant.Variant
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
@@ -12,23 +11,105 @@ import scala.util.hashing._
 case class SimplePartition(index: Int) extends Partition
 
 object OrderedRDD {
-  def apply[T, K, V](rdd: RDD[(K, V)])(implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K],
+  def apply[T, K, V](rdd: RDD[(K, V)], check: Boolean = true)(implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K],
     tct: ClassTag[T], kct: ClassTag[K]): OrderedRDD[T, K, V] = {
-    rdd.partitioner match {
-      case Some(p: OrderedPartitioner[T, K]) =>
-        println("found ordered partitioner")
-        new OrderedRDD(rdd, p)
+    rdd match {
+      case _: OrderedRDD[T, K, V] =>
+        info("RDD was an OrderedRDD already")
+        rdd.asInstanceOf[OrderedRDD[T, K, V]]
       case _ =>
-        println("didn't find ordered partitioner")
-        println(rdd.getClass.getName)
-        println(s"in ORDD apply: ev = ${ ev(Variant("CHROM", 100, "A", "T").asInstanceOf[K]) }")
+        rdd.partitioner match {
+          case Some(p: OrderedPartitioner[T, K]) =>
+            info("RDD had an OrderedPartitioner")
+            new OrderedRDD(rdd, p)
+          case _ =>
+            val coercedRDD: Option[OrderedRDD[T, K, V]] = if (check) {
+              val res = rdd.mapPartitionsWithIndex { case (index, it) =>
+                if (it.isEmpty)
+                  Iterator((index, true, true, None))
+                else {
+                  var sortedT = true
+                  var sortedK = true
+                  var continue = true
+                  val firstK = it.next()._1
+                  var lastK = firstK
+                  var lastT = ev(firstK)
 
-        val ranges = calculateKeyRanges[T](rdd.map { case (k, _) => ev(k) })
-        val partitioner = OrderedPartitioner[T, K](ranges)
-        new OrderedRDD[T, K, V](new ShuffledRDD[K, V, V](rdd, partitioner).setKeyOrdering(kOrd), partitioner)
+                  while (it.hasNext && continue) {
+                    val (k, _) = it.next()
+                    val t = ev(k)
+                    if (tOrd.lt(t, lastT)) {
+                      sortedT = false
+                      continue = false
+                    } else if (kOrd.lt(k, lastK))
+                      sortedK = false
+
+                    lastK = k
+                    lastT = t
+                  }
+                  Iterator((index, sortedT, sortedK, Some(ev(firstK), ev(lastK))))
+                }
+              }.collect().sortBy(_._1)
+
+              if (res.forall(_._4.isEmpty))
+                None
+              else {
+
+                val allTSorted = res.forall(_._2)
+                val allKSorted = res.forall(_._3)
+                val maxSorted = res.foldLeft[(Boolean, Option[T])]((true, None)) { case ((b, prev), (_, _, _, o)) =>
+                  if (!b)
+                    (b, prev)
+                  else (prev, o) match {
+                    case (Some(leftMax), Some((min, max))) => (tOrd.gt(min, leftMax), Some(max))
+                    case (None, Some((min, max))) => (b, Some(max))
+                    case (_, None) => (b, prev)
+                  }
+                }._1
+
+                if (allTSorted && maxSorted) {
+                  val partitioner = if (res.size == 1)
+                    OrderedPartitioner[T, K](Array.empty[T])
+                  else {
+                    val ab = mutable.ArrayBuilder.make[T]()
+                    val min = res.take(res.length - 1).flatMap(_._4.map(_._2)).head
+                    res.take(res.length - 1).foldLeft[T](min) { case (prev, (_, _, _, o)) =>
+                      val next = o.map(_._2).getOrElse(prev)
+
+                      ab += next
+                      next
+                    }
+                    OrderedPartitioner[T, K](ab.result())
+                  }
+
+                  assert(partitioner.numPartitions == rdd.partitions.size)
+
+                  if (allKSorted) {
+                    info("Coerced key-sorted RDD")
+                    Some(new OrderedRDD[T, K, V](rdd, partitioner))
+                  } else {
+                    val sortedRDD = rdd.mapPartitionsWithIndex({ case (i, it) =>
+                      if (res(i)._3)
+                        it
+                      else it.localKeySort[T]
+                    }, preservesPartitioning = true)
+                    info("Coerced partition-key-sorted RDD")
+                    Some(new OrderedRDD(sortedRDD, partitioner))
+                  }
+                } else None
+              }
+            } else None
+
+            coercedRDD.getOrElse({
+              info("ordering with network shuffle")
+              val ranges = calculateKeyRanges[T](rdd.map { case (k, _) => ev(k) })
+              val partitioner = OrderedPartitioner[T, K](ranges)
+              new OrderedRDD[T, K, V](new ShuffledRDD[K, V, V](rdd, partitioner).setKeyOrdering(kOrd), partitioner)
+            })
+        }
+
     }
   }
-
 
   /**
     * Lifted from org.apache.spark.RangePartitioner.scala in org.apache.spark
@@ -75,8 +156,8 @@ object OrderedRDD {
 class OrderedRDD[T, K, V](rdd: RDD[(K, V)], p: OrderedPartitioner[T, K])
   (implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]) extends RDD[(K, V)](rdd) {
 
-  println(s"constructed ordered rdd from parent ${ rdd.getClass.getName }")
-  println(s"in ORDD: ev = ${ ev(Variant("CHROM", 100, "A", "T").asInstanceOf[K]) }")
+  //  println(s"constructed ordered rdd from parent ${ rdd.getClass.getName }")
+  //  println(s"in ORDD: ev = ${ ev(Variant("CHROM", 100, "A", "T").asInstanceOf[K]) }")
 
   def orderedPartitioner = p
 
@@ -137,13 +218,16 @@ class OrderedLeftJoinRDD[T, K, V1, V2](rdd1: OrderedRDD[T, K, V1], rdd2: Ordered
 
   private def p2 = rdd2.orderedPartitioner
 
-  val r2Partitions = rdd2.partitions // FIXME wtf
+  val r2Partitions = rdd2.partitions // FIXME wtf?
 
   def getPartitions: Array[Partition] = rdd1.partitions
 
   override def getPreferredLocations(split: Partition): Seq[String] = rdd1.preferredLocations(split)
 
   override def compute(split: Partition, context: TaskContext): Iterator[(K, (V1, Option[V2]))] = {
+
+    println(s"trying to compute split ${ split.index } of rdd2, overlap = ${ OrderedDependency.getDependencies(p1, p2)(split.index) }")
+
     val left = rdd1.iterator(split, context)
     if (left.isEmpty)
       Iterator.empty
@@ -179,7 +263,7 @@ class OrderedLeftPartitionKeyJoinRDD[T, K, V1, V2](rdd1: OrderedRDD[T, K, V1],
 
   private def p2 = rdd2.orderedPartitioner
 
-  val r2Partitions = rdd2.partitions // FIXME wtf
+  val r2Partitions = rdd2.partitions // FIXME wtf?
 
   def getPartitions: Array[Partition] = rdd1.partitions
 

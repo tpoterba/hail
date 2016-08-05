@@ -588,10 +588,68 @@ class RichPairTraversableOnce[K, V](val t: TraversableOnce[(K, V)]) extends AnyV
   }
 }
 
-class RichSortedPairIterator[K, V1](val it: Iterator[(K, V1)]) extends AnyVal {
 
-  def sortedLeftJoinDistinct[V2](other: Iterator[(K, V2)])
-    (implicit ordering: Ordering[K]): Iterator[(K, (V1, Option[V2]))] = {
+class KeySortIterator[T, K, V](it: Iterator[(K, V)])(implicit tOrd: Ordering[T], kOrd: Ordering[K],
+  ev: (K) => T) extends Iterator[(K, V)] {
+
+  val b = mutable.ArrayBuffer[(K, V)]()
+  b.clear()
+  var takingSortedIterator: Iterator[(K, V)] = Iterator()
+
+  override def hasNext: Boolean = takingSortedIterator.nonEmpty || b.nonEmpty || it.nonEmpty
+
+  def next: (K, V) = {
+    if (takingSortedIterator.hasNext)
+      takingSortedIterator.next()
+    else if (it.isEmpty) {
+      assert(b.nonEmpty)
+      if (b.size == 1) {
+        val toReturn = b.head
+        b.clear()
+        toReturn
+      }
+      else {
+        takingSortedIterator = b.sortBy(_._1).iterator
+        b.clear()
+        next()
+      }
+    } else if (b.isEmpty) {
+      b += it.next()
+      next()
+    } else {
+      val (k, v) = it.next()
+      val t = ev(k)
+      val lastT = ev(b.last._1)
+      assert(tOrd.gteq(t, lastT), "iterator not K-sorted")
+      if (tOrd.equiv(t, lastT)) {
+        b += ((k, v))
+        next()
+      } else {
+        if (b.size == 1) {
+          // common case
+          val last = b(0)
+          b(0) = (k, v)
+          last
+        } else {
+          takingSortedIterator = b.sortBy(_._1).iterator
+          b.clear()
+          b += ((k, v))
+          next()
+        }
+      }
+    }
+  }
+}
+
+
+class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
+
+  def localKeySort[T](implicit ord: Ordering[T], kOrd: Ordering[K], ev: (K) => T): Iterator[(K, V)] = {
+    new KeySortIterator[T, K, V](it)
+  }
+
+  def sortedLeftJoinDistinct[W](other: Iterator[(K, W)])
+    (implicit ordering: Ordering[K]): Iterator[(K, (V, Option[W]))] = {
     import ordering._
 
     if (other.isEmpty)
@@ -609,7 +667,7 @@ class RichSortedPairIterator[K, V1](val it: Iterator[(K, V1)]) extends AnyVal {
         else {
           while (k2 < k && other.hasNext) {
             val (_1, _2) = other.next()
-            assert(_1 >= k2)
+            assert(_1 >= k2, "iterator was not sorted")
             k2 = _1
             v2 = _2
           }
@@ -623,7 +681,7 @@ class RichSortedPairIterator[K, V1](val it: Iterator[(K, V1)]) extends AnyVal {
   }
 
   def sortedTransformedLeftJoinDistinct[T, V2](other: Iterator[(T, V2)])
-    (implicit ordering: Ordering[T], ev: (K) => T): Iterator[(K, (V1, Option[V2]))] = {
+    (implicit ordering: Ordering[T], ev: (K) => T): Iterator[(K, (V, Option[V2]))] = {
     import ordering._
 
     if (other.isEmpty)
@@ -1376,7 +1434,7 @@ object Utils extends Logging {
 
   implicit def richIterator[T](it: Iterator[T]): RichIterator[T] = new RichIterator[T](it)
 
-  implicit def toRichSortedPairIterator[K, V](it: Iterator[(K, V)]): RichSortedPairIterator[K, V] = new RichSortedPairIterator(it)
+  implicit def toRichSortedPairIterator[K, V](it: Iterator[(K, V)]): RichPairIterator[K, V] = new RichPairIterator(it)
 
   implicit def richBoolean(b: Boolean): RichBoolean = new RichBoolean(b)
 

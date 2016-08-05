@@ -1,5 +1,6 @@
 package org.broadinstitute.hail.methods
 
+import org.apache.hadoop
 import org.broadinstitute.hail.SparkSuite
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.annotations.Annotation
@@ -9,9 +10,8 @@ import org.broadinstitute.hail.expr.TStruct
 import org.broadinstitute.hail.variant.{Genotype, VSMSubgen, VariantSampleMatrix}
 import org.testng.annotations.Test
 
-import scala.language.postfixOps
-import scala.sys.process._
 import scala.io.Source
+import scala.language.postfixOps
 
 class ExportVcfSuite extends SparkSuite {
 
@@ -62,6 +62,10 @@ class ExportVcfSuite extends SparkSuite {
     val stateOrig = State(sc, sqlContext, vdsOrig)
 
     ExportVCF.run(stateOrig, Array("-o", outFile))
+
+    val fs = hadoopFS(outFile, hadoopConf)
+    val hPath = new hadoop.fs.Path(outFile)
+    println(fs.getFileStatus(hPath).getLen)
 
     val vdsNew = LoadVCF(sc, outFile, nPartitions = Some(10))
     val stateNew = State(sc, sqlContext, vdsNew)

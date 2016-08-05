@@ -1,5 +1,6 @@
 package org.broadinstitute.hail.driver
 
+import org.apache.spark.rdd.OrderedRDD
 import org.apache.spark.sql.Row
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.annotations.Annotation
@@ -69,7 +70,7 @@ object ImportAnnotationsTable extends Command with JoinAnnotator {
     }
 
     val vds: VariantDataset = VariantSampleMatrix(VariantMetadata(Array.empty[String], IndexedSeq.empty[Annotation], Annotation.empty,
-      TStruct.empty, finalType, TStruct.empty), keyedRDD)
+      TStruct.empty, finalType, TStruct.empty), OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](keyedRDD, check = true))
 
     state.copy(vds = vds)
   }

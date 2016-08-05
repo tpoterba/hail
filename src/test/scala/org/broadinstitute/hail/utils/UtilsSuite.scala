@@ -4,6 +4,7 @@ import org.broadinstitute.hail.{SpanningIterator, SparkSuite}
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.check.{Gen, Prop}
 import org.broadinstitute.hail.check.Arbitrary._
+import org.broadinstitute.hail.variant._
 import org.testng.annotations.Test
 
 class UtilsSuite extends SparkSuite {
@@ -127,5 +128,21 @@ class UtilsSuite extends SparkSuite {
     }
 
     p.check(size = 1000, count = 1000) // important to keep size at ~1000 to get reasonable levels of match and no match
+  }
+
+  @Test def testKeySortIterator() {
+    val g = for (chr <- Gen.oneOf("1", "2");
+                 pos <- Gen.choose(1, 25);
+                 ref <- genDNAString;
+                 alt <- genDNAString.filter(_ != ref)) yield Variant(chr, pos, ref, alt)
+    val p = Prop.forAll(Gen.buildableOf[IndexedSeq[Variant], Variant](g).map(_.map(v => (v, ())).sortBy(_._1.locus))) { it =>
+      val arraySort = it.sortBy(_._1)
+      val locusSort = it.sortBy(_._1.locus)
+      val itSort = it.iterator.localKeySort[Locus].toIndexedSeq
+
+      arraySort == itSort
+    }
+
+    p.check(size = 1000, count = 100)
   }
 }

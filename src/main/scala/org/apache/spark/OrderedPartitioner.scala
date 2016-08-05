@@ -62,10 +62,8 @@ case class OrderedPartitioner[T: Ordering : ClassTag, K: Ordering : ClassTag](
   }
 
   override def equals(other: Any): Boolean = other match {
-    case r: OrderedPartitioner[_, _] =>
-      r.rangeBounds.sameElements(rangeBounds) && r.ascending == ascending
-    case _ =>
-      false
+    case r: OrderedPartitioner[_, _] => r.rangeBounds.sameElements(rangeBounds) && r.ascending == ascending
+    case _ => false
   }
 
   override def hashCode(): Int = {

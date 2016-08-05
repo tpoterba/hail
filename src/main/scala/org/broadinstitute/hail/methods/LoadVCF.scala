@@ -1,6 +1,7 @@
 package org.broadinstitute.hail.methods
 
 import htsjdk.variant.vcf.{VCFHeaderLineCount, VCFHeaderLineType, VCFInfoHeaderLine}
+import org.apache.spark.rdd.OrderedRDD
 import org.apache.spark.{Accumulable, SparkContext}
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.annotations._
@@ -48,7 +49,7 @@ object VCFReport {
       case Symbolic => "Variant is symbolic"
       case ADInvalidNumber => "AD array contained the wrong number of elements"
     }
-    s"$count ${plural(count, "time")}: $desc"
+    s"$count ${ plural(count, "time") }: $desc"
   }
 
   def report() {
@@ -204,7 +205,7 @@ object LoadVCF {
     val headerLine = headerLines.last
     if (!(headerLine(0) == '#' && headerLine(1) != '#'))
       fatal(s"corrupt VCF: expected final header line of format `#CHROM\tPOS\tID...'" +
-        s"\n  found: ${truncate(headerLine)}")
+        s"\n  found: ${ truncate(headerLine) }")
 
     val sampleIds: Array[String] =
       if (skipGenotypes)
@@ -256,7 +257,7 @@ object LoadVCF {
       Annotation.empty,
       TStruct.empty,
       variantAnnotationSignatures,
-      TStruct.empty), genotypes)
+      TStruct.empty), OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](genotypes, check = true))
   }
 
 }
