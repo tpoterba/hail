@@ -24,7 +24,7 @@ class OrderedLeftPartitionKeyJoinRDD[T, K, V1, V2](rdd1: OrderedRDD[T, K, V1],
 
   private def p2 = rdd2.orderedPartitioner
 
-  val r2Partitions = rdd2.partitions // compute and store -- getPartitions called on a worker throw a NullPointerException
+  val r2Partitions = rdd2.partitions // compute and store -- getPartitions called on a worker throw a NullPointerExceptione
 
   def getPartitions: Array[Partition] = rdd1.partitions
 

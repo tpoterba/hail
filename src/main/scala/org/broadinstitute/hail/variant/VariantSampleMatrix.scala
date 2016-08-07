@@ -157,7 +157,7 @@ object VariantSampleMatrix {
       warn(
         """No partition information found: VDS is old or corrupted and will experience poor performance.
           |  Please `read' and `write' this dataset to update it.""".stripMargin)
-      OrderedRDD(rdd)
+      OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](rdd)
     }
 
     new VariantSampleMatrix[Genotype](
