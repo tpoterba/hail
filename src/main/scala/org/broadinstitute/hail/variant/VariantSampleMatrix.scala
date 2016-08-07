@@ -2,10 +2,11 @@ package org.broadinstitute.hail.variant
 
 import java.nio.ByteBuffer
 
+import org.apache.hadoop
 import org.apache.spark.rdd.{OrderedRDD, RDD}
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{PartitionedDataFrameReader, Row, SQLContext}
-import org.apache.spark.{OneToOneDependency, OrderedPartitioner, SparkContext, SparkEnv}
+import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.{OrderedPartitioner, SparkContext, SparkEnv}
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.annotations._
 import org.broadinstitute.hail.check.Gen
@@ -29,12 +30,10 @@ object VariantSampleMatrix {
   }
 
 
-  private def readMetadata(sqlContext: SQLContext, dirname: String,
+  private def readMetadata(hConf: hadoop.conf.Configuration, dirname: String,
     requireParquetSuccess: Boolean = true): VariantMetadata = {
     if (!dirname.endsWith(".vds") && !dirname.endsWith(".vds/"))
       fatal(s"input path ending in `.vds' required, found `$dirname'")
-
-    val hConf = sqlContext.sparkContext.hadoopConfiguration
 
     if (!hadoopExists(hConf, dirname))
       fatal(s"no VDS found at `$dirname'")
@@ -125,7 +124,9 @@ object VariantSampleMatrix {
 
   def read(sqlContext: SQLContext, dirname: String, skipGenotypes: Boolean = false): VariantDataset = {
 
-    val metadata = readMetadata(sqlContext, dirname, skipGenotypes)
+    val hConf = sqlContext.sparkContext.hadoopConfiguration
+
+    val metadata = readMetadata(hConf, dirname, skipGenotypes)
     val vaSignature = metadata.vaSignature
 
     val df = sqlContext.readPartitioned.parquet(dirname + "/rdd.parquet")
@@ -146,17 +147,24 @@ object VariantSampleMatrix {
             row.getGenotypeStream(v, 2)))
       }
 
-    val partitioner = readObjectFile(dirname + "/partitioner", sqlContext.sparkContext.hadoopConfiguration) { in =>
-      OrderedPartitioner.read[Locus, Variant](in)
-    }
+    val orderedRDD = if (hadoopExists(hConf, dirname + "/partitioner")) {
+      val partitioner = readObjectFile(dirname + "/partitioner", sqlContext.sparkContext.hadoopConfiguration) { in =>
+        OrderedPartitioner.read[Locus, Variant](in)
+      }
 
-    val oRDD = new OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](rdd, partitioner)
+      new OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](rdd, partitioner)
+    } else {
+      warn(
+        """No partition information found: VDS is old or corrupted and will experience poor performance.
+          |  Please `read' and `write' this dataset to update it.""".stripMargin)
+      OrderedRDD(rdd)
+    }
 
     new VariantSampleMatrix[Genotype](
       if (skipGenotypes) metadata.copy(sampleIds = IndexedSeq.empty[String],
         sampleAnnotations = IndexedSeq.empty[Annotation])
       else metadata,
-      oRDD)
+      orderedRDD)
   }
 
   def kuduRowType(vaSignature: Type): Type = TStruct("variant" -> Variant.t,
@@ -167,7 +175,7 @@ object VariantSampleMatrix {
   def readKudu(sqlContext: SQLContext, dirname: String, tableName: String,
     master: String): VariantDataset = {
 
-    val metadata = readMetadata(sqlContext, dirname, requireParquetSuccess = false)
+    val metadata = readMetadata(sqlContext.sparkContext.hadoopConfiguration, dirname, requireParquetSuccess = false)
     val vaSignature = metadata.vaSignature
 
     val df = sqlContext.read.options(

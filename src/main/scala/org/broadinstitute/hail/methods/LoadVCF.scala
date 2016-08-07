@@ -113,6 +113,11 @@ object LoadVCF {
     s.substring(start, end)
   }
 
+  def lineVariant(s: String): Variant = {
+    val arr = s.split("\t", 6)
+    Variant(arr(0), arr(1).toInt, arr(3), arr(4))
+  }
+
   def infoNumberToString(line: VCFInfoHeaderLine): String = line.getCountType match {
     case VCFHeaderLineCount.A => "A"
     case VCFHeaderLineCount.G => "G"
@@ -224,6 +229,14 @@ object LoadVCF {
     else
       files
 
+    val justVariants = sc.textFilesLines(files2)
+      .filter(_.map { line => !line.isEmpty &&
+        line(0) != '#' &&
+        lineRef(line).forall(c => c == 'A' || c == 'C' || c == 'G' || c == 'T' || c == 'N')
+      // FIXME doesn't filter symbolic, but also avoids decoding the line.  Won't cause errors but might cause unnecessary shuffles
+      }.value)
+      .map(_.map(lineVariant).value)
+
     val genotypes = sc.union(files2.map { file =>
       val reportAcc = sc.accumulable[mutable.Map[Int, Int], Int](mutable.Map.empty[Int, Int])
       VCFReport.accumulators ::= (file, reportAcc)
@@ -257,7 +270,7 @@ object LoadVCF {
       Annotation.empty,
       TStruct.empty,
       variantAnnotationSignatures,
-      TStruct.empty), OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](genotypes, check = true))
+      TStruct.empty), OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](genotypes, reducedRDD = Some(justVariants)))
   }
 
 }
