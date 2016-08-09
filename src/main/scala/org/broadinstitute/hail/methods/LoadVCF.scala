@@ -2,6 +2,7 @@ package org.broadinstitute.hail.methods
 
 import htsjdk.variant.vcf.{VCFHeaderLineCount, VCFHeaderLineType, VCFInfoHeaderLine}
 import org.apache.spark.rdd.OrderedRDD
+import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{Accumulable, SparkContext}
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.annotations._
@@ -164,6 +165,7 @@ object LoadVCF {
     ppAsPL: Boolean = false,
     skipBadAD: Boolean = false): VariantDataset = {
 
+    println("in loadVCF, nPar is " + nPartitions) //DEBUG
     val settings = VCFSettings(storeGQ, skipGenotypes, compress, ppAsPL, skipBadAD)
 
     val hConf = sc.hadoopConfiguration
@@ -236,8 +238,9 @@ object LoadVCF {
         // FIXME this doesn't filter symbolic, but also avoids decoding the line.  Won't cause errors but might cause unnecessary shuffles
       }.value)
       .map(_.map(lineVariant).value)
+    justVariants.persist(StorageLevel.MEMORY_AND_DISK)
 
-    val genotypes = sc.union(files2.map { file =>
+    val genotypes = OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](sc.union(files2.map { file =>
       val reportAcc = sc.accumulable[mutable.Map[Int, Int], Int](mutable.Map.empty[Int, Int])
       VCFReport.accumulators ::= (file, reportAcc)
 
@@ -263,14 +266,16 @@ object LoadVCF {
           }.value
           }
         }
-    })
+    }), reducedRDD = Some(justVariants))
+
+    justVariants.unpersist()
 
     VariantSampleMatrix(VariantMetadata(sampleIds,
       Annotation.emptyIndexedSeq(sampleIds.length),
       Annotation.empty,
       TStruct.empty,
       variantAnnotationSignatures,
-      TStruct.empty), OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](genotypes, reducedRDD = Some(justVariants)))
+      TStruct.empty), genotypes)
   }
 
 }
