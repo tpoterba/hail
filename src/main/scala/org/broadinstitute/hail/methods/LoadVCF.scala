@@ -229,11 +229,11 @@ object LoadVCF {
     else
       files
 
-    val justVariants = sc.textFilesLines(files2)
+    val justVariants = sc.textFilesLines(files2, nPartitions = nPartitions.getOrElse(sc.defaultMinPartitions))
       .filter(_.map { line => !line.isEmpty &&
         line(0) != '#' &&
         lineRef(line).forall(c => c == 'A' || c == 'C' || c == 'G' || c == 'T' || c == 'N')
-      // FIXME doesn't filter symbolic, but also avoids decoding the line.  Won't cause errors but might cause unnecessary shuffles
+        // FIXME this doesn't filter symbolic, but also avoids decoding the line.  Won't cause errors but might cause unnecessary shuffles
       }.value)
       .map(_.map(lineVariant).value)
 

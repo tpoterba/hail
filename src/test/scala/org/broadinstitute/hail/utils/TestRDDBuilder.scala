@@ -1,6 +1,7 @@
 package org.broadinstitute.hail.utils
 
 import org.apache.spark.SparkContext
+import org.apache.spark.rdd.OrderedRDD
 import org.broadinstitute.hail.annotations._
 import org.broadinstitute.hail.variant._
 
@@ -126,6 +127,6 @@ object TestRDDBuilder {
         }
         (variant, (Annotation.empty, b.result(): Iterable[Genotype]))
     }
-    VariantSampleMatrix(VariantMetadata(sampleList), streamRDD)
+    VariantSampleMatrix(VariantMetadata(sampleList), OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](streamRDD))
   }
 }

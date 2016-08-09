@@ -1,8 +1,6 @@
 package org.broadinstitute.hail.driver
 
-import org.apache.spark.RangePartitioner
 import org.apache.spark.sql.Row
-import org.apache.spark.storage.StorageLevel
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.annotations._
 import org.broadinstitute.hail.expr._
@@ -214,7 +212,7 @@ object ExportVCF extends Command {
       }
     }
 
-    val kvRDD = vds.makeOrderedRDD()
+    val kvRDD = vds.rdd
       .mapPartitions { it: Iterator[(Variant, (Annotation, Iterable[Genotype]))] =>
         val sb = new StringBuilder
         it.map { case (v, (va, gs)) =>

@@ -1,10 +1,8 @@
 package org.broadinstitute.hail.driver
 
-import org.apache.spark.RangePartitioner
 import org.apache.spark.storage.StorageLevel
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.methods.ExportBedBimFam
-import org.broadinstitute.hail.variant.Variant
 import org.kohsuke.args4j.{Option => Args4jOption}
 
 object ExportPlink extends Command {
@@ -41,8 +39,7 @@ object ExportPlink extends Command {
 
     val bedHeader = Array[Byte](108, 27, 1)
 
-    val plinkRDD = vds
-      .makeOrderedRDD()
+    val plinkRDD = vds.rdd
       .mapValuesWithKey { case (v, (va, gs)) => ExportBedBimFam.makeBedRow(gs) }
 
     plinkRDD.persist(StorageLevel.MEMORY_AND_DISK)

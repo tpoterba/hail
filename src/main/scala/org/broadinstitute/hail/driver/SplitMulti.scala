@@ -162,13 +162,15 @@ object SplitMulti extends Command {
     val newVDS = state.vds.copy[Genotype](
       wasSplit = true,
       vaSignature = vas4,
-      rdd = vds.rdd.flatMap[(Variant, (Annotation, Iterable[Genotype]))] { case (v, (va, it)) =>
-        split(v, va, it,
-          propagateGQ = propagateGQ,
-          compress = !noCompress, { (va, index, wasSplit) =>
-            insertSplit(insertIndex(va, Some(index)), Some(wasSplit))
-          })
-      })
+      rdd = vds.rdd.mapPartitions[(Variant, (Annotation, Iterable[Genotype]))]({ it =>
+        it.flatMap { case (v, (va, gs)) =>
+          split(v, va, gs,
+            propagateGQ = propagateGQ,
+            compress = !noCompress, { (va, index, wasSplit) =>
+              insertSplit(insertIndex(va, Some(index)), Some(wasSplit))
+            })
+        }
+      }, preservesPartitioning = true))
     state.copy(vds = newVDS)
   }
 }

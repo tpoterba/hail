@@ -3,7 +3,6 @@ package org.broadinstitute.hail.driver
 import java.io.{FileInputStream, IOException}
 import java.util.Properties
 
-import org.apache.spark.RangePartitioner
 import org.apache.spark.rdd.OrderedRDD
 import org.apache.spark.storage.StorageLevel
 import org.broadinstitute.hail.Utils._
@@ -309,8 +308,12 @@ object VEP extends Command {
     val (newVASignature, insertVEP) = vds.vaSignature.insert(vepSignature, root)
 
     val newRDD = vds.rdd
-      .orderedLeftJoinDistinct(annotations)
-      .mapValues { case ((va, gs), vaVep) => (vaVep.map(a => insertVEP(va, Some(a))).getOrElse(va), gs) }
+      .zipPartitions(annotations, preservesPartitioning = true) { case (left, right) =>
+        left.sortedLeftJoinDistinct(right)
+          .map { case (v, ((va, gs), vaVep)) =>
+            (v, (vaVep.map(a => insertVEP(va, Some(a))).getOrElse(va), gs))
+          }
+      }
 
     val newVDS = vds.copy(rdd = newRDD,
       vaSignature = newVASignature)

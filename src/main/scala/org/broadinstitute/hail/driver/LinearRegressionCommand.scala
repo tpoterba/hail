@@ -61,13 +61,13 @@ object LinearRegressionCommand extends Command {
     val covToDouble = (covT, options.covSA.split(",").map(_.trim)).zipped.map(toDouble)
     val covSA = vds.sampleIdsAndAnnotations.map { case (s, sa) =>
       ec.setAll(s, sa)
-      (covQ.map(_()), covToDouble).zipped.map(_.map(_))
+      (covQ.map(_ ()), covToDouble).zipped.map(_.map(_))
     }
 
     val (yForCompleteSamples, covForCompleteSamples, completeSamples) =
       (ySA, covSA, vds.sampleIds)
         .zipped
-        .filter( (y, c, s) => y.isDefined && c.forall(_.isDefined))
+        .filter((y, c, s) => y.isDefined && c.forall(_.isDefined))
 
     val yArray = yForCompleteSamples.map(_.get).toArray
     val y = DenseVector(yArray)
@@ -95,7 +95,7 @@ object LinearRegressionCommand extends Command {
 
     state.copy(
       vds = vds.copy(
-        rdd = vds.rdd.zipPartitions(linreg.rdd) { case (it, jt) =>
+        rdd = vds.rdd.zipPartitions(linreg.rdd, preservesPartitioning = true) { case (it, jt) =>
           it.zip(jt).map { case ((v, (va, gs)), (v2, comb)) =>
             assert(v == v2)
             (v, (inserter(va, comb.map(_.toAnnotation)), gs))

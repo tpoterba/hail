@@ -38,6 +38,8 @@ object FilterVariantsList extends Command {
 
     val keep = options.keep
 
+
+
     val variants: RDD[(Variant, Unit)] =
       vds.sparkContext.textFileLines(options.input)
         .map {
@@ -53,19 +55,20 @@ object FilterVariantsList extends Command {
           }.value
         }
 
-    val in = vds.rdd
-      .map { case (v, (va, gs)) => (v, (va, gs.toGenotypeStream(v, compress = false))) }
-
     state.copy(
       vds = vds.copy(
-        rdd = in
+        rdd = vds.rdd
           .orderedLeftJoinDistinct(variants)
-          .flatMap {
-            case (v, ((va, gs), Some(_))) =>
-              if (keep) Some((v, (va, gs))) else None
-            case (v, ((va, gs), None)) =>
-              if (keep) None else Some((v, (va, gs)))
-          }
+          .mapPartitions({ it =>
+            it.flatMap { case (v, ((va, gs), o)) =>
+              o match {
+                case Some(_) =>
+                  if (keep) Some((v, (va, gs))) else None
+                case None =>
+                  if (keep) None else Some((v, (va, gs)))
+              }
+            }
+          }, preservesPartitioning = true)
       ))
   }
 }

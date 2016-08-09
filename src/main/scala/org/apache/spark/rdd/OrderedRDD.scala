@@ -14,6 +14,7 @@ object OrderedRDD {
     rdd match {
       case _: OrderedRDD[T, K, V] =>
         rdd.asInstanceOf[OrderedRDD[T, K, V]]
+      case _: EmptyRDD[(K, V)] => new OrderedRDD(rdd, OrderedPartitioner(Array.empty[T]))
       case _ =>
         rdd.partitioner match {
           case Some(p: OrderedPartitioner[T, K]) =>
@@ -47,37 +48,22 @@ object OrderedRDD {
                 }
               }.collect().sortBy(_._1)
 
-              if (res.count(_._4.isDefined) <= 1)
+              if (!res.forall(_._4.isDefined))
                 None
               else {
 
                 val allTSorted = res.forall(_._2)
                 val allKSorted = res.forall(_._3)
-                val maxSorted = res.foldLeft[(Boolean, Option[T])]((true, None)) { case ((b, prev), (_, _, _, o)) =>
-                  if (!b)
-                    (b, prev)
-                  else (prev, o) match {
-                    case (Some(leftMax), Some((min, max))) => (tOrd.gt(min, leftMax), Some(max))
-                    case (None, Some((min, max))) => (b, Some(max))
-                    case (_, None) => (b, prev)
-                  }
-                }._1
+
+                val minMax = res.map(_._4.get)
+                val maxSorted = minMax.tail.map(_._1).zip(minMax.map(_._2))
+                  .forall { case (nextMin, lastMax) => tOrd.gt(nextMin, lastMax) }
 
                 if (allTSorted && maxSorted) {
-                  val partitioner = if (res.size == 1)
-                    OrderedPartitioner[T, K](Array.empty[T])
-                  else {
-                    val ab = mutable.ArrayBuilder.make[T]()
-                    val min = res.take(res.length - 1).flatMap(_._4.map(_._2)).head
-                    res.take(res.length - 1).foldLeft[T](min) { case (prev, (_, _, _, o)) =>
-                      val next = o.map(_._2).getOrElse(prev)
+                  val ab = mutable.ArrayBuilder.make[T]()
+                  minMax.take(minMax.length - 1).foreach { case (_, max) => ab += max }
 
-                      ab += next
-                      next
-                    }
-                    OrderedPartitioner[T, K](ab.result())
-                  }
-
+                  val partitioner = OrderedPartitioner[T, K](ab.result())
                   assert(partitioner.numPartitions == rdd.partitions.size)
 
                   if (allKSorted) {
@@ -99,7 +85,9 @@ object OrderedRDD {
             coercedRDD.getOrElse({
               info("ordering with network shuffle")
               val ranges: Array[T] = calculateKeyRanges[T](reducedRDD.map(_.map(k => ev(k)))
-                .getOrElse(rdd.map { case (k, _) => ev(k) }))
+                .getOrElse(rdd.map {
+                  case (k, _) => ev(k)
+                }))
               val partitioner = OrderedPartitioner[T, K](ranges)
               new OrderedRDD[T, K, V](new ShuffledRDD[K, V, V](rdd, partitioner).setKeyOrdering(kOrd), partitioner)
             })

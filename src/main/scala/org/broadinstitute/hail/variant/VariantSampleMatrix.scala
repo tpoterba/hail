@@ -3,7 +3,7 @@ package org.broadinstitute.hail.variant
 import java.nio.ByteBuffer
 
 import org.apache.hadoop
-import org.apache.spark.rdd.{OrderedRDD, RDD}
+import org.apache.spark.rdd.{EmptyRDD, OrderedRDD, RDD}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Row, SQLContext}
 import org.apache.spark.{OrderedPartitioner, SparkContext, SparkEnv}
@@ -245,7 +245,8 @@ case class VSMSubgen[T](
                 va <- vaGen(vaSig);
                 ts <- Gen.buildableOfN[Iterable[T], T](sampleIds.length, tGen(v)))
              yield (v, (va, ts))))
-      yield VariantSampleMatrix[T](VariantMetadata(sampleIds, saValues, global, saSig, vaSig, globalSig), sc.parallelize(rows))
+      yield VariantSampleMatrix[T](VariantMetadata(sampleIds, saValues, global, saSig, vaSig, globalSig),
+        OrderedRDD[Locus, Variant, (Annotation, Iterable[T])](sc.parallelize(rows)))
 }
 
 object VSMSubgen {
@@ -268,6 +269,8 @@ object VSMSubgen {
 class VariantSampleMatrix[T](val metadata: VariantMetadata,
   val rdd: RDD[(Variant, (Annotation, Iterable[T]))])
   (implicit tct: ClassTag[T]) {
+  require(rdd.partitioner.exists(p => p.isInstanceOf[OrderedPartitioner[_, _]]), //FIXME how to get around erasure?
+    "cannot construct a variant sample matrix from an RDD not ordered by locus")
 
   def sampleIds: IndexedSeq[String] = metadata.sampleIds
 
@@ -308,7 +311,8 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
 
   def cache(): VariantSampleMatrix[T] = copy[T](rdd = rdd.cache())
 
-  def repartition(nPartitions: Int) = copy[T](rdd = rdd.repartition(nPartitions)(null))
+  def repartition(nPartitions: Int) = copy[T](rdd =
+    OrderedRDD[Locus, Variant, (Annotation, Iterable[T])](rdd.repartition(nPartitions)(null)))
 
   def nPartitions: Int = rdd.partitions.length
 
@@ -802,10 +806,6 @@ class RichVDS(vds: VariantDataset) {
   def makeSchemaForKudu(): StructType =
     makeSchema().add(StructField("sample_group", StringType, nullable = false))
 
-  def makeOrderedRDD(compress: Boolean = false): OrderedRDD[Locus, Variant, (Annotation, GenotypeStream)] = {
-    OrderedRDD(vds.rdd.mapValuesWithKey { case (v, (va, gs)) => (va, gs.toGenotypeStream(v, compress)) })
-  }
-
   private def writeMetadata(sqlContext: SQLContext, dirname: String, compress: Boolean = true) = {
     if (!dirname.endsWith(".vds") && !dirname.endsWith(".vds/"))
       fatal(s"output path ending in `.vds' required, found `$dirname'")
@@ -854,19 +854,18 @@ class RichVDS(vds: VariantDataset) {
     val vaSignature = vds.vaSignature
     val vaRequiresConversion = SparkAnnotationImpex.requiresConversion(vaSignature)
 
-    val ordered = makeOrderedRDD()
+    val ordered = OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](vds.rdd)
 
     writeObjectFile(dirname + "/partitioner", vds.sparkContext.hadoopConfiguration) { out =>
       ordered.orderedPartitioner.write(out)
     }
 
-    val rowRDD = ordered
-      .map {
-        case (v, (va, gs)) =>
-          Row.fromSeq(Array(v.toRow,
-            if (vaRequiresConversion) SparkAnnotationImpex.exportAnnotation(va, vaSignature) else va,
-            gs.toRow))
-      }
+    val rowRDD = ordered.map {
+      case (v, (va, gs)) =>
+        Row.fromSeq(Array(v.toRow,
+          if (vaRequiresConversion) SparkAnnotationImpex.exportAnnotation(va, vaSignature) else va,
+          gs.toGenotypeStream(v, compress).toRow))
+    }
     sqlContext.createDataFrame(rowRDD, makeSchema())
       .write.parquet(dirname + "/rdd.parquet")
     // .saveAsParquetFile(dirname + "/rdd.parquet")
