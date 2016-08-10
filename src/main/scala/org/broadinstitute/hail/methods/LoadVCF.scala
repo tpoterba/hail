@@ -165,7 +165,6 @@ object LoadVCF {
     ppAsPL: Boolean = false,
     skipBadAD: Boolean = false): VariantDataset = {
 
-    println("in loadVCF, nPar is " + nPartitions) //DEBUG
     val settings = VCFSettings(storeGQ, skipGenotypes, compress, ppAsPL, skipBadAD)
 
     val hConf = sc.hadoopConfiguration

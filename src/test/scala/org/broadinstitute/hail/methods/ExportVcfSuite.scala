@@ -57,8 +57,7 @@ class ExportVcfSuite extends SparkSuite {
 
   @Test def testSorted() {
     val vcfFile = "src/test/resources/multipleChromosomes.vcf"
-//        val outFile = tmpDir.createTempFile("sort", ".vcf.bgz")
-    val outFile = "/tmp/testOut.vcf.bgz"
+    val outFile = tmpDir.createTempFile("sort", ".vcf.bgz")
 
     val vdsOrig = LoadVCF(sc, vcfFile, nPartitions = Some(10))
     val stateOrig = State(sc, sqlContext, vdsOrig)
@@ -66,26 +65,9 @@ class ExportVcfSuite extends SparkSuite {
 
     ExportVCF.run(stateOrig, Array("-o", outFile))
 
-    //    val fs = hadoopFS(outFile, hadoopConf)
-    //    val hPath = new hadoop.fs.Path(outFile)
-    //    println(s"FILE $outFile is ${ fs.getFileStatus(hPath).getLen } bytes")
-
-    val vdsNew = ImportVCF.run(stateOrig, Array(outFile, "-n", "6")).vds
-    //    val vdsNew = LoadVCF(sc, outFile, nPartitions = Some(10))
+    val vdsNew = LoadVCF(sc, outFile, nPartitions = Some(10))
     val stateNew = State(sc, sqlContext, vdsNew)
 
-    case class Coordinate(contig: String, start: Int, ref: String, alt: String) extends Ordered[Coordinate] {
-      def compare(that: Coordinate) = {
-        if (this.contig != that.contig)
-          this.contig.compareTo(that.contig)
-        else if (this.start != that.start)
-          this.start.compareTo(that.start)
-        else if (this.ref != that.ref)
-          this.ref.compareTo(that.ref)
-        else
-          this.alt.compareTo(that.alt)
-      }
-    }
     assert(readFile(outFile, stateNew.hadoopConf) { s =>
       Source.fromInputStream(s)
         .getLines()
@@ -96,8 +78,8 @@ class ExportVcfSuite extends SparkSuite {
 
   @Test def testReadWrite() {
     val s = State(sc, sqlContext, null)
-    val out = tmpDir.createTempFile("foo", ".vcf")
-    val out2 = tmpDir.createTempFile("foo2", ".vcf")
+    val out = tmpDir.createTempFile("foo", ".vcf.bgz")
+    val out2 = tmpDir.createTempFile("foo2", ".vcf.bgz")
     val p = forAll(VariantSampleMatrix.gen[Genotype](sc, VSMSubgen.random), Gen.choose(1, 10)) { case (vds, nPar) =>
       hadoopDelete("/tmp/foo.vcf", sc.hadoopConfiguration, recursive = true)
       ExportVCF.run(s.copy(vds = vds), Array("-o", out))
