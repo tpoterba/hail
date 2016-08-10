@@ -13,6 +13,7 @@ import org.json4s.jackson.JsonMethods
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 import scala.util.parsing.input.{Position, Positional}
+import scala.language.existentials
 
 case class EvalContext(st: SymbolTable, a: ArrayBuffer[Any], aggregationFunctions: ArrayBuffer[Aggregator]) {
 
@@ -82,7 +83,7 @@ object DoubleNumericConversion extends NumericConversion[Double] {
 object AST extends Positional {
   def promoteNumeric(t: TNumeric): BaseType = t
 
-  def promoteNumeric(lhs: TNumeric, rhs: TNumeric): BaseType =
+  def promoteNumeric(lhs: TNumeric, rhs: TNumeric): TNumeric =
     if (lhs == TDouble || rhs == TDouble)
       TDouble
     else if (lhs == TFloat || rhs == TFloat)
@@ -950,7 +951,7 @@ case class Apply(posn: Position, fn: String, args: Array[AST]) extends AST(posn,
     case ("pow", Array(a, b)) =>
       AST.evalComposeNumeric[Double, Double](ec, a, b)((b, x) => math.pow(b, x))
     case ("log", Array(a)) =>
-    AST.evalComposeNumeric[Double](ec, a)(x => math.log(x))
+      AST.evalComposeNumeric[Double](ec, a)(x => math.log(x))
     case ("log", Array(a, b)) =>
       AST.evalComposeNumeric[Double, Double](ec, a, b)((x, b) => math.log(x) / math.log(b))
     case ("log10", Array(a)) =>
@@ -1354,7 +1355,7 @@ case class ApplyMethod(posn: Position, lhs: AST, method: String, args: Array[AST
         m.mapValues { elt =>
           localA(localIdx) = elt
           bodyFn()
-        }
+        }.force
       }
 
     case (agg, "count", Array(predicate)) =>
@@ -1631,6 +1632,65 @@ case class BinaryOp(posn: Position, lhs: AST, operation: String, rhs: AST) exten
       s.r.findFirstIn(t).isDefined
     }
 
+    case ("+" | "*" | "-" | "/", TArray(elementType)) =>
+      val f: (Any, Any) => Any = (operation, elementType) match {
+        case ("+", TDouble) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else DoubleNumericConversion.to(l) + DoubleNumericConversion.to(r)
+        case ("+", TInt) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else IntNumericConversion.to(l) + IntNumericConversion.to(r)
+        case ("+", TLong) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else LongNumericConversion.to(l) + LongNumericConversion.to(r)
+        case ("+", TFloat) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else FloatNumericConversion.to(l) + FloatNumericConversion.to(r)
+        case ("*", TDouble) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else DoubleNumericConversion.to(l) * DoubleNumericConversion.to(r)
+        case ("*", TInt) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else IntNumericConversion.to(l) * IntNumericConversion.to(r)
+        case ("*", TLong) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else LongNumericConversion.to(l) * LongNumericConversion.to(r)
+        case ("*", TFloat) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else FloatNumericConversion.to(l) * FloatNumericConversion.to(r)
+        case ("-", TDouble) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else DoubleNumericConversion.to(l) - DoubleNumericConversion.to(r)
+        case ("-", TInt) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else IntNumericConversion.to(l) - IntNumericConversion.to(r)
+        case ("-", TLong) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else LongNumericConversion.to(l) - LongNumericConversion.to(r)
+        case ("-", TFloat) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else FloatNumericConversion.to(l) - FloatNumericConversion.to(r)
+        case ("/", TDouble) => (l: Any, r: Any) =>
+          if (l == null || r == null) null
+          else DoubleNumericConversion.to(l) / DoubleNumericConversion.to(r)
+      }
+
+      ((lhs.`type`, rhs.`type`): @unchecked) match {
+        case (t: TNumeric, TArray(_)) => AST.evalCompose[Any, IndexedSeq[_]](ec, lhs, rhs) { case (num, arr) =>
+          arr.map(elem => f(num, elem))
+        }
+        case (TArray(_), t: TNumeric) => AST.evalCompose[IndexedSeq[_], Any](ec, lhs, rhs) { case (arr, num) =>
+          arr.map(elem => f(elem, num))
+        }
+        case (TArray(_), TArray(_)) => AST.evalCompose[IndexedSeq[_], IndexedSeq[_]](ec, lhs, rhs) { case (left, right) =>
+          if (left.length != right.length) ParserUtils.error(posn,
+            s"""cannot apply operation `$operation' to arrays of unequal length
+                |  Left: ${ left.length } elements
+                |  Right: ${ right.length } elements""".stripMargin)
+          (left, right).zipped.map(f)
+        }
+      }
+
     case ("||", TBoolean) =>
       val f1 = lhs.eval(ec)
       val f2 = rhs.eval(ec)
@@ -1692,6 +1752,7 @@ case class BinaryOp(posn: Position, lhs: AST, operation: String, rhs: AST) exten
     case ("-", TDouble) => AST.evalComposeNumeric[Double, Double](ec, lhs, rhs)(_ - _)
     case ("*", TDouble) => AST.evalComposeNumeric[Double, Double](ec, lhs, rhs)(_ * _)
     case ("/", TDouble) => AST.evalComposeNumeric[Double, Double](ec, lhs, rhs)(_ / _)
+
   }
 
   override def typecheckThis(): BaseType = (lhs.`type`, operation, rhs.`type`) match {
@@ -1705,6 +1766,17 @@ case class BinaryOp(posn: Position, lhs: AST, operation: String, rhs: AST) exten
     case (lhsType: TNumeric, "-", rhsType: TNumeric) => AST.promoteNumeric(lhsType, rhsType)
     case (lhsType: TNumeric, "*", rhsType: TNumeric) => AST.promoteNumeric(lhsType, rhsType)
     case (lhsType: TNumeric, "/", rhsType: TNumeric) => TDouble
+
+    case (TArray(lhsType: TNumeric), "+" | "-" | "*", TArray(rhsType: TNumeric)) =>
+      TArray(AST.promoteNumeric(lhsType, rhsType))
+    case (TArray(lhsType: TNumeric), "/", TArray(rhsType: TNumeric)) => TArray(TDouble)
+
+    case (lhsType: TNumeric, "+" | "-" | "*", TArray(rhsType: TNumeric)) =>
+      TArray(AST.promoteNumeric(lhsType, rhsType))
+    case (lhsType: TNumeric, "/", TArray(rhsType: TNumeric)) => TArray(TDouble)
+    case (TArray(lhsType: TNumeric), "+" | "-" | "*", rhsType: TNumeric) =>
+      TArray(AST.promoteNumeric(lhsType, rhsType))
+    case (TArray(lhsType: TNumeric), "/", rhsType: TNumeric) => TArray(TDouble)
 
     case (lhsType, _, rhsType) =>
       parseError(s"invalid arguments to `$operation': ($lhsType, $rhsType)")
@@ -1862,7 +1934,10 @@ case class SymRef(posn: Position, symbol: String) extends AST(posn) {
     ec.st.get(symbol) match {
       case Some((_, t)) => t
       case None =>
-        parseError(s"symbol `$symbol' not found")
+        parseError(
+          s"""symbol `$symbol' not found
+              |  Available symbols:
+              |    ${ ec.st.map { case (id, (_, t)) => s"${ prettyIdentifier(id) }: $t" }.mkString("\n    ") } """.stripMargin)
     }
   }
 }
