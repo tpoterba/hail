@@ -9,8 +9,78 @@ import scala.reflect.ClassTag
 import scala.util.hashing._
 
 object OrderedRDD {
-  def apply[T, K, V](rdd: RDD[(K, V)], reducedRDD: Option[RDD[K]] = None, check: Boolean = true)
+
+
+  def apply[T, K, V](rdd: RDD[(K, V)], reducedRDD: Option[RDD[K]] = None)
     (implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]): OrderedRDD[T, K, V] = {
+
+    def fromPartitionSummaries(arr: Array[(Int, Boolean, T, T)]): Option[OrderedRDD[T, K, V]] = {
+      val allKSorted = arr.forall(_._2)
+
+      val minMax = arr.map(x => (x._3, x._4))
+      val sortedBetweenPartitions = minMax.tail.map(_._1).zip(minMax.map(_._2))
+        .forall { case (nextMin, lastMax) => tOrd.gt(nextMin, lastMax) }
+
+      if (sortedBetweenPartitions) {
+        val ab = mutable.ArrayBuilder.make[T]()
+        minMax.take(minMax.length - 1).foreach { case (_, max) => ab += max }
+
+        val partitioner = OrderedPartitioner[T, K](ab.result())
+        assert(partitioner.numPartitions == rdd.partitions.length)
+
+        if (allKSorted) {
+          info("Coerced key-sorted RDD")
+          Some(new OrderedRDD[T, K, V](rdd, partitioner))
+        } else {
+          val sortedRDD = rdd.mapPartitionsWithIndex { case (i, it) =>
+            if (arr(i)._2)
+              it
+            else it.localKeySort[T]
+          }
+          info("Coerced partition-key-sorted RDD")
+          Some(new OrderedRDD(sortedRDD, partitioner))
+        }
+      }
+      else None
+    }
+
+    def verifySortedness(i: Int, it: Iterator[K]): Iterator[Option[(Int, Boolean, T, T)]] = {
+      if (it.isEmpty)
+        Iterator(None)
+      else {
+        var sortedT = true
+        var sortedK = true
+        var continue = true
+        val firstK = it.next()
+        var lastK = firstK
+        var lastT = ev(firstK)
+
+        while (it.hasNext && continue) {
+          val k = it.next()
+          val t = ev(k)
+          if (tOrd.lt(t, lastT)) {
+            sortedT = false
+            continue = false
+          } else if (kOrd.lt(k, lastK))
+            sortedK = false
+
+          lastK = k
+          lastT = t
+        }
+        if (!sortedT)
+          Iterator(None)
+        else Iterator(Some((i, sortedK, ev(firstK), ev(lastK))))
+      }
+    }
+
+    def fromShuffle(): OrderedRDD[T, K, V] = {
+      info("ordering with network shuffle")
+      val ranges: Array[T] = calculateKeyRanges[T](reducedRDD.map(_.map(k => ev(k)))
+        .getOrElse(rdd.map { case (k, _) => ev(k) }))
+      val partitioner = OrderedPartitioner[T, K](ranges)
+      new OrderedRDD[T, K, V](new ShuffledRDD[K, V, V](rdd, partitioner).setKeyOrdering(kOrd), partitioner)
+    }
+
     rdd match {
       case _: OrderedRDD[T, K, V] =>
         rdd.asInstanceOf[OrderedRDD[T, K, V]]
@@ -20,79 +90,14 @@ object OrderedRDD {
           case Some(p: OrderedPartitioner[T, K]) =>
             new OrderedRDD(rdd, p)
           case _ =>
-            val coercedRDD: Option[OrderedRDD[T, K, V]] = if (check) {
-              val res = reducedRDD.getOrElse(rdd.map(_._1)).mapPartitionsWithIndex { case (index, it) =>
-                if (it.isEmpty)
-                  Iterator((index, true, true, None))
-                else {
-                  var sortedT = true
-                  var sortedK = true
-                  var continue = true
-                  val firstK = it.next()
-                  var lastK = firstK
-                  var lastT = ev(firstK)
+            val result = reducedRDD.getOrElse(rdd.map(_._1))
+              .mapPartitionsWithIndex(verifySortedness).collect()
 
-                  while (it.hasNext && continue) {
-                    val k = it.next()
-                    val t = ev(k)
-                    if (tOrd.lt(t, lastT)) {
-                      sortedT = false
-                      continue = false
-                    } else if (kOrd.lt(k, lastK))
-                      sortedK = false
-
-                    lastK = k
-                    lastT = t
-                  }
-                  Iterator((index, sortedT, sortedK, Some(ev(firstK), ev(lastK))))
-                }
-              }.collect().sortBy(_._1)
-
-              if (!res.forall(_._4.isDefined))
-                None
-              else {
-
-                val allTSorted = res.forall(_._2)
-                val allKSorted = res.forall(_._3)
-
-                val minMax = res.map(_._4.get)
-                val maxSorted = minMax.tail.map(_._1).zip(minMax.map(_._2))
-                  .forall { case (nextMin, lastMax) => tOrd.gt(nextMin, lastMax) }
-
-                if (allTSorted && maxSorted) {
-                  val ab = mutable.ArrayBuilder.make[T]()
-                  minMax.take(minMax.length - 1).foreach { case (_, max) => ab += max }
-
-                  val partitioner = OrderedPartitioner[T, K](ab.result())
-                  assert(partitioner.numPartitions == rdd.partitions.size)
-
-                  if (allKSorted) {
-                    info("Coerced key-sorted RDD")
-                    Some(new OrderedRDD[T, K, V](rdd, partitioner))
-                  } else {
-                    val sortedRDD = rdd.mapPartitionsWithIndex { case (i, it) =>
-                      if (res(i)._3)
-                        it
-                      else it.localKeySort[T]
-                    }
-                    info("Coerced partition-key-sorted RDD")
-                    Some(new OrderedRDD(sortedRDD, partitioner))
-                  }
-                } else None
-              }
-            } else None
-
-            coercedRDD.getOrElse({
-              info("ordering with network shuffle")
-              val ranges: Array[T] = calculateKeyRanges[T](reducedRDD.map(_.map(k => ev(k)))
-                .getOrElse(rdd.map {
-                  case (k, _) => ev(k)
-                }))
-              val partitioner = OrderedPartitioner[T, K](ranges)
-              new OrderedRDD[T, K, V](new ShuffledRDD[K, V, V](rdd, partitioner).setKeyOrdering(kOrd), partitioner)
-            })
+            anyFailAllFail[Array, (Int, Boolean, T, T)](result)
+              .map(_.sortBy(_._1))
+              .flatMap(fromPartitionSummaries)
+              .getOrElse(fromShuffle())
         }
-
     }
   }
 

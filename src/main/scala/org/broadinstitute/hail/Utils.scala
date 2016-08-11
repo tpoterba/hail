@@ -27,10 +27,11 @@ import org.seqdoop.hadoop_bam.util.BGZFCodec
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
+import scala.collection.generic.CanBuildFrom
 import scala.collection.mutable.ListBuffer
 import scala.collection.{TraversableOnce, mutable}
 import scala.io.Source
-import scala.language.implicitConversions
+import scala.language.{higherKinds, implicitConversions}
 import scala.reflect.ClassTag
 import scala.util.Random
 
@@ -1477,5 +1478,16 @@ object Utils extends Logging {
           case _ => ord.compare(a.asInstanceOf[T], b.asInstanceOf[T])
         }
     }
+  }
+
+  def anyFailAllFail[C[_], T](ts: TraversableOnce[Option[T]])(implicit cbf: CanBuildFrom[Nothing, T, C[T]]): Option[C[T]] = {
+    val b = cbf()
+    for (t <- ts) {
+      if (t.isEmpty)
+        return None
+      else
+        b += t.get
+    }
+    Some(b.result())
   }
 }
