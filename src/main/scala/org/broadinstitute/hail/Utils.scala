@@ -612,37 +612,9 @@ class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
       kSorted.iterator ++ lazyKSorted(greater)
     }
 
-  def sortedLeftJoinDistinct[W](other: Iterator[(K, W)])
-    (implicit ordering: Ordering[K]): Iterator[(K, (V, Option[W]))] = {
-    import ordering._
-
-    if (other.isEmpty)
-      it.map { case (k, v) => (k, (v, None)) }
-    else {
-      val (_1, _2) = other.next()
-      var k2 = _1
-      var v2 = _2
-
-      for ((k, v1) <- it) yield {
-        if (k2 > k)
-          (k, (v1, None))
-        else if (k2 == k)
-          (k, (v1, Some(v2)))
-        else {
-          while (k2 < k && other.hasNext) {
-            val (_1, _2) = other.next()
-            assert(_1 >= k2, "iterator was not sorted")
-            k2 = _1
-            v2 = _2
-          }
-          if (k2 == k)
-            (k, (v1, Some(v2)))
-          else
-            (k, (v1, None))
-        }
-      }
-    }
-  }
+  def sortedLeftJoinDistinct[V2](other: Iterator[(K, V2)])
+    (implicit ordering: Ordering[K]): Iterator[(K, (V, Option[V2]))] =
+    sortedTransformedLeftJoinDistinct(other)
 
   def sortedTransformedLeftJoinDistinct[T, V2](other: Iterator[(T, V2)])
     (implicit ordering: Ordering[T], ev: (K) => T): Iterator[(K, (V, Option[V2]))] = {
