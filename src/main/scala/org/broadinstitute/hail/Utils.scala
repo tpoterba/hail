@@ -484,9 +484,9 @@ class RichPairRDD[K, V](val r: RDD[(K, V)]) extends AnyVal {
     }
   }
 
-  def orderedLeftJoinDistinct[T, V2](other: RDD[(K, V2)])
-    (implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]): RDD[(K, (V, Option[V2]))] = {
-    OrderedLeftJoinRDD[T, K, V, V2](r, other)
+  def orderedLeftJoinDistinct[V2](other: RDD[(K, V2)])
+    (kOrd: Ordering[K], kct: ClassTag[K]): RDD[(K, (V, Option[V2]))] = {
+    OrderedLeftPartitionKeyJoinRDD[K, K, V, V2](r, other)
   }
 
   def orderedLeftKeyJoinDistinct[T, V2](other: RDD[(T, V2)])(implicit ev: (K) => T,
