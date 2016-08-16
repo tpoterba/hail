@@ -1623,6 +1623,12 @@ case class Let(posn: Position, bindings: Array[(String, AST)], body: AST) extend
 }
 
 case class BinaryOp(posn: Position, lhs: AST, operation: String, rhs: AST) extends AST(posn, lhs, rhs) {
+  def liftBinaryWithCoerce[T,U,V](coerce: T => U)(op: (U, U) => V): (T, T) => V =
+    (l, r) => op(coerce(l), coerce(r))
+
+  def threadNulls(f: (Any, Any) => Any): (Any, Any) => Any =
+    (l, r) => if (l == null || r == null) null else f(l, r)
+  
   def eval(ec: EvalContext): () => Any = ((operation, `type`): @unchecked) match {
     case ("+", TString) =>
       val lhsT = lhs.`type`.asInstanceOf[Type]
@@ -1633,47 +1639,22 @@ case class BinaryOp(posn: Position, lhs: AST, operation: String, rhs: AST) exten
     }
 
     case ("+" | "*" | "-" | "/", TArray(elementType)) =>
-      val f: (Any, Any) => Any = (operation, elementType) match {
-        case ("+", TDouble) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else DoubleNumericConversion.to(l) + DoubleNumericConversion.to(r)
-        case ("+", TInt) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else IntNumericConversion.to(l) + IntNumericConversion.to(r)
-        case ("+", TLong) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else LongNumericConversion.to(l) + LongNumericConversion.to(r)
-        case ("+", TFloat) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else FloatNumericConversion.to(l) + FloatNumericConversion.to(r)
-        case ("*", TDouble) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else DoubleNumericConversion.to(l) * DoubleNumericConversion.to(r)
-        case ("*", TInt) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else IntNumericConversion.to(l) * IntNumericConversion.to(r)
-        case ("*", TLong) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else LongNumericConversion.to(l) * LongNumericConversion.to(r)
-        case ("*", TFloat) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else FloatNumericConversion.to(l) * FloatNumericConversion.to(r)
-        case ("-", TDouble) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else DoubleNumericConversion.to(l) - DoubleNumericConversion.to(r)
-        case ("-", TInt) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else IntNumericConversion.to(l) - IntNumericConversion.to(r)
-        case ("-", TLong) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else LongNumericConversion.to(l) - LongNumericConversion.to(r)
-        case ("-", TFloat) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else FloatNumericConversion.to(l) - FloatNumericConversion.to(r)
-        case ("/", TDouble) => (l: Any, r: Any) =>
-          if (l == null || r == null) null
-          else DoubleNumericConversion.to(l) / DoubleNumericConversion.to(r)
+      val nullsUnhandled: (Any, Any) => Any = (operation, elementType) match {
+        case ("+", TDouble) => liftBinaryWithCoerce(DoubleNumericConversion.to)({ _ + _ })
+        case ("+", TInt) => liftBinaryWithCoerce(IntNumericConversion.to)({ _ + _ })
+        case ("+", TLong) => liftBinaryWithCoerce(LongNumericConversion.to)({ _ + _ })
+        case ("+", TFloat) => liftBinaryWithCoerce(FloatNumericConversion.to)({ _ + _ })
+        case ("*", TDouble) => liftBinaryWithCoerce(DoubleNumericConversion.to)({ _ * _ })
+        case ("*", TInt) => liftBinaryWithCoerce(IntNumericConversion.to)({ _ * _ })
+        case ("*", TLong) => liftBinaryWithCoerce(LongNumericConversion.to)({ _ * _ })
+        case ("*", TFloat) => liftBinaryWithCoerce(FloatNumericConversion.to)({ _ * _ })
+        case ("-", TDouble) => liftBinaryWithCoerce(DoubleNumericConversion.to)({ _ - _ })
+        case ("-", TInt) => liftBinaryWithCoerce(IntNumericConversion.to)({ _ - _ })
+        case ("-", TLong) => liftBinaryWithCoerce(LongNumericConversion.to)({ _ - _ })
+        case ("-", TFloat) => liftBinaryWithCoerce(FloatNumericConversion.to)({ _ - _ })
+        case ("/", TDouble) => liftBinaryWithCoerce(DoubleNumericConversion.to)({ _ / _ })
       }
+      val f = threadNulls(nullsUnhandled)
 
       ((lhs.`type`, rhs.`type`): @unchecked) match {
         case (t: TNumeric, TArray(_)) => AST.evalCompose[Any, IndexedSeq[_]](ec, lhs, rhs) { case (num, arr) =>
