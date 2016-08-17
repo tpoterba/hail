@@ -40,6 +40,8 @@ class GTPair(val p: Int) extends AnyVal {
     (if (j != 0) 1 else 0) + (if (k != 0) 1 else 0)
 }
 
+case class CompleteGenotype(gt: Int, ad: Array[Int], dp: Int, gq: Int, pl: Array[Int])
+
 class Genotype(private val _gt: Int,
   private val _ad: Array[Int],
   private val _dp: Int,
@@ -75,6 +77,18 @@ class Genotype(private val _gt: Int,
     px: Option[Array[Int]] = this.px,
     fakeRef: Boolean = this.fakeRef,
     isDosage: Boolean = this.isDosage): Genotype = Genotype(gt, ad, dp, gq, px, fakeRef, isDosage)
+
+  def toCompleteGenotype: Option[CompleteGenotype] = gt.flatMap { gt =>
+    ad.flatMap { ad =>
+      dp.flatMap { dp =>
+        gq.flatMap { gq =>
+          pl.flatMap { pl =>
+            Some(CompleteGenotype(gt, ad, dp, gq, pl))
+          }
+        }
+      }
+    }
+  }
 
   override def equals(that: Any): Boolean = that match {
     case g: Genotype =>
