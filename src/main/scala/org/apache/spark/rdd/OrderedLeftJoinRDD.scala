@@ -32,9 +32,8 @@ class OrderedLeftJoinRDD[T, K, V1, V2](left: OrderedRDD[T, K, V1], right: Ordere
       val rightStart = rightP.getPartition(first._1)
       val rightIterator = (rightStart to OrderedDependency.getDependencies(leftP, rightP)(split.index)._2)
         .iterator
-        .flatMap(i => {
-          right.iterator(rightPartitions(i), context)
-        })
+        .flatMap(i =>
+          right.iterator(rightPartitions(i), context))
 
       (Iterator(first) ++ leftIterator).sortedLeftJoinDistinct(rightIterator)
     }
