@@ -159,7 +159,7 @@ object VariantSampleMatrix {
 
     val orderedRDD = if (hadoopExists(hConf, dirname + "/partitioner")) {
       val partitioner = readObjectFile(dirname + "/partitioner", sqlContext.sparkContext.hadoopConfiguration) { in =>
-        OrderedPartitioner.read[Locus, Variant](in)
+        OrderedPartitioner.read[Locus, Variant](in, _.locus)
       }
 
       new OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](readRDD(skipGenotypes), partitioner)
@@ -168,9 +168,10 @@ object VariantSampleMatrix {
         """No partition information found: VDS is old or corrupted and will experience poor performance.
           |  Please `read' and `write' this dataset to update it.""".stripMargin)
       if (skipGenotypes)
-        readRDD(skipGenotypes = true).toOrderedRDD[Locus]()
+        readRDD(skipGenotypes = true).toOrderedRDD(_.locus)
       else
-        readRDD(skipGenotypes = false).toOrderedRDD[Locus](
+        readRDD(skipGenotypes = false).toOrderedRDD(
+          _.locus,
           reducedRepresentation = Some(readRDD(skipGenotypes = true).map(_._1)))
 
     }
@@ -222,7 +223,7 @@ object VariantSampleMatrix {
     }
 
     )
-    new VariantSampleMatrix[Genotype](metadata, rdd.toOrderedRDD[Locus]())
+    new VariantSampleMatrix[Genotype](metadata, rdd.toOrderedRDD(_.locus))
   }
 
   private def makeSchemaForKudu(vaSignature: Type): StructType =
@@ -272,7 +273,7 @@ case class VSMSubgen[T](
           yield (v, (va, ts))).resize(l))
       yield {
         VariantSampleMatrix[T](VariantMetadata(sampleIds, saValues, global, saSig, vaSig, globalSig, wasSplit = false, isDosage = isDosage),
-          sc.parallelize(rows, nPartitions).toOrderedRDD[Locus]())
+          sc.parallelize(rows, nPartitions).toOrderedRDD(_.locus))
       }
 }
 
@@ -341,7 +342,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
   def cache(): VariantSampleMatrix[T] = copy[T](rdd = rdd.cache())
 
   // FIXME make this faster by maintaining order
-  def repartition(nPartitions: Int) = copy[T](rdd = rdd.repartition(nPartitions)(null).toOrderedRDD[Locus]())
+  def repartition(nPartitions: Int) = copy[T](rdd = rdd.repartition(nPartitions)(null).toOrderedRDD(_.locus))
 
   def nPartitions: Int = rdd.partitions.length
 
@@ -358,7 +359,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     mapWithAll[(Variant, Annotation, String, Annotation, T)]((v, va, s, sa, g) => (v, va, s, sa, g))
 
   def sampleVariants(fraction: Double): VariantSampleMatrix[T] =
-    copy(rdd = rdd.sample(withReplacement = false, fraction, 1).toOrderedRDD[Locus]())
+    copy(rdd = rdd.sample(withReplacement = false, fraction, 1).toOrderedRDD(_.locus))
 
   def mapValues[U](f: (T) => U)(implicit uct: ClassTag[U]): VariantSampleMatrix[U] = {
     mapValuesWithAll((v, va, s, sa, g) => f(g))
@@ -377,7 +378,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
       (va, localSampleIdsBc.value.lazyMapWith2[Annotation, T, U](localSampleAnnotationsBc.value, gs, {
         case (s, sa, g) => f(v, va, s, sa, g)
       }))
-    }.toOrderedRDD[Locus]())
+    }.toOrderedRDD(_.locus))
   }
 
   def map[U](f: T => U)(implicit uct: ClassTag[U]): RDD[U] =
@@ -419,7 +420,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
   }
 
   def mapAnnotations(f: (Variant, Annotation, Iterable[T]) => Annotation): VariantSampleMatrix[T] =
-    copy[T](rdd = rdd.mapValuesWithKey { case (v, (va, gs)) => (f(v, va, gs), gs) }.toOrderedRDD[Locus]())
+    copy[T](rdd = rdd.mapValuesWithKey { case (v, (va, gs)) => (f(v, va, gs), gs) }.toOrderedRDD(_.locus))
 
   def flatMap[U](f: T => TraversableOnce[U])(implicit uct: ClassTag[U]): RDD[U] =
     flatMapWithKeys((v, s, g) => f(g))
@@ -434,7 +435,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
   }
 
   def filterVariants(p: (Variant, Annotation, Iterable[T]) => Boolean): VariantSampleMatrix[T] =
-    copy(rdd = rdd.filter { case (v, (va, gs)) => p(v, va, gs) }.toOrderedRDD[Locus]())
+    copy(rdd = rdd.filter { case (v, (va, gs)) => p(v, va, gs) }.toOrderedRDD(_.locus))
 
   def filterIntervals(iList: IntervalTree[Locus], keep: Boolean = true): VariantSampleMatrix[T] = {
     val iListBc = sparkContext.broadcast(iList)
@@ -451,7 +452,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     copy(sampleIds = IndexedSeq.empty[String],
       sampleAnnotations = IndexedSeq.empty[Annotation],
       rdd = rdd.mapValues { case (va, gs) => (va, Iterable.empty[T]) }
-        .toOrderedRDD[Locus]())
+        .toOrderedRDD(_.locus))
 
   // FIXME see if we can remove broadcasts elsewhere in the code
   def filterSamples(p: (String, Annotation) => Boolean): VariantSampleMatrix[T] = {
@@ -466,7 +467,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
         .map(_._1),
       rdd = rdd.mapValues { case (va, gs) =>
         (va, gs.lazyFilterWith(maskBc.value, (g: T, m: Boolean) => m))
-      }.toOrderedRDD[Locus]())
+      }.toOrderedRDD(_.locus))
   }
 
   def aggregateBySample[U](zeroValue: U)(
@@ -677,7 +678,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
             case (acc, (g, (s, sa))) =>
               seqOp(acc, v, va, s, sa, g)
           }), gs)
-      }.toOrderedRDD[Locus]())
+      }.toOrderedRDD(_.locus))
   }
 
   def annotateIntervals(is: IntervalTree[Locus],
@@ -686,7 +687,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     val (newSignature, inserter) = insertVA(TBoolean, path)
     copy(rdd = rdd.mapValuesWithKey { case (v, (va, gs)) =>
       (inserter(va, Some(isBc.value.contains(Locus(v.contig, v.start)))), gs)
-    }.toOrderedRDD[Locus](),
+    }.toOrderedRDD(_.locus),
       vaSignature = newSignature)
   }
 
@@ -712,24 +713,28 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
           Some(mBc.value(queries.head))
       }
       (inserter(va, toIns), gs)
-    }.toOrderedRDD[Locus](),
+    }.toOrderedRDD(_.locus),
       vaSignature = newSignature)
   }
 
   def annotateVariants(otherRDD: RDD[(Variant, Annotation)], newSignature: Type,
     inserter: Inserter): VariantSampleMatrix[T] = {
-    val newRDD = rdd.orderedLeftJoinDistinct[Locus, Annotation](otherRDD)
+    val newRDD = rdd.orderedLeftJoinDistinct(otherRDD.toOrderedRDD(_.locus))
       .mapValues { case ((va, gs), annotation) =>
         (inserter(va, annotation), gs)
-      }.toOrderedRDD[Locus]()
+      }.toOrderedRDD(_.locus)
     copy(rdd = newRDD, vaSignature = newSignature)
   }
 
   def annotateLoci(lociRDD: RDD[(Locus, Annotation)], newSignature: Type, inserter: Inserter): VariantSampleMatrix[T] = {
     val newRDD = rdd
-      .orderedLeftJoinTransformedDistinct[Locus, Locus, Annotation](lociRDD)
-      .mapValues { case ((va, gs), annotation) => (inserter(va, annotation), gs) }
-      .toOrderedRDD[Locus]()
+      .mapMonotonic({ case (v, vags) => (v.locus, (v, vags)) },
+        identity[Locus])
+      .orderedLeftJoinDistinct(lociRDD.toOrderedRDD(identity[Locus]))
+      .mapValues { case ((v, (va, gs)), annotation) => (v, (inserter(va, annotation), gs)) }
+      .toOrderedRDD[Locus](identity)
+      .mapMonotonic({ case (_, vvags) => vvags },
+        (v: Variant) => v.locus)
     copy(rdd = newRDD, vaSignature = newSignature)
   }
 
@@ -887,7 +892,7 @@ class RichVDS(vds: VariantDataset) {
     val vaSignature = vds.vaSignature
     val vaRequiresConversion = SparkAnnotationImpex.requiresConversion(vaSignature)
 
-    val ordered = vds.rdd.toOrderedRDD[Locus]()
+    val ordered = vds.rdd.toOrderedRDD(_.locus)
 
     writeObjectFile(dirname + "/partitioner", vds.sparkContext.hadoopConfiguration) { out =>
       ordered.orderedPartitioner.write(out)
@@ -969,7 +974,7 @@ class RichVDS(vds: VariantDataset) {
         rdd = vds1.rdd.mapValuesWithKey {
           case (v, (va, gs)) =>
             (f2(f1(va)), gs.lazyMap(g => g.copy(fakeRef = false)))
-        }.toOrderedRDD[Locus]())
+        }.toOrderedRDD(_.locus))
     } else
       vds
   }
@@ -978,6 +983,6 @@ class RichVDS(vds: VariantDataset) {
     val isDosage = vds.isDosage
     vds.copy(rdd = vds.rdd.mapValuesWithKey[(Annotation, Iterable[Genotype])] { case (v, (va, gs)) =>
       (va, gs.toGenotypeStream(v, isDosage, compress = compress))
-    }.toOrderedRDD[Locus]())
+    }.toOrderedRDD(_.locus))
   }
 }

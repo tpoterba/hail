@@ -16,8 +16,6 @@ package object variant {
       }
   }
 
-  implicit def toLocus(v: Variant): Locus = v.locus
-
   implicit def toRichIterableGenotype(it: Iterable[Genotype]): RichIterableGenotype = new RichIterableGenotype(it)
 
   implicit def toRichVDS(vsm: VariantDataset): RichVDS = new RichVDS(vsm)

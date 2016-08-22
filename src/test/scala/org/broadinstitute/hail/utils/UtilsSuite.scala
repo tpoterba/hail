@@ -138,7 +138,7 @@ class UtilsSuite extends SparkSuite {
     val p = Prop.forAll(Gen.buildableOf[IndexedSeq, Variant](g).map(_.map(v => (v, ())).sortBy(_._1.locus))) { it =>
       val arraySort = it.sortBy(_._1)
       val locusSort = it.sortBy(_._1.locus)
-      val itSort = it.iterator.localKeySort[Locus].toIndexedSeq
+      val itSort = it.iterator.localKeySort[Locus](_.locus).toIndexedSeq
 
       arraySort == itSort
     }

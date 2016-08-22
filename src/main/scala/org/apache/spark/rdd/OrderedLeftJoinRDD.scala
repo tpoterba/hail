@@ -6,7 +6,7 @@ import org.broadinstitute.hail.Utils._
 import scala.reflect.ClassTag
 
 class OrderedLeftJoinRDD[T, K, V1, V2](left: OrderedRDD[T, K, V1], right: OrderedRDD[T, K, V2])
-  (implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T],
+  (implicit tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T],
     kct: ClassTag[K]) extends RDD[(K, (V1, Option[V2]))](left.sparkContext, Seq(new OneToOneDependency(left),
   new OrderedDependency(left.orderedPartitioner, right.orderedPartitioner, right)): Seq[Dependency[_]]) {
 
