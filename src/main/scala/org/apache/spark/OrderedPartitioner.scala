@@ -6,9 +6,10 @@ import org.apache.spark.util.CollectionsUtils
 
 import scala.reflect.ClassTag
 
-case class OrderedPartitioner[T: Ordering : ClassTag, K: Ordering : ClassTag](
+case class OrderedPartitioner[T, K](
   rangeBounds: Array[T],
-  private var ascending: Boolean = true)(implicit f: (K) => T)
+  projectKey: (K) => T,
+  ascending: Boolean = true)(implicit tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K])
   extends Partitioner {
 
   var ordering = implicitly[Ordering[T]]
@@ -25,7 +26,7 @@ case class OrderedPartitioner[T: Ordering : ClassTag, K: Ordering : ClassTag](
 
   var binarySearch: ((Array[T], T) => Int) = CollectionsUtils.makeBinarySearch[T]
 
-  def getPartition(key: Any): Int = getPartitionT(f(key.asInstanceOf[K]))
+  def getPartition(key: Any): Int = getPartitionT(projectKey(key.asInstanceOf[K]))
 
   /**
     * Code mostly copied from:
@@ -74,16 +75,20 @@ case class OrderedPartitioner[T: Ordering : ClassTag, K: Ordering : ClassTag](
     result = prime * result + ascending.hashCode
     result
   }
+
+  def mapMonotonic[K2](newF: (K2) => T)(implicit k2Ord: Ordering[K2], k2ct: ClassTag[K2]): OrderedPartitioner[T, K2] = {
+    new OrderedPartitioner[T, K2](rangeBounds, newF, ascending)
+  }
 }
 
 object OrderedPartitioner {
-  def empty[T, K](implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T],
-    kct: ClassTag[K]): OrderedPartitioner[T, K] = new OrderedPartitioner(Array.empty[T])
+  def empty[T, K](projectKey: (K) => T)(implicit tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T],
+    kct: ClassTag[K]): OrderedPartitioner[T, K] = new OrderedPartitioner(Array.empty[T], projectKey)
 
-  def read[T, K](in: ObjectInputStream)(implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T],
+  def read[T, K](in: ObjectInputStream, projectKey: (K) => T)(implicit tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T],
     kct: ClassTag[K]): OrderedPartitioner[T, K] = {
     val ascending = in.readBoolean()
     val rangeBounds = in.readObject().asInstanceOf[Array[T]]
-    OrderedPartitioner(rangeBounds, ascending)
+    OrderedPartitioner(rangeBounds, projectKey, ascending)
   }
 }

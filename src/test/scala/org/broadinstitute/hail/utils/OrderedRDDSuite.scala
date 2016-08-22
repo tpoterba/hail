@@ -19,32 +19,12 @@ class OrderedRDDSuite extends SparkSuite {
     toZip <- Gen.buildableOfN[IndexedSeq, String](uniqueVariants.size, arbitrary[String]);
     nPar <- Gen.choose(1, 10)) yield (nPar, uniqueVariants.zip(toZip))
 
-  @Test def testJoin() {
-
-    val p = Prop.forAll(gen, gen) { case ((nPar1, it1), (nPar2, it2)) =>
-      val m2 = it2.toMap
-
-      val rdd1 = sc.parallelize(it1, nPar1).cache()
-      val rdd2 = sc.parallelize(it2, nPar2).cache()
-
-      val join: IndexedSeq[(Variant, (String, Option[String]))] = rdd1.orderedLeftJoinTransformedDistinct[Locus, Variant, String](rdd2).collect().toIndexedSeq
-
-      val check1 = it1.toMap == join.map { case (k, (v1, _)) => (k, v1) }.toMap
-      val check2 = join.forall { case (k, (_, v2)) => v2 == m2.get(k) }
-      val check3 = rdd1.leftOuterJoinDistinct(rdd2).collect().toMap == join.toMap
-
-      check1 && check2 && check3
-    }
-
-    p.check()
-  }
-
   @Test def testWriteRead() {
     val tmpPartitioner = tmpDir.createTempFile("partitioner")
     val tmpRdd = tmpDir.createTempFile("rdd", ".parquet")
 
     val p = Prop.forAll(gen) { case (nPar, it) =>
-      val rdd = sc.parallelize(it, nPar).toOrderedRDD[Locus]()
+      val rdd = sc.parallelize(it, nPar).toOrderedRDD(_.locus)
       val schema = StructType(Array(
         StructField("variant", Variant.schema, nullable = false),
         StructField("str", StringType, nullable = false)))
@@ -63,7 +43,7 @@ class OrderedRDDSuite extends SparkSuite {
         .map(r => (Variant.fromRow(r.getAs[Row](0)), r.getAs[String](1)))
 
       val readBackPartitioner = readObjectFile(tmpPartitioner, hadoopConf) { in =>
-        OrderedPartitioner.read[Locus, Variant](in)
+        OrderedPartitioner.read[Locus, Variant](in, _.locus)
       }
 
       val orderedRddRB = new OrderedRDD[Locus, Variant, String](rddReadBack, readBackPartitioner)
@@ -119,15 +99,15 @@ class OrderedRDDSuite extends SparkSuite {
     }
 
     property("randomlyOrdered") = Prop.forAll(random) { case (nPar, s) =>
-      check(sc.parallelize(s, nPar).toOrderedRDD[Locus]())
+      check(sc.parallelize(s, nPar).toOrderedRDD(_.locus))
     }
 
     property("locusSorted") = Prop.forAll(locusSorted) { case (nPar, s) =>
-      check(sc.parallelize(s, nPar).toOrderedRDD[Locus]())
+      check(sc.parallelize(s, nPar).toOrderedRDD(_.locus))
     }
 
     property("fullySorted") = Prop.forAll(sorted) { case (nPar, s) =>
-      check(sc.parallelize(s, nPar).toOrderedRDD[Locus]())
+      check(sc.parallelize(s, nPar).toOrderedRDD(_.locus))
     }
   }
 

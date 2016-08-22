@@ -1,8 +1,6 @@
 package org.broadinstitute.hail.driver
 
-import org.apache.spark.rdd.OrderedRDD
 import org.broadinstitute.hail.Utils._
-import org.broadinstitute.hail.annotations.Annotation
 import org.broadinstitute.hail.expr._
 import org.broadinstitute.hail.io.bgen.BgenLoader
 import org.broadinstitute.hail.variant._
@@ -93,7 +91,7 @@ object ImportBGEN extends Command {
     val signature = TStruct("rsid" -> TString, "varid" -> TString)
 
     val vds = VariantSampleMatrix(VariantMetadata(samples).copy(isDosage = true),
-      sc.union(results.map(_.rdd)).toOrderedRDD[Locus]())
+      sc.union(results.map(_.rdd)).toOrderedRDD(_.locus))
       .copy(vaSignature = signature, wasSplit = true)
 
     state.copy(vds = vds)

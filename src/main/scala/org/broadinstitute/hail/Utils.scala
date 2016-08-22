@@ -15,7 +15,7 @@ import org.apache.spark.mllib.linalg.distributed.IndexedRow
 import org.apache.spark.mllib.linalg.{DenseVector => SDenseVector, SparseVector => SSparseVector, Vector => SVector}
 import org.apache.spark.rdd.{OrderedLeftJoinRDD, _}
 import org.apache.spark.sql.{PartitionedDataFrameReader, Row, SQLContext}
-import org.apache.spark.{AccumulableParam, Partitioner, SparkContext}
+import org.apache.spark.{AccumulableParam, OrderedPartitioner, Partitioner, SparkContext}
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.check.Gen
 import org.broadinstitute.hail.driver.HailConfiguration
@@ -477,9 +477,9 @@ class RichPairRDD[K, V](val rdd: RDD[(K, V)]) extends AnyVal {
     }
   }
 
-  def toOrderedRDD[T](reducedRepresentation: Option[RDD[K]] = None)
-    (implicit ev: (K) => T, tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]): OrderedRDD[T, K, V] =
-    OrderedRDD[T, K, V](rdd, reducedRepresentation)
+  def toOrderedRDD[T](projectKey: (K) => T, reducedRepresentation: Option[RDD[K]] = None)
+    (implicit tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]): OrderedRDD[T, K, V] =
+    OrderedRDD[T, K, V](rdd, projectKey, reducedRepresentation)
 
   def joinDistinct[W](other: RDD[(K, W)])
     (implicit kt: ClassTag[K], vt: ClassTag[V], ord: Ordering[K] = null): RDD[(K, (V, W))] = joinDistinct(other, defaultPartitioner(rdd, other))
@@ -490,15 +490,6 @@ class RichPairRDD[K, V](val rdd: RDD[(K, V)]) extends AnyVal {
       for (v <- pair._1.iterator; w <- pair._2.iterator.take(1)) yield (v, w)
     }
   }
-
-  def orderedLeftJoinDistinct[T, V2](other: RDD[(K, V2)])(implicit ev: (K) => T, tOrd: Ordering[T], kOrd1: Ordering[K],
-    tct: ClassTag[T], kct: ClassTag[K]): RDD[(K, (V, Option[V2]))] =
-    new OrderedLeftJoinRDD[T, K, V, V2](OrderedRDD[T, K, V](rdd), OrderedRDD[T, K, V2](other))
-
-  def orderedLeftJoinTransformedDistinct[T, K2, V2](other: RDD[(K2, V2)])(implicit ev: (K) => T, ev2: (K2) => T,
-    tOrd: Ordering[T], kOrd1: Ordering[K], kOrd2: Ordering[K2], tct: ClassTag[T],
-    kct1: ClassTag[K], kct2: ClassTag[K2]): RDD[(K, (V, Option[V2]))] =
-    new OrderedLeftJoinTransformedRDD(OrderedRDD[T, K, V](rdd), OrderedRDD[T, K2, V2](other))
 
 }
 
@@ -598,64 +589,57 @@ class RichPairTraversableOnce[K, V](val t: TraversableOnce[(K, V)]) extends AnyV
 
 class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
 
-  def localKeySort[T](implicit ord: Ordering[T], kOrd: Ordering[K], ev: (K) => T): Iterator[(K, V)] = {
-    lazyKSorted[T](it)
+  def localKeySort[T](projectKey: (K) => T)(implicit ord: Ordering[T], kOrd: Ordering[K]): Iterator[(K, V)] = {
+    lazyKSorted[T](it, projectKey)
   }
 
   /**
     * Precondition: the iterator is T-sorted. Moreover, ev must be monotonic. We lazily K-sort each block of
     * T-equivalent elements.
     */
-  private def lazyKSorted[T](it: Iterator[(K, V)])
-    (implicit tOrd: Ordering[T], kOrd: Ordering[K], ev: (K) => T): Iterator[(K, V)] =
+  private def lazyKSorted[T](it: Iterator[(K, V)], projectKey: (K) => T)
+    (implicit tOrd: Ordering[T], kOrd: Ordering[K]): Iterator[(K, V)] =
   if (it.isEmpty)
     Iterator.empty
   else {
     val nextValue = it.next
-    val t = ev(nextValue._1)
-    val (tEquivalents, greater) = it.span({ case (k, _) => tOrd.equiv(t, ev(k)) })
+    val t = projectKey(nextValue._1)
+    val (tEquivalents, greater) = it.span({ case (k, _) => tOrd.equiv(t, projectKey(k)) })
     val kSorted = (Iterator(nextValue) ++ tEquivalents).toSeq.sortBy(_._1)
     // NB: ++ is lazy in its second argument
-    kSorted.iterator ++ lazyKSorted[T](greater)
+    kSorted.iterator ++ lazyKSorted[T](greater, projectKey)
   }
 
-  def sortedLeftJoinDistinct[V2](other: Iterator[(K, V2)])
-    (implicit ordering: Ordering[K]): Iterator[(K, (V, Option[V2]))] =
-    sortedTransformedLeftJoinDistinct(other)
+  def sortedLeftJoinDistinct[V2](other: Iterator[(K, V2)])(implicit ord: Ordering[K]): Iterator[(K, (V, Option[V2]))] = {
+    import Ordering.Implicits._
 
-  def sortedTransformedLeftJoinDistinct[T, K2, V2](other: Iterator[(K2, V2)])
-    (implicit ordering: Ordering[T], ev1: (K) => T, ev2: (K2) => T): Iterator[(K, (V, Option[V2]))] = {
-    import ordering._
+    val bother = other.buffered
 
-    if (other.isEmpty)
-      it.map { case (k, v) => (k, (v, None)) }
-    else {
-      val (_1, _2) = other.next()
-      var t2 = ev2(_1)
-      var v2 = _2
+    /* wouldn't compile without this, no idea why */
+    type T = (K, (V, Option[V2]))
 
-      for ((k, v1) <- it) yield {
-        val t = ev1(k)
-        if (t2 > t)
-          (k, (v1, None))
-        else if (t2 == t)
-          (k, (v1, Some(v2)))
-        else {
-          while (t2 < t && other.hasNext) {
-            val (_1, _2) = other.next()
-            t2 = ev2(_1)
-            v2 = _2
-          }
-          if (t2 == t)
-            (k, (v1, Some(v2)))
-          else
-            (k, (v1, None))
-        }
+    new Iterator[T] {
+      def hasNext: Boolean = it.hasNext
+
+      def next(): T = {
+        val (k, v) = it.next()
+
+        while (bother.hasNext && bother.head._1 < k)
+          bother.next()
+
+        if (bother.hasNext && bother.head._1 == k) {
+          val (k2, v2) = bother.next()
+
+          /* implement distinct on the right */
+          while (bother.hasNext && bother.head._1 == k)
+            bother.next()
+
+          (k, (v, Some(v2)))
+        } else
+          (k, (v, None))
       }
     }
   }
-
-
 }
 
 class RichIterator[T](val it: Iterator[T]) extends AnyVal {

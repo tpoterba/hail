@@ -55,7 +55,7 @@ object FilterVariantsList extends Command {
     state.copy(
       vds = vds.copy(
         rdd = vds.rdd
-          .orderedLeftJoinDistinct(variants)
+          .orderedLeftJoinDistinct(variants.toOrderedRDD(_.locus))
           .mapPartitions({ it =>
             it.flatMap { case (v, ((va, gs), o)) =>
               o match {
@@ -66,7 +66,7 @@ object FilterVariantsList extends Command {
               }
             }
           }, preservesPartitioning = true)
-          .toOrderedRDD[Locus]()
+          .toOrderedRDD(_.locus)
       ))
   }
 }
