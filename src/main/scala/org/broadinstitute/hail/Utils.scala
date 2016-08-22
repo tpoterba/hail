@@ -639,17 +639,15 @@ class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
       def next(): T = {
         val (k, v) = it.next()
 
-        while (bother.hasNext && bother.head._1 < k) {
-          val n = bother.next()
-        }
+        while (bother.hasNext && bother.head._1 < k)
+          bother.next()
 
         if (bother.hasNext && bother.head._1 == k) {
           val (k2, v2) = bother.next()
 
           /* implement distinct on the right */
-          while (bother.hasNext && bother.head._1 == k) {
-            val n = bother.next()
-          }
+          while (bother.hasNext && bother.head._1 == k)
+            bother.next()
 
           (k, (v, Some(v2)))
         } else
