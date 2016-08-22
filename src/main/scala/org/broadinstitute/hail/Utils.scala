@@ -589,25 +589,40 @@ class RichPairTraversableOnce[K, V](val t: TraversableOnce[(K, V)]) extends AnyV
 
 class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
 
-  def localKeySort[T](projectKey: (K) => T)(implicit ord: Ordering[T], kOrd: Ordering[K]): Iterator[(K, V)] = {
-    lazyKSorted[T](it, projectKey)
-  }
-
   /**
-    * Precondition: the iterator is T-sorted. Moreover, ev must be monotonic. We lazily K-sort each block of
-    * T-equivalent elements.
+    * Precondition: the iterator it is T-sorted. Moreover, projectKey must be monotonic. We lazily K-sort each block
+    * of T-equivalent elements.
     */
-  private def lazyKSorted[T](it: Iterator[(K, V)], projectKey: (K) => T)
-    (implicit tOrd: Ordering[T], kOrd: Ordering[K]): Iterator[(K, V)] =
-  if (it.isEmpty)
-    Iterator.empty
-  else {
-    val nextValue = it.next
-    val t = projectKey(nextValue._1)
-    val (tEquivalents, greater) = it.span({ case (k, _) => tOrd.equiv(t, projectKey(k)) })
-    val kSorted = (Iterator(nextValue) ++ tEquivalents).toSeq.sortBy(_._1)
-    // NB: ++ is lazy in its second argument
-    kSorted.iterator ++ lazyKSorted[T](greater, projectKey)
+  def localKeySort[T](projectKey: (K) => T)(implicit ord: Ordering[T], kOrd: Ordering[K]): Iterator[(K, V)] = {
+
+    type KV = (K, V)
+
+    implicit val kvOrd = new Ordering[KV] {
+      // ascending
+      def compare(x: KV, y: KV): Int = - kOrd.compare(x._1, y._1)
+    }
+
+    val bit = it.buffered
+
+    new Iterator[KV] {
+      val q = new mutable.PriorityQueue[(K, V)]
+
+      def hasNext: Boolean = it.hasNext || q.nonEmpty
+
+      def next(): KV = {
+        if (q.isEmpty) {
+          val kv = bit.next()
+          val t = projectKey(kv._1)
+
+          q.enqueue(kv)
+
+          while (bit.hasNext && projectKey(bit.head._1) == t)
+            q.enqueue(bit.next())
+        }
+
+        q.dequeue()
+      }
+    }
   }
 
   def sortedLeftJoinDistinct[V2](other: Iterator[(K, V2)])(implicit ord: Ordering[K]): Iterator[(K, (V, Option[V2]))] = {
@@ -624,15 +639,23 @@ class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
       def next(): T = {
         val (k, v) = it.next()
 
-        while (bother.hasNext && bother.head._1 < k)
-          bother.next()
+        println("k", k, bother.hasNext)
+
+        while (bother.hasNext && bother.head._1 < k) {
+          val n = bother.next()
+          println("early skipped", n)
+        }
 
         if (bother.hasNext && bother.head._1 == k) {
           val (k2, v2) = bother.next()
 
+          println("k2", k2)
+
           /* implement distinct on the right */
-          while (bother.hasNext && bother.head._1 == k)
-            bother.next()
+          while (bother.hasNext && bother.head._1 == k) {
+            val n = bother.next()
+            println("skipped", n)
+          }
 
           (k, (v, Some(v2)))
         } else
@@ -697,6 +720,7 @@ class RichIterator[T](val it: Iterator[T]) extends AnyVal {
     // Return an iterator that read lines from the process's stdout
     Source.fromInputStream(proc.getInputStream).getLines()
   }
+
 }
 
 class RichBoolean(val b: Boolean) extends AnyVal {
