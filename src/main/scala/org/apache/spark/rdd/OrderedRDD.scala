@@ -83,10 +83,6 @@ object OrderedRDD {
       new OrderedRDD[T, K, V](new ShuffledRDD[K, V, V](rdd, partitioner).setKeyOrdering(kOrd), partitioner)
     }
 
-    fromShuffle()
-
-    // FIXME testVariantTSVAnnotator breaks here (one line of the annotation is getting dropped)
-    /*
     rdd match {
       case _: OrderedRDD[T, K, V] =>
         rdd.asInstanceOf[OrderedRDD[T, K, V]]
@@ -105,7 +101,6 @@ object OrderedRDD {
               .getOrElse(fromShuffle())
         }
     }
-    */
   }
 
   /**

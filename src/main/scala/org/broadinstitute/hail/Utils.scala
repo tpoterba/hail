@@ -599,7 +599,7 @@ class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
 
     implicit val kvOrd = new Ordering[KV] {
       // ascending
-      def compare(x: KV, y: KV): Int = - kOrd.compare(x._1, y._1)
+      def compare(x: KV, y: KV): Int = -kOrd.compare(x._1, y._1)
     }
 
     val bit = it.buffered
@@ -607,7 +607,7 @@ class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
     new Iterator[KV] {
       val q = new mutable.PriorityQueue[(K, V)]
 
-      def hasNext: Boolean = it.hasNext || q.nonEmpty
+      def hasNext: Boolean = bit.hasNext || q.nonEmpty
 
       def next(): KV = {
         if (q.isEmpty) {
@@ -639,22 +639,16 @@ class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
       def next(): T = {
         val (k, v) = it.next()
 
-        println("k", k, bother.hasNext)
-
         while (bother.hasNext && bother.head._1 < k) {
           val n = bother.next()
-          println("early skipped", n)
         }
 
         if (bother.hasNext && bother.head._1 == k) {
           val (k2, v2) = bother.next()
 
-          println("k2", k2)
-
           /* implement distinct on the right */
           while (bother.hasNext && bother.head._1 == k) {
             val n = bother.next()
-            println("skipped", n)
           }
 
           (k, (v, Some(v2)))

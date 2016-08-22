@@ -127,21 +127,21 @@ class UtilsSuite extends SparkSuite {
       check1 && check2
     }
 
-    p.check() // important to keep size at ~1000 to get reasonable levels of match and no match
+    p.check()
   }
 
   @Test def testKeySortIterator() {
     val g = for (chr <- Gen.oneOf("1", "2");
-      pos <- Gen.choose(1, 25);
+      pos <- Gen.choose(1, 50);
       ref <- genDNAString;
       alt <- genDNAString.filter(_ != ref);
       v <- arbitrary[Int]) yield (Variant(chr, pos, ref, alt), v)
     val p = Prop.forAll(Gen.buildableOf[IndexedSeq, (Variant, Int)](g)) { is =>
       val kSorted = is.sortBy(_._1)
       val tSorted = is.sortBy(_._1.locus)
-      val kSorted2 = tSorted.iterator.localKeySort[Locus](_.locus).toIndexedSeq
+      val localKeySort = is.sortBy(_._1.locus).iterator.localKeySort[Locus](_.locus).toIndexedSeq
 
-      kSorted == kSorted2
+      kSorted == localKeySort
     }
 
     p.check()
