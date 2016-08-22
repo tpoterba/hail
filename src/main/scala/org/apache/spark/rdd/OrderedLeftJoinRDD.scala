@@ -28,14 +28,75 @@ class OrderedLeftJoinRDD[T, K, V1, V2](left: OrderedRDD[T, K, V1], right: Ordere
     if (leftIterator.isEmpty)
       Iterator.empty
     else {
-      val first = leftIterator.next()
-      val rightStart = rightP.getPartition(first._1)
-      val rightIterator = (rightStart to OrderedDependency.getDependencies(leftP, rightP)(split.index)._2)
-        .iterator
-        .flatMap(i =>
-          right.iterator(rightPartitions(i), context))
+      val lastRightPartition = OrderedDependency.getDependencies(leftP, rightP)(split.index)._2
 
-      (Iterator(first) ++ leftIterator).sortedLeftJoinDistinct(rightIterator)
+      val rightMatcher = new SkippingLookup[T, K, V2](right, leftP.projectKey, lastRightPartition, context)
+      leftIterator.map { case (k, v) => (k, (v, rightMatcher.findMatch(k))) }
+    }
+  }
+}
+
+class SkippingLookup[T, K, V](rdd: OrderedRDD[T, K, V], projectKey: (K) => T, lastPartition: Int, context: TaskContext)
+  (implicit tOrd: Ordering[T], kOrd: Ordering[K]) {
+  val p = rdd.orderedPartitioner
+  var partition = -1
+  var it: Iterator[(K, V)] = Iterator[(K, V)]()
+  var buffer: Option[(K, V)] = None
+  var partitionMaxT: Option[T] = None
+
+  def initialize(k: K) {
+    partition = p.getPartition(k)
+    it = rdd.iterator(rdd.partitions(partition), context)
+
+    while (it.isEmpty && partition < lastPartition) {
+      partition += 1
+      it = rdd.iterator(rdd.partitions(partition), context)
+    }
+    if (partition < lastPartition)
+      partitionMaxT = Some(p.rangeBounds(partition))
+    if (it.nonEmpty) {
+      buffer = Some(it.next())
+    }
+  }
+
+  def advanceTo(k: K) {
+    val t = projectKey(k)
+    if (partitionMaxT.exists(tOrd.gt(t, _))) {
+      while (partition < lastPartition && partitionMaxT.exists(tOrd.gt(t, _))) {
+        partition += 1
+        if (partition < lastPartition)
+          partitionMaxT = Some(p.rangeBounds(partition))
+      }
+      it = rdd.iterator(rdd.partitions(partition), context)
+      if (it.hasNext)
+        buffer = Some(it.next())
+      else
+        buffer = None
+    }
+
+    if (buffer.exists { case (bufferK, _) => kOrd.lt(bufferK, k) }) {
+      it = it.dropWhile { case (itK, _) => kOrd.lt(itK, k) }
+
+      if (it.hasNext)
+        buffer = Some(it.next())
+      else
+        buffer = None
+    }
+  }
+
+  def findMatch(k: K): Option[V] = {
+    if (partition < 0)
+      initialize(k)
+
+    advanceTo(k)
+
+    buffer.flatMap { case (bufferK, bufferV) =>
+      if (kOrd.equiv(k, bufferK))
+        Some(bufferV)
+      else {
+        assert(kOrd.lt(k, bufferK))
+        None
+      }
     }
   }
 }
