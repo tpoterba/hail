@@ -64,6 +64,16 @@ object OrderedRDD {
     if (rdd.partitions.isEmpty)
       return empty(rdd.sparkContext, projectKey)
 
+    rdd match {
+      case ordd: OrderedRDD[T, K, V] => return ordd
+      case _ =>
+    }
+
+    rdd.partitioner match {
+      case Some(op: OrderedPartitioner[T, K]) => return new OrderedRDD[T, K, V](rdd, op)
+      case _ =>
+    }
+
     val keys = fastKeys.getOrElse(rdd.map(_._1))
 
     val keyInfoOption = anyFailAllFail[Array, PartitionKeyInfo[T]](
