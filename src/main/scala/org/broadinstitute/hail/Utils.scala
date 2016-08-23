@@ -13,15 +13,15 @@ import org.apache.hadoop.io.{BytesWritable, NullWritable}
 import org.apache.spark.Partitioner._
 import org.apache.spark.mllib.linalg.distributed.IndexedRow
 import org.apache.spark.mllib.linalg.{DenseVector => SDenseVector, SparseVector => SSparseVector, Vector => SVector}
-import org.apache.spark.rdd.{OrderedLeftJoinRDD, _}
+import org.apache.spark.rdd._
 import org.apache.spark.sql.{PartitionedDataFrameReader, Row, SQLContext}
-import org.apache.spark.{AccumulableParam, OrderedPartitioner, Partitioner, SparkContext}
+import org.apache.spark.{AccumulableParam, Partitioner, SparkContext}
 import org.broadinstitute.hail.Utils._
 import org.broadinstitute.hail.check.Gen
 import org.broadinstitute.hail.driver.HailConfiguration
 import org.broadinstitute.hail.io.compress.BGzipCodec
 import org.broadinstitute.hail.io.hadoop.{ByteArrayOutputFormat, BytesOnlyWritable}
-import org.broadinstitute.hail.utils.{RichRow, StringEscapeUtils}
+import org.broadinstitute.hail.utils.{AdvanceableOrderedPairIterator, RichRow, StringEscapeUtils}
 import org.broadinstitute.hail.variant.Variant
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -587,7 +587,7 @@ class RichPairTraversableOnce[K, V](val t: TraversableOnce[(K, V)]) extends AnyV
   }
 }
 
-class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
+class RichPairIterator[K, V](val it: Iterator[(K, V)]) {
 
   /**
     * Precondition: the iterator it is T-sorted. Moreover, projectKey must be monotonic. We lazily K-sort each block
@@ -595,21 +595,19 @@ class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
     */
   def localKeySort[T](projectKey: (K) => T)(implicit ord: Ordering[T], kOrd: Ordering[K]): Iterator[(K, V)] = {
 
-    type KV = (K, V)
-
-    implicit val kvOrd = new Ordering[KV] {
+    implicit val kvOrd = new Ordering[(K, V)] {
       // ascending
-      def compare(x: KV, y: KV): Int = -kOrd.compare(x._1, y._1)
+      def compare(x: (K, V), y: (K, V)): Int = -kOrd.compare(x._1, y._1)
     }
 
     val bit = it.buffered
 
-    new Iterator[KV] {
+    new Iterator[(K, V)] {
       val q = new mutable.PriorityQueue[(K, V)]
 
-      def hasNext: Boolean = bit.hasNext || q.nonEmpty
+      def hasNext = bit.hasNext || q.nonEmpty
 
-      def next(): KV = {
+      def next() = {
         if (q.isEmpty) {
           val kv = bit.next()
           val t = projectKey(kv._1)
@@ -625,29 +623,39 @@ class RichPairIterator[K, V](val it: Iterator[(K, V)]) extends AnyVal {
     }
   }
 
-  def sortedLeftJoinDistinct[V2](other: Iterator[(K, V2)])(implicit ord: Ordering[K]): Iterator[(K, (V, Option[V2]))] = {
+  def sortedLeftJoinDistinct[V2](right: Iterator[(K, V2)])(implicit kOrd: Ordering[K]): Iterator[(K, (V, Option[V2]))] = {
     import Ordering.Implicits._
 
-    val bother = other.buffered
+    val rightAdvanceable = new AdvanceableOrderedPairIterator[K, V2] {
+      val bright = right.buffered
 
-    /* wouldn't compile without this, no idea why */
-    type T = (K, (V, Option[V2]))
+      val kOrdering = kOrd
 
-    new Iterator[T] {
-      def hasNext: Boolean = it.hasNext
+      def hasNext = bright.hasNext
 
-      def next(): T = {
+      def next() = bright.next()
+
+      def advanceTo(k: K) {
+        while (bright.hasNext && bright.head._1 < k)
+          bright.next()
+      }
+    }
+
+    sortedLeftJoinDistinct(rightAdvanceable)
+  }
+
+  def sortedLeftJoinDistinct[V2](right: AdvanceableOrderedPairIterator[K, V2]): Iterator[(K, (V, Option[V2]))] = {
+    val bright = right.buffered
+
+    new Iterator[(K, (V, Option[V2]))] {
+      def hasNext = it.hasNext
+
+      def next() = {
         val (k, v) = it.next()
 
-        while (bother.hasNext && bother.head._1 < k)
-          bother.next()
-
-        if (bother.hasNext && bother.head._1 == k) {
-          val (k2, v2) = bother.next()
-
-          /* implement distinct on the right */
-          while (bother.hasNext && bother.head._1 == k)
-            bother.next()
+        bright.advanceTo(k)
+        if (bright.hasNext && bright.head._1 == k) {
+          val (k2, v2) = bright.next()
 
           (k, (v, Some(v2)))
         } else
@@ -1464,4 +1472,10 @@ object Utils extends Logging {
     }
   }
 
+  def uninitialized[T]: T = {
+    class A {
+      var x: T = _
+    }
+    (new A).x
+  }
 }
