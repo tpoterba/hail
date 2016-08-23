@@ -26,9 +26,9 @@ class OrderedRDDIterator[T, K, V](
 
   import Ordering.Implicits._
 
-  private var nPartitions = rdd.partitions.length
-  private var partitioner = rdd.orderedPartitioner
-  private var projectKey = partitioner.projectKey
+  private val nPartitions = rdd.partitions.length
+  private val partitioner = rdd.orderedPartitioner
+  private val projectKey = partitioner.projectKey
 
   def head = it.head
 
@@ -73,8 +73,6 @@ class OrderedLeftJoinRDD[T, K, V1, V2](left: OrderedRDD[T, K, V1], right: Ordere
   new OrderedDependency(left.orderedPartitioner, right.orderedPartitioner, right)): Seq[Dependency[_]]) {
 
   override val partitioner: Option[Partitioner] = left.partitioner
-
-  val rightPartitions = right.partitions // compute and store -- getPartitions called on a worker throw a NullPointerException
 
   def getPartitions: Array[Partition] = left.partitions
 

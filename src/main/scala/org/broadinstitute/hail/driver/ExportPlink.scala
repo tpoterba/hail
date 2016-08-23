@@ -41,8 +41,7 @@ object ExportPlink extends Command {
 
     val plinkRDD = vds.rdd
       .mapValuesWithKey { case (v, (va, gs)) => ExportBedBimFam.makeBedRow(gs) }
-
-    plinkRDD.persist(StorageLevel.MEMORY_AND_DISK)
+      .persist(StorageLevel.MEMORY_AND_DISK)
 
     plinkRDD.map { case (v, bed) => bed }
       .saveFromByteArrays(options.output + ".bed", header = Some(bedHeader))

@@ -11,11 +11,10 @@ case class OrderedPartitioner[T, K](
   projectKey: (K) => T,
   ascending: Boolean = true)(implicit tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K])
   extends Partitioner {
-
-  var ordering = implicitly[Ordering[T]]
+  import Ordering.Implicits._
 
   require(rangeBounds.isEmpty ||
-    rangeBounds.zip(rangeBounds.tail).forall { case (left, right) => ordering.lt(left, right) })
+    rangeBounds.zip(rangeBounds.tail).forall { case (left, right) => left < right })
 
   def write(out: ObjectOutputStream) {
     out.writeBoolean(ascending)
@@ -38,7 +37,7 @@ case class OrderedPartitioner[T, K](
     var partition = 0
     if (rangeBounds.length <= 128) {
       // If we have less than 128 partitions naive search
-      while (partition < rangeBounds.length && ordering.gt(key, rangeBounds(partition))) {
+      while (partition < rangeBounds.length && key > rangeBounds(partition)) {
         partition += 1
       }
     } else {
