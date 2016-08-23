@@ -163,7 +163,9 @@ class OrderedRDD[T, K, V](rdd: RDD[(K, V)],
 
   override val partitioner: Option[Partitioner] = Some(orderedPartitioner)
 
-  def getPartitions: Array[Partition] = rdd.partitions
+  private val cachedPartitions = rdd.partitions
+
+  def getPartitions: Array[Partition] = cachedPartitions
 
   override def compute(split: Partition, context: TaskContext): Iterator[(K, V)] = rdd.iterator(split, context)
 

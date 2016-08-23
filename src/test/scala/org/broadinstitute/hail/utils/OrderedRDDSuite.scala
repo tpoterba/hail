@@ -13,58 +13,15 @@ import org.testng.annotations.Test
 
 class OrderedRDDSuite extends SparkSuite {
 
-  val gen = for (uniqueVariants <- Gen.buildableOf[Set, Variant](Gen.choose(1, 100)
-    .map(i => Variant("1", i, "A", "T")))
-    .map(set => set.toIndexedSeq);
-    toZip <- Gen.buildableOfN[IndexedSeq, String](uniqueVariants.size, arbitrary[String]);
-    nPar <- Gen.choose(1, 10)) yield (nPar, uniqueVariants.zip(toZip))
-
-  @Test def testWriteRead() {
-    val tmpPartitioner = tmpDir.createTempFile("partitioner")
-    val tmpRdd = tmpDir.createTempFile("rdd", ".parquet")
-
-    val p = Prop.forAll(gen) { case (nPar, it) =>
-      val rdd = sc.parallelize(it, nPar).toOrderedRDD(_.locus)
-      val schema = StructType(Array(
-        StructField("variant", Variant.schema, nullable = false),
-        StructField("str", StringType, nullable = false)))
-      hadoopDelete(tmpRdd, hadoopConf, recursive = true)
-      val df = sqlContext.createDataFrame(rdd.map { case (v, s) => Row.fromSeq(Seq(v.toRow, s)) }, schema)
-        .write.parquet(tmpRdd)
-
-      writeObjectFile(tmpPartitioner, hadoopConf) { out =>
-        rdd.partitioner.get.asInstanceOf[OrderedPartitioner[Variant, String]].write(out)
-      }
-
-      val status = hadoopFileStatus(tmpPartitioner, hadoopConf)
-
-      val rddReadBack = sqlContext.readPartitioned.parquet(tmpRdd)
-        .rdd
-        .map(r => (Variant.fromRow(r.getAs[Row](0)), r.getAs[String](1)))
-
-      val readBackPartitioner = readObjectFile(tmpPartitioner, hadoopConf) { in =>
-        OrderedPartitioner.read[Locus, Variant](in, _.locus)
-      }
-
-      val orderedRddRB = new OrderedRDD[Locus, Variant, String](rddReadBack, readBackPartitioner)
-
-      orderedRddRB.zipPartitions(rdd) { case (it1, it2) =>
-        it1.zip(it2)
-      }
-        .collect()
-        .forall { case (v1, v2) => v1 == v2 }
-    }
-
-    p.check()
-  }
-
-  object Spec extends Properties("OrderedRDDConstruction") {
-    val v = for (pos <- Gen.choose(1, 100);
-      alt <- genDNAString.filter(_ != "A")) yield Variant("16", pos, "A", alt)
+  object Spec extends Properties("OrderedRDDFunctions") {
+    val v = for (pos <- Gen.choose(1, 1000);
+      alt <- Gen.oneOfGen(Gen.const("T"), Gen.const("C"), Gen.const("G"), Gen.const("TTT"), Gen.const("ATA")))
+      yield Variant("16", pos, "A", alt)
 
     val g = for (uniqueVariants <- Gen.buildableOf[Set, Variant](v).map(set => set.toIndexedSeq);
       toZip <- Gen.buildableOfN[IndexedSeq, String](uniqueVariants.size, arbitrary[String]);
       nPar <- Gen.choose(1, 10)) yield (nPar, uniqueVariants.zip(toZip))
+
     val random = for ((n, v) <- g;
       shuffled <- Gen.shuffle(v)) yield (n, shuffled)
 
@@ -98,6 +55,26 @@ class OrderedRDDSuite extends SparkSuite {
       }
     }
 
+
+    def checkJoin(nPar1: Int, is1: IndexedSeq[(Variant, String)],
+      nPar2: Int, is2: IndexedSeq[(Variant, String)]): Boolean = {
+      val m2 = is2.toMap
+
+      val rdd1 = sc.parallelize(is1, nPar1).cache()
+      val rdd2 = sc.parallelize(is2, nPar2).cache()
+
+      val join: IndexedSeq[(Variant, (String, Option[String]))] = rdd1.toOrderedRDD(_.locus)
+        .orderedLeftJoinDistinct(rdd2.toOrderedRDD(_.locus))
+        .collect()
+        .toIndexedSeq
+
+      val check1 = is1.toMap == join.map { case (k, (v1, _)) => (k, v1) }.toMap
+      val check2 = join.forall { case (k, (_, v2)) => v2 == m2.get(k) }
+      val check3 = rdd1.leftOuterJoinDistinct(rdd2).collect().toMap == join.toMap
+
+      check1 && check2 && check3
+    }
+
     property("randomlyOrdered") = Prop.forAll(random) { case (nPar, s) =>
       check(sc.parallelize(s, nPar).toOrderedRDD(_.locus))
     }
@@ -109,10 +86,74 @@ class OrderedRDDSuite extends SparkSuite {
     property("fullySorted") = Prop.forAll(sorted) { case (nPar, s) =>
       check(sc.parallelize(s, nPar).toOrderedRDD(_.locus))
     }
+
+    property("join1") = Prop.forAll(g, g) { case ((nPar1, is1), (nPar2, is2)) =>
+      checkJoin(nPar1, is1, nPar2, is2)
+    }
+
+    // check different levels of partition skipping and sparsity
+    val v2 = for (pos <- Gen.oneOfGen(Gen.choose(1, 100), Gen.choose(400, 500), Gen.choose(900, 1000));
+      alt <- Gen.oneOfGen(Gen.const("T"), Gen.const("C"), Gen.const("G"), Gen.const("TTT"), Gen.const("ATA")))
+      yield Variant("16", pos, "A", alt)
+
+    val g2 = for (uniqueVariants <- Gen.buildableOf[Set, Variant](v2).map(set => set.toIndexedSeq);
+      toZip <- Gen.buildableOfN[IndexedSeq, String](uniqueVariants.size, arbitrary[String]);
+      nPar <- Gen.choose(1, 25)) yield (nPar, uniqueVariants.zip(toZip))
+
+    property("join2") = Prop.forAll(g, g2) { case ((nPar1, is1), (nPar2, is2)) =>
+      checkJoin(nPar1, is1, nPar2, is2)
+    }
+
+    property("join3") = Prop.forAll(g, g2) { case ((_, is1), (nPar2, is2)) =>
+      checkJoin(1, is1, nPar2, is2)
+    }
+
+    property("join4") = Prop.forAll(g2, g) { case ((nPar1, is1), (nPar2, is2)) =>
+      checkJoin(nPar1, is1, nPar2, is2)
+    }
+
+    property("join4") = Prop.forAll(g2, g) { case ((_, is1), (nPar2, is2)) =>
+      checkJoin(1, is1, nPar2, is2)
+    }
+
+
+    val tmpPartitioner = tmpDir.createTempFile("partitioner")
+    val tmpRdd = tmpDir.createTempFile("rdd", ".parquet")
+
+    property("writeRead") = Prop.forAll(g) { case (nPar, is) =>
+      val rdd = sc.parallelize(is, nPar).toOrderedRDD(_.locus)
+      val schema = StructType(Array(
+        StructField("variant", Variant.schema, nullable = false),
+        StructField("str", StringType, nullable = false)))
+      hadoopDelete(tmpRdd, hadoopConf, recursive = true)
+      val df = sqlContext.createDataFrame(rdd.map { case (v, s) => Row.fromSeq(Seq(v.toRow, s)) }, schema)
+        .write.parquet(tmpRdd)
+
+      writeObjectFile(tmpPartitioner, hadoopConf) { out =>
+        rdd.partitioner.get.asInstanceOf[OrderedPartitioner[Variant, String]].write(out)
+      }
+
+      val status = hadoopFileStatus(tmpPartitioner, hadoopConf)
+
+      val rddReadBack = sqlContext.readPartitioned.parquet(tmpRdd)
+        .rdd
+        .map(r => (Variant.fromRow(r.getAs[Row](0)), r.getAs[String](1)))
+
+      val readBackPartitioner = readObjectFile(tmpPartitioner, hadoopConf) { in =>
+        OrderedPartitioner.read[Locus, Variant](in, _.locus)
+      }
+
+      val orderedRddRB = new OrderedRDD[Locus, Variant, String](rddReadBack, readBackPartitioner)
+
+      orderedRddRB.zipPartitions(rdd) { case (it1, it2) =>
+        it1.zip(it2)
+      }
+        .collect()
+        .forall { case (v1, v2) => v1 == v2 }
+    }
   }
 
-
-  @Test def testConstruction() {
+  @Test def test() {
     Spec.check()
   }
 }
