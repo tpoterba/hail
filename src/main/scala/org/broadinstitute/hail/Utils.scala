@@ -480,7 +480,7 @@ class RichPairRDD[K, V](val rdd: RDD[(K, V)]) extends AnyVal {
   }
 
   def toOrderedRDD[T](projectKey: (K) => T, reducedRepresentation: Option[RDD[K]] = None)
-    (implicit tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K]): OrderedRDD[T, K, V] =
+    (implicit tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T], kct: ClassTag[K], vct: ClassTag[V]): OrderedRDD[T, K, V] =
     OrderedRDD[T, K, V](rdd, projectKey, reducedRepresentation)
 
 }

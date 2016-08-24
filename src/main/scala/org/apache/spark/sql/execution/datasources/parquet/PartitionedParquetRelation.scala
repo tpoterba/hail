@@ -7,8 +7,8 @@ import java.util.{List => JList}
 import org.apache.hadoop.fs._
 import org.apache.hadoop.io.Writable
 import org.apache.hadoop.mapreduce._
-import org.apache.parquet.hadoop._
-import org.apache.parquet.{Log => ApacheParquetLog}
+import parquet.hadoop._
+import parquet.{Log => ApacheParquetLog}
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.rdd.{RDD, SqlNewHadoopPartition, SqlNewHadoopRDD}
 import org.apache.spark.sql._
@@ -18,7 +18,6 @@ import org.apache.spark.sql.sources._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.util.{SerializableConfiguration, Utils}
 import org.apache.spark.{Partition => SparkPartition}
-import org.broadinstitute.hail.sparkextras.PartitionedParquetInputFormat
 
 import scala.collection.JavaConversions._
 
@@ -46,7 +45,6 @@ class PartitionedParquetRelation(paths: Array[String],
     val parquetFilterPushDown = sqlContext.conf.parquetFilterPushDown
     val assumeBinaryIsString = sqlContext.conf.isParquetBinaryAsString
     val assumeInt96IsTimestamp = sqlContext.conf.isParquetINT96AsTimestamp
-    val followParquetFormatSpec = sqlContext.conf.followParquetFormatSpec
 
     // Parquet row group size. We will use this value as the value for
     // mapreduce.input.fileinputformat.split.minsize and mapred.min.split.size if the value
@@ -63,15 +61,14 @@ class PartitionedParquetRelation(paths: Array[String],
       useMetadataCache,
       parquetFilterPushDown,
       assumeBinaryIsString,
-      assumeInt96IsTimestamp,
-      followParquetFormatSpec) _
+      assumeInt96IsTimestamp) _
 
     val setInputPaths =
       ParquetRelation.initializeDriverSideJobFunc(inputFiles, parquetBlockSize) _
 
     Utils.withDummyCallSite(sqlContext.sparkContext) {
       new SqlNewHadoopRDD(
-        sc = sqlContext.sparkContext,
+        sqlContext = sqlContext,
         broadcastedConf = broadcastedConf,
         initDriverSideJobFuncOpt = Some(setInputPaths),
         initLocalJobFuncOpt = Some(initLocalJobFuncOpt),
