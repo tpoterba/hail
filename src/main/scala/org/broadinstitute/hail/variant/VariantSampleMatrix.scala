@@ -146,47 +146,30 @@ object VariantSampleMatrix {
 
     val dfOption = sqlContext.sortedParquetRead(dirname + "/rdd.parquet")
 
-    def readRDD(skipGenotypes: Boolean): RDD[(Variant, (Annotation, Iterable[Genotype]))] = {
-      dfOption.map { df =>
-        if (skipGenotypes)
-          df.select("variant", "annotations")
-            .map(row => (row.getVariant(0),
-              (if (vaRequiresConversion) SparkAnnotationImpex.importAnnotation(row.get(1), vaSignature) else row.get(1),
-                Iterable.empty[Genotype])))
-        else
-          df.map { row =>
-            val v = row.getVariant(0)
-            (v,
-              (if (vaRequiresConversion) SparkAnnotationImpex.importAnnotation(row.get(1), vaSignature) else row.get(1),
-                row.getGenotypeStream(v, 2, isDosage): Iterable[Genotype]))
-          }
-      }.getOrElse(sc.emptyRDD[(Variant, (Annotation, Iterable[Genotype]))])
-    }
+    val rdd = dfOption.map { df =>
+      val fastKeys = df.select("variant").map(r => r.getVariant(0))
 
-    val orderedRDD = if (hadoopExists(hConf, dirname + "/partitioner")) {
-      val partitioner = readObjectFile(dirname + "/partitioner", sqlContext.sparkContext.hadoopConfiguration) { in =>
-        OrderedPartitioner.read[Locus, Variant](in, _.locus)
-      }
-
-      OrderedRDD[Locus, Variant, (Annotation, Iterable[Genotype])](readRDD(skipGenotypes), partitioner)
-    } else {
-      warn(
-        """No partition information found: VDS is old or corrupted and will experience poor performance.
-          |  Please `read' and `write' this dataset to update it.""".stripMargin)
       if (skipGenotypes)
-        readRDD(skipGenotypes = true).toOrderedRDD(_.locus)
+        df.select("variant", "annotations")
+          .map(row => (row.getVariant(0),
+            (if (vaRequiresConversion) SparkAnnotationImpex.importAnnotation(row.get(1), vaSignature) else row.get(1),
+              Iterable.empty[Genotype])))
+          .toOrderedRDD(_.locus, Some(fastKeys))
       else
-        readRDD(skipGenotypes = false).toOrderedRDD(
-          _.locus,
-          reducedRepresentation = Some(readRDD(skipGenotypes = true).map(_._1)))
+        df.map { row =>
+          val v = row.getVariant(0)
+          (v,
+            (if (vaRequiresConversion) SparkAnnotationImpex.importAnnotation(row.get(1), vaSignature) else row.get(1),
+              row.getGenotypeStream(v, 2, isDosage): Iterable[Genotype]))
+        }.toOrderedRDD(_.locus, Some(fastKeys))
 
-    }
+    }.getOrElse(OrderedRDD.empty[Locus, Variant, (Annotation, Iterable[Genotype])](sc, _.locus))
 
     new VariantSampleMatrix[Genotype](
       if (skipGenotypes) metadata.copy(sampleIds = IndexedSeq.empty[String],
         sampleAnnotations = IndexedSeq.empty[Annotation])
       else metadata,
-      orderedRDD)
+      rdd)
   }
 
   def kuduRowType(vaSignature: Type): Type = TStruct("variant" -> Variant.t,
@@ -349,7 +332,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
 
   def coalesce(k: Int): VariantSampleMatrix[T] =
     copy[T](rdd = rdd.coalesce(k)(null).toOrderedRDD(_.locus))
-  
+
   def nPartitions: Int = rdd.partitions.length
 
   def variants: RDD[Variant] = rdd.keys
@@ -899,10 +882,6 @@ class RichVDS(vds: VariantDataset) {
     val vaRequiresConversion = SparkAnnotationImpex.requiresConversion(vaSignature)
 
     val ordered = vds.rdd.toOrderedRDD(_.locus)
-
-    writeObjectFile(dirname + "/partitioner", vds.sparkContext.hadoopConfiguration) { out =>
-      ordered.orderedPartitioner.write(out)
-    }
 
     val isDosage = vds.isDosage
     val rowRDD = ordered.map {

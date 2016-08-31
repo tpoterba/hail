@@ -114,43 +114,6 @@ class OrderedRDDSuite extends SparkSuite {
     property("join4") = Prop.forAll(g2, g) { case ((_, is1), (nPar2, is2)) =>
       checkJoin(1, is1, nPar2, is2)
     }
-
-
-    val tmpPartitioner = tmpDir.createTempFile("partitioner")
-    val tmpRdd = tmpDir.createTempFile("rdd", ".parquet")
-
-    property("writeRead") = Prop.forAll(g) { case (nPar, is) =>
-      val rdd = sc.parallelize(is, nPar).toOrderedRDD(_.locus)
-      val schema = StructType(Array(
-        StructField("variant", Variant.schema, nullable = false),
-        StructField("str", StringType, nullable = false)))
-      hadoopDelete(tmpRdd, hadoopConf, recursive = true)
-      val df = sqlContext.createDataFrame(rdd.map { case (v, s) => Row.fromSeq(Seq(v.toRow, s)) }, schema)
-        .write.parquet(tmpRdd)
-
-      writeObjectFile(tmpPartitioner, hadoopConf) { out =>
-        rdd.partitioner.get.asInstanceOf[OrderedPartitioner[Variant, String]].write(out)
-      }
-
-      val status = hadoopFileStatus(tmpPartitioner, hadoopConf)
-
-      val rddReadBack = sqlContext.sortedParquetRead(tmpRdd)
-        .get
-        .rdd
-        .map(r => (Variant.fromRow(r.getAs[Row](0)), r.getAs[String](1)))
-
-      val readBackPartitioner = readObjectFile(tmpPartitioner, hadoopConf) { in =>
-        OrderedPartitioner.read[Locus, Variant](in, _.locus)
-      }
-
-      val orderedRddRB = OrderedRDD[Locus, Variant, String](rddReadBack, readBackPartitioner)
-
-      orderedRddRB.zipPartitions(rdd) { case (it1, it2) =>
-        it1.zip(it2)
-      }
-        .collect()
-        .forall { case (v1, v2) => v1 == v2 }
-    }
   }
 
   @Test def test() {

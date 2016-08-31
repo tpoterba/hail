@@ -24,11 +24,6 @@ case class OrderedPartitioner[T, K](
   require(rangeBounds.isEmpty ||
     rangeBounds.zip(rangeBounds.tail).forall { case (left, right) => left < right })
 
-  def write(out: ObjectOutputStream) {
-    out.writeBoolean(ascending)
-    out.writeObject(rangeBounds)
-  }
-
   def numPartitions: Int = rangeBounds.length + 1
 
   var binarySearch: ((Array[T], T) => Int) = OrderedPartitioner.makeBinarySearch[T]
@@ -91,13 +86,6 @@ case class OrderedPartitioner[T, K](
 object OrderedPartitioner {
   def empty[T, K](projectKey: (K) => T)(implicit tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T],
     kct: ClassTag[K]): OrderedPartitioner[T, K] = new OrderedPartitioner(Array.empty[T], projectKey)
-
-  def read[T, K](in: ObjectInputStream, projectKey: (K) => T)(implicit tOrd: Ordering[T], kOrd: Ordering[K], tct: ClassTag[T],
-    kct: ClassTag[K]): OrderedPartitioner[T, K] = {
-    val ascending = in.readBoolean()
-    val rangeBounds = in.readObject().asInstanceOf[Array[T]]
-    OrderedPartitioner(rangeBounds, projectKey, ascending)
-  }
 
   /**
     * Copied from:
