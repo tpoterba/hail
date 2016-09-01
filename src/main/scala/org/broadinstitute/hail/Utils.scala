@@ -21,7 +21,7 @@ import org.broadinstitute.hail.check.Gen
 import org.broadinstitute.hail.driver.HailConfiguration
 import org.broadinstitute.hail.io.compress.BGzipCodec
 import org.broadinstitute.hail.io.hadoop.{ByteArrayOutputFormat, BytesOnlyWritable}
-import org.broadinstitute.hail.sparkextras.{OrderedKey, OrderedPartitioner, OrderedRDD}
+import org.broadinstitute.hail.sparkextras.{OrderedKey, OrderedPartitioner, OrderedRDD, ReorderedPartitionsRDD}
 import org.broadinstitute.hail.utils.{AdvanceableOrderedPairIterator, RichRow, StringEscapeUtils}
 import org.broadinstitute.hail.variant.Variant
 import org.slf4j.{Logger, LoggerFactory}
@@ -351,6 +351,9 @@ class RichRDD[T](val r: RDD[T]) extends AnyVal {
 
   def exists(p: T => Boolean)(implicit tct: ClassTag[T]): Boolean = r.map(p).fold(false)(_ || _)
 
+  def reorderPartitions(oldIndices: Array[Int])(implicit tct: ClassTag[T]): RDD[T] =
+    new ReorderedPartitionsRDD[T](r, oldIndices)
+
   def writeTable(filename: String, header: Option[String] = None, deleteTmpFiles: Boolean = true) {
     val hConf = r.sparkContext.hadoopConfiguration
     val tmpFileName = hadoopGetTemporaryFile(HailConfiguration.tmpDir, hConf)
@@ -501,9 +504,9 @@ class RichPairRDD[K, V](val rdd: RDD[(K, V)]) extends AnyVal {
     OrderedRDD(rdd, ranges)
   }
 
-  def toOrderedRDD[PK](reducedRepresentation: Option[RDD[K]])
+  def toOrderedRDD[PK](reducedRepresentation: RDD[K])
     (implicit kOk: OrderedKey[PK, K], vct: ClassTag[V]): OrderedRDD[PK, K, V] =
-    OrderedRDD[PK, K, V](rdd, reducedRepresentation)
+    OrderedRDD[PK, K, V](rdd, Some(reducedRepresentation))
 
   def toOrderedRDD[PK](implicit kOk: OrderedKey[PK, K], vct: ClassTag[V]): OrderedRDD[PK, K, V] =
     OrderedRDD[PK, K, V](rdd, None)
