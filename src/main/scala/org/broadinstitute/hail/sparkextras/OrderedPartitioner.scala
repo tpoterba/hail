@@ -13,22 +13,23 @@ import scala.reflect.{ClassTag, classTag}
 import scala.util.Random
 import scala.util.hashing.{MurmurHash3, byteswap32}
 
-case class OrderedPartitioner[PK, K](rangeBounds: Array[PK], ascending: Boolean = true)(implicit val kOk: OrderedKey[PK, K])
+case class OrderedPartitioner[PK, K](rangeBounds: Array[PK], ascending: Boolean = true, empty: Boolean = false)
+  (implicit val kOk: OrderedKey[PK, K])
   extends Partitioner {
 
   import kOk.pkct
   import kOk.pkOrd
   import Ordering.Implicits._
 
-  require(rangeBounds.isEmpty ||
-    rangeBounds.zip(rangeBounds.tail).forall { case (left, right) => left < right })
+  require(!empty || rangeBounds.isEmpty)
+  require(rangeBounds.isEmpty || rangeBounds.zip(rangeBounds.tail).forall { case (left, right) => left < right })
 
   def write(out: ObjectOutputStream) {
     out.writeBoolean(ascending)
     out.writeObject(rangeBounds)
   }
 
-  def numPartitions: Int = rangeBounds.length + 1
+  def numPartitions: Int = if (empty) 0 else rangeBounds.length + 1
 
   var binarySearch: (Array[PK], PK) => Int = OrderedPartitioner.makeBinarySearch[PK]
 
@@ -89,7 +90,7 @@ case class OrderedPartitioner[PK, K](rangeBounds: Array[PK], ascending: Boolean 
 
 object OrderedPartitioner {
   def empty[PK, K](implicit kOk: OrderedKey[PK, K]): OrderedPartitioner[PK, K] =
-    new OrderedPartitioner[PK, K](Array.empty(kOk.pkct))
+    new OrderedPartitioner[PK, K](Array.empty(kOk.pkct), empty = true)
 
   def read[PK, K](in: ObjectInputStream)(implicit kOk: OrderedKey[PK, K]): OrderedPartitioner[PK, K] = {
     val ascending = in.readBoolean()

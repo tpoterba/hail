@@ -10,10 +10,13 @@ case class ReorderedPartitionsRDDPartition(index: Int, oldPartition: Partition) 
 class ReorderedPartitionsRDD[T](@transient var prev: RDD[T], oldIndices: Array[Int])(implicit tct: ClassTag[T])
   extends RDD[T](prev.sparkContext, Nil) {
 
-  override def getPartitions: Array[Partition] = Array.tabulate(oldIndices.length) { i =>
-    val oldIndex = oldIndices(i)
-    val oldPartition = prev.partitions(oldIndex)
-    ReorderedPartitionsRDDPartition(i, oldPartition)
+  override def getPartitions: Array[Partition] = {
+    val parentPartitions = dependencies.head.rdd.asInstanceOf[RDD[T]].partitions
+    Array.tabulate(oldIndices.length) { i =>
+      val oldIndex = oldIndices(i)
+      val oldPartition = parentPartitions(oldIndex)
+      ReorderedPartitionsRDDPartition(i, oldPartition)
+    }
   }
 
   override def compute(split: Partition, context: TaskContext): Iterator[T] = {

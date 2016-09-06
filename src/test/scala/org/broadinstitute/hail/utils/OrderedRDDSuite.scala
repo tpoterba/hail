@@ -104,7 +104,7 @@ class OrderedRDDSuite extends SparkSuite {
 
     val g2 = for (uniqueVariants <- Gen.buildableOf[Set, Variant](v2).map(set => set.toIndexedSeq);
       toZip <- Gen.buildableOfN[IndexedSeq, String](uniqueVariants.size, arbitrary[String]);
-      nPar <- Gen.choose(1, 25)) yield (nPar, uniqueVariants.zip(toZip))
+      nPar <- Gen.choose(1, 10)) yield (nPar, uniqueVariants.zip(toZip))
 
     property("join2") = Prop.forAll(g, g2) { case ((nPar1, is1), (nPar2, is2)) =>
       checkJoin(nPar1, is1, nPar2, is2)

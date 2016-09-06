@@ -4,7 +4,6 @@ import java.util
 
 import org.apache.spark.rdd.{PartitionPruningRDD, RDD, ShuffledRDD}
 import org.apache.spark.storage.StorageLevel
-import org.broadinstitute.hail.RichPairIterator
 import org.apache.spark.{SparkContext, _}
 import org.broadinstitute.hail.Utils._
 
@@ -16,19 +15,20 @@ import scala.util.hashing._
 
 object OrderedRDD {
 
-  final val ORDERED_PARTITIONER = 0
-  final val AS_IS = 1
-  final val LOCAL_SORT = 2
-  final val ARRAY_SORT = 3
-  final val SHUFFLE = 4
+  type CoercionMethod = Int
+
+  final val ORDERED_PARTITIONER: CoercionMethod = 0
+  final val AS_IS: CoercionMethod = 1
+  final val LOCAL_SORT: CoercionMethod = 2
+  final val ARRAY_SORT: CoercionMethod = 3
+  final val SHUFFLE: CoercionMethod = 4
 
   def empty[PK, K, V](sc: SparkContext)(implicit kOk: OrderedKey[PK, K], vct: ClassTag[V]): OrderedRDD[PK, K, V] =
     new OrderedRDD[PK, K, V](sc.emptyRDD[(K, V)], OrderedPartitioner.empty)
 
   def apply[PK, K, V](rdd: RDD[(K, V)], ranges: Array[PK])
     (implicit kOk: OrderedKey[PK, K], vct: ClassTag[V]): OrderedRDD[PK, K, V] = {
-    import kOk.kct
-    import kOk.pkct
+    import kOk._
     val partitioner = OrderedPartitioner(ranges)
     OrderedRDD[PK, K, V](new ShuffledRDD[K, V, V](rdd, partitioner).setKeyOrdering(kOk.kOrd), partitioner)
   }
@@ -53,11 +53,9 @@ object OrderedRDD {
   }
 
   def coerce[PK, K, V](rdd: RDD[(K, V)], fastKeys: Option[RDD[K]] = None)
-    (implicit kOk: OrderedKey[PK, K], vct: ClassTag[V]): (Int, OrderedRDD[PK, K, V]) = {
-    import kOk.kct
-    import kOk.pkct
-    import kOk.kOrd
-    import kOk.pkOrd
+    (implicit kOk: OrderedKey[PK, K], vct: ClassTag[V]): (CoercionMethod, OrderedRDD[PK, K, V]) = {
+    import kOk._
+
     import Ordering.Implicits._
 
     if (rdd.partitions.isEmpty)
@@ -77,7 +75,7 @@ object OrderedRDD {
 
     val keyInfo = keys.mapPartitionsWithIndex { case (i, it) =>
       if (it.hasNext)
-        Iterator(PartitionKeyInfo.apply(i, it))
+        Iterator(PartitionKeyInfo(i, it))
       else
         Iterator()
     }.collect()
@@ -128,10 +126,9 @@ object OrderedRDD {
   def apply[PK, K, V](rdd: RDD[(K, V)],
     orderedPartitioner: OrderedPartitioner[PK, K])
     (implicit kOk: OrderedKey[PK, K], vct: ClassTag[V]): OrderedRDD[PK, K, V] = {
+    import kOk._
+
     import Ordering.Implicits._
-    import kOk.pkOrd
-    import kOk.kOrd
-    import kOk.pkct
 
     rdd.partitioner match {
       /* if we verified rdd is K-sorted, it won't necessarily be partitioned */
@@ -248,19 +245,16 @@ object OrderedRDD {
 
 class OrderedRDD[PK, K, V] private(rdd: RDD[(K, V)], val orderedPartitioner: OrderedPartitioner[PK, K])
   extends RDD[(K, V)](rdd) {
-
-  import orderedPartitioner.kOk.pkct
-  import orderedPartitioner.kOk.kct
   implicit val kOk: OrderedKey[PK, K] = orderedPartitioner.kOk
+  import kOk._
 
   log.info(s"partitions: ${ rdd.partitions.length }, ${ orderedPartitioner.rangeBounds.length }")
 
-  assert((orderedPartitioner.rangeBounds.isEmpty && rdd.partitions.isEmpty)
-    || orderedPartitioner.rangeBounds.length == rdd.partitions.length - 1)
+  assert(orderedPartitioner.numPartitions == rdd.partitions.length)
 
   override val partitioner: Option[Partitioner] = Some(orderedPartitioner)
 
-  val getPartitions: Array[Partition] = rdd.partitions
+  override def getPartitions: Array[Partition] = rdd.partitions
 
   override def compute(split: Partition, context: TaskContext): Iterator[(K, V)] = rdd.iterator(split, context)
 
@@ -338,8 +332,7 @@ class OrderedRDD[PK, K, V] private(rdd: RDD[(K, V)], val orderedPartitioner: Ord
     assert(newPartEnd.last == n - 1)
     assert(newPartEnd.zip(newPartEnd.tail).forall { case (i, inext) => i <= inext })
 
-    val newRangeBounds = newPartEnd.init.map(orderedPartitioner.rangeBounds)
-
+    val newRangeBounds = Array.tabulate(newPartEnd.length - 1) { i => orderedPartitioner.rangeBounds(newPartEnd(i)) }
     new OrderedRDD[PK, K, V](new BlockedRDD(persisted, newPartEnd), OrderedPartitioner(newRangeBounds))
   }
 }

@@ -164,8 +164,9 @@ object VariantSampleMatrix {
           }
       }.getOrElse(sc.emptyRDD[(Variant, (Annotation, Iterable[Genotype]))])
     }
-    
-    val partitioner = {
+
+    val partitioner = dfOption match {
+      case Some(_) =>
         try {
           Some(readObjectFile(dirname + "/partitioner", sqlContext.sparkContext.hadoopConfiguration) { in =>
             OrderedPartitioner.read[Locus, Variant](in)
@@ -174,7 +175,8 @@ object VariantSampleMatrix {
           case _: InvalidClassException => None
           case _: FileNotFoundException => None
         }
-      }
+      case None => Some(OrderedPartitioner.empty[Locus, Variant])
+    }
 
     val orderedRDD = partitioner match {
       case Some(p) =>

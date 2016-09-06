@@ -170,10 +170,19 @@ class VSMSuite extends SparkSuite {
   }
 
   @Test def testReadWrite() {
-    val p = forAll(VariantSampleMatrix.gen[Genotype](sc, VSMSubgen.random)) { (vsm: VariantSampleMatrix[Genotype]) =>
+    val x = OrderedRDD.empty[Locus, Variant, String](sc).fullOuterJoin(OrderedRDD.empty[Locus, Variant, String](sc)).forall(_ => true)
+//    assert(false)
+
+    val p = forAll(VariantSampleMatrix.gen[Genotype](sc, VSMSubgen.random).filter(_.nVariants == 0)) { (vsm: VariantSampleMatrix[Genotype]) =>
+      println("rdd partitions = " + vsm.rdd.partitions.mkString(","))
+      println(vsm.variantsAndAnnotations.collect().toIndexedSeq)
       val f = tmpDir.createTempFile(extension = ".vds")
       vsm.write(sqlContext, f)
       val vsm2 = VariantSampleMatrix.read(sqlContext, f)
+      println("rdd partitions = " + vsm2.rdd.partitions.mkString(","))
+      println(vsm2.variantsAndAnnotations.collect().toIndexedSeq)
+
+      println(vsm.rdd.fullOuterJoin(vsm2.rdd).forall { case (k, (v1, v2)) => v1 == v2 })
       vsm2.same(vsm)
     }
 
