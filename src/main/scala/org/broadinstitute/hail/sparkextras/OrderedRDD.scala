@@ -88,31 +88,33 @@ object OrderedRDD {
 
     val sortedKeyInfo = keyInfo.sortBy(_.min)
     val partitionsSorted = sortedKeyInfo.zip(sortedKeyInfo.tail).forall { case (p, pnext) =>
-      val r = p.max < pnext.min
+      val r = p.max <= pnext.min
       if (!r)
         log.info(s"not sorted: p = $p, pnext = $pnext")
       r
     }
 
     if (partitionsSorted) {
-      val partitioner = OrderedPartitioner[PK, K](sortedKeyInfo.init.map(_.max))
+      val (adjustments, rangeBounds) = rangesAndAdjustments[PK, K, V](sortedKeyInfo)
+      val partitioner = OrderedPartitioner[PK, K](rangeBounds)
       val sortedness = sortedKeyInfo.map(_.sortedness).min
       val reorderedPartitionsRDD = rdd.reorderPartitions(sortedKeyInfo.map(_.partIndex))
+      val adjustedRDD = new AdjustedPartitionsRDD(reorderedPartitionsRDD, adjustments)
       (sortedness: @unchecked) match {
         case PartitionKeyInfo.KSORTED =>
           assert(sortedness == PartitionKeyInfo.KSORTED)
           info("Coerced sorted dataset")
-          (AS_IS, OrderedRDD(reorderedPartitionsRDD, partitioner))
+          (AS_IS, OrderedRDD(adjustedRDD, partitioner))
 
         case PartitionKeyInfo.TSORTED =>
           info("Coerced almost-sorted dataset")
-          (LOCAL_SORT, OrderedRDD(reorderedPartitionsRDD.mapPartitions { it =>
+          (LOCAL_SORT, OrderedRDD(adjustedRDD.mapPartitions { it =>
             localKeySort(it)
           }, partitioner))
 
         case PartitionKeyInfo.UNSORTED =>
           info("Coerced unsorted dataset")
-          (ARRAY_SORT, OrderedRDD(reorderedPartitionsRDD.mapPartitions { it =>
+          (ARRAY_SORT, OrderedRDD(adjustedRDD.mapPartitions { it =>
             it.toArray.sortBy(_._1).iterator
           }, partitioner))
       }
@@ -123,9 +125,58 @@ object OrderedRDD {
     }
   }
 
+  def rangesAndAdjustments[PK, K, V](sortedKeyInfo: Array[PartitionKeyInfo[PK]])
+    (implicit kOk: OrderedKey[PK, K], vct: ClassTag[V]): (IndexedSeq[Adjustment[(K, V), Int]], Array[PK]) = {
+    import kOk._
+
+    val rangeBounds = mutable.ArrayBuilder.make[PK]
+    val ab = new mutable.ArrayBuffer[Adjustment[(K, V), Int]]
+    val ab2 = mutable.ArrayBuilder.make[Int]
+
+    val it = sortedKeyInfo.indices.iterator.buffered
+
+    while (it.nonEmpty) {
+      val i = it.next()
+      val thisP = sortedKeyInfo(i)
+      val min = thisP.min
+      val max = thisP.max
+
+      ab2.clear()
+      while (it.hasNext && {
+        val info = sortedKeyInfo(it.head)
+        info.min == info.max && info.min == max
+      }) {
+        ab2 += it.next()
+      }
+
+      if (it.hasNext && sortedKeyInfo(it.head).min == max)
+        ab2 += it.head
+
+      val toTake = ab2.result().toSeq
+
+      val dropF = if (ab.nonEmpty && thisP.min == sortedKeyInfo(ab.last.originalIndex).max)
+        Some((kv: (K, V)) => kOk.project(kv._1) == min)
+      else
+        None
+
+      val take = if (toTake.nonEmpty)
+        Some(toTake, (kv: (K, V)) => kOk.project(kv._1) == max)
+      else
+        None
+
+      ab += Adjustment[(K, V), Int](i, dropF, take)
+
+      if (it.hasNext)
+        rangeBounds += max
+    }
+
+    (ab, rangeBounds.result())
+  }
+
   def apply[PK, K, V](rdd: RDD[(K, V)],
     orderedPartitioner: OrderedPartitioner[PK, K])
     (implicit kOk: OrderedKey[PK, K], vct: ClassTag[V]): OrderedRDD[PK, K, V] = {
+
     import kOk._
 
     import Ordering.Implicits._
@@ -138,31 +189,36 @@ object OrderedRDD {
 
     val rangeBoundsBc = rdd.sparkContext.broadcast(orderedPartitioner.rangeBounds)
     new OrderedRDD(
-      rdd.mapPartitionsWithIndex { case (i, it) =>
-        new Iterator[(K, V)] {
-          var prevK: K = _
-          var first = true
+      rdd.mapPartitionsWithIndex {
+        case (i, it) =>
+          new Iterator[(K, V)] {
+            var prevK: K = _
+            var first = true
 
-          def hasNext = it.hasNext
+            def hasNext = it.hasNext
 
-          def next(): (K, V) = {
-            val r = it.next()
+            def next(): (K, V) = {
+              val r = it.next()
 
-            if (i < rangeBoundsBc.value.length)
-              assert(kOk.project(r._1) <= rangeBoundsBc.value(i))
-            if (i > 0)
-              assert(rangeBoundsBc.value(i - 1) < kOk.project(r._1),
-                s"key ${ r._1 } >= last max ${ rangeBoundsBc.value(i - 1) } in partition $i")
+              if (i < rangeBoundsBc.value.length)
+                assert(kOk.project(r._1) <= rangeBoundsBc.value(i))
+              if (i > 0)
+                assert(rangeBoundsBc.value(i - 1) < kOk.project(r._1),
+                  s"key ${
+                    r._1
+                  } <= last max ${
+                    rangeBoundsBc.value(i - 1)
+                  } in partition $i")
 
-            if (first)
-              first = false
-            else
-              assert(prevK <= r._1)
+              if (first)
+                first = false
+              else
+                assert(prevK <= r._1)
 
-            prevK = r._1
-            r
+              prevK = r._1
+              r
+            }
           }
-        }
       }, orderedPartitioner)
   }
 
@@ -246,6 +302,7 @@ object OrderedRDD {
 class OrderedRDD[PK, K, V] private(rdd: RDD[(K, V)], val orderedPartitioner: OrderedPartitioner[PK, K])
   extends RDD[(K, V)](rdd) {
   implicit val kOk: OrderedKey[PK, K] = orderedPartitioner.kOk
+
   import kOk._
 
   log.info(s"partitions: ${ rdd.partitions.length }, ${ orderedPartitioner.rangeBounds.length }")
