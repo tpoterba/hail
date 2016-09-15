@@ -13,9 +13,10 @@ import org.testng.annotations.Test
 class OrderedRDDSuite extends SparkSuite {
 
   object Spec extends Properties("OrderedRDDFunctions") {
-    val v = for (pos <- Gen.choose(1, 1000);
+    val v = for (contig <- Gen.oneOf("1", "2", "3");
+      pos <- Gen.choose(1, 300);
       alt <- Gen.oneOfGen(Gen.const("T"), Gen.const("C"), Gen.const("G"), Gen.const("TTT"), Gen.const("ATA")))
-      yield Variant("16", pos, "A", alt)
+      yield Variant(contig, pos, "A", alt)
 
     val g = for (uniqueVariants <- Gen.buildableOf[Set, Variant](v).map(set => set.toIndexedSeq);
       toZip <- Gen.buildableOfN[IndexedSeq, String](uniqueVariants.size, arbitrary[String]);
@@ -29,6 +30,20 @@ class OrderedRDDSuite extends SparkSuite {
 
     val sorted = for ((n, v) <- g;
       sorted <- Gen.const(v.sortBy(_._1))) yield sc.parallelize(sorted, n)
+
+    val contigScrambled = for (
+      (nPar, variants) <- g;
+      contigScrambledSort <- Gen.shuffle(IndexedSeq("1", "2", "3")).map { inds =>
+        val sortedIndex = inds.zipWithIndex.toMap
+        val v = variants
+          .groupBy(_._1.contig)
+          .mapValues(_.sortBy(_._1.locus))
+          .toArray
+          .sortBy { case (contig, _) => sortedIndex(contig) }
+          .flatMap(_._2)
+        println(v.toSeq)
+        v
+      }) yield sc.parallelize(contigScrambledSort, nPar)
 
     def check(rdd: OrderedRDD[Locus, Variant, String]): Boolean = {
       val p = rdd.orderedPartitioner
@@ -87,6 +102,11 @@ class OrderedRDDSuite extends SparkSuite {
     property("fullySorted") = Prop.forAll(sorted) { rdd =>
       val (status, ordered) = OrderedRDD.coerce(rdd)
       check(ordered) && status == OrderedRDD.AS_IS
+    }
+
+    property("scrambledContigs") = Prop.forAll(contigScrambled) { rdd =>
+      val (status, ordered) = OrderedRDD.coerce(rdd)
+      check(ordered) && status <= OrderedRDD.LOCAL_SORT
     }
 
     property("join1") = Prop.forAll(g, g) { case ((nPar1, is1), (nPar2, is2)) =>
@@ -169,6 +189,14 @@ class OrderedRDDSuite extends SparkSuite {
 
   @Test def test() {
     Spec.check()
+  }
+
+  @Test def test2() {
+    Prop.forAll(Spec.contigScrambled) { rdd =>
+      val (status, ordered) = OrderedRDD.coerce(rdd)
+      Spec.check(ordered) && status <= OrderedRDD.LOCAL_SORT
+    }.check()
+
   }
 
   @Test def testEmptyPartitions() {

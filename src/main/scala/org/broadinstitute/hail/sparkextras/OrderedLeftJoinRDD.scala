@@ -18,7 +18,7 @@ object OrderedRDDIterator {
 }
 
 class OrderedRDDIterator[PK, K, V](
-  rdd: OrderedRDD[PK, K, V],
+  rdd: OrderedRDD[_, PK, K, V],
   partitions: Array[Partition], // cannot access rdd.partitions on executor
   context: TaskContext,
   var partIndex: Int = -1,

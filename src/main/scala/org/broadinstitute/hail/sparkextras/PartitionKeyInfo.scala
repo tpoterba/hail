@@ -1,50 +1,98 @@
 package org.broadinstitute.hail.sparkextras
 
-case class PartitionKeyInfo[T](
-  partIndex: Int,
-  sortedness: Int,
-  min: T,
-  max: T)
+import org.broadinstitute.hail.utils._
+import scala.collection.mutable
+import Ordering.Implicits._
+
+case class SpanInfo[PK](sortedness: Int, min: PK, max: PK)
+
+class SpanInfoBuilder[PK, K](init: K)(implicit kOk: OrderedKey[_, PK, K]) {
+
+  import kOk._
+
+  var sortedness = PartitionKeyInfo.KSORTED
+  var minPK = project(init)
+  var maxPK = minPK
+  var prevK = init
+  var prevPK = minPK
+
+  def update(k: K): SpanInfoBuilder[PK, K] = {
+    val pk = project(k)
+    if (pk < prevPK)
+      sortedness = PartitionKeyInfo.UNSORTED
+    else if (k < prevK)
+      sortedness = math.min(sortedness, PartitionKeyInfo.TSORTED)
+
+    if (pk < minPK)
+      minPK = pk
+    if (pk > maxPK)
+      maxPK = pk
+
+    prevK = k
+    prevPK = pk
+
+    this
+  }
+
+  def result(): SpanInfo[PK] = SpanInfo(sortedness, minPK, maxPK)
+}
+
+class PartitionKeyInfoBuilder[MPK, PK, K](implicit kOk: OrderedKey[MPK, PK, K]) {
+  import kOk._
+  val m = mutable.Map.empty[MPK, (SpanInfoBuilder[PK, K])]
+
+  var prev: K = _
+  var totalSortedness = PartitionKeyInfo.KSORTED
+
+  def update(k: K) {
+    if (prev == null)
+      prev = k
+    else {
+
+    }
+    val pk = kOk.project(k)
+    val mpk = kOk.projectPK(pk)
+
+    m.updateValue(mpk, new SpanInfoBuilder[PK, K](k), b => b.update(k))
+  }
+
+  def result(index: Int): PartitionKeyInfo[MPK, PK] = {
+    PartitionKeyInfo(index, m.map { case (mpk, pkb) => (mpk, pkb.result()) }.toMap)
+  }
+}
+
+case class PartitionKeyInfo[MPK, PK](partIndex: Int, mpkMap: Map[MPK, SpanInfo[PK]])(implicit kOk: OrderedKey[MPK, PK, _]) {
+
+  lazy val min: PK = {
+    mpkMap.minBy(_._1)
+      ._2
+      .min
+  }
+
+  lazy val max: PK = {
+    mpkMap.maxBy(_._1)
+      ._2
+      .max
+  }
+
+  def sortedness: Int = mpkMap.valuesIterator.map(_.sortedness).min
+}
 
 object PartitionKeyInfo {
   final val UNSORTED = 0
   final val TSORTED = 1
   final val KSORTED = 2
 
-  def apply[PK, K](partIndex: Int, it: Iterator[K])(implicit kOk: OrderedKey[PK, K]): PartitionKeyInfo[PK] = {
+  def apply[MPK, PK, K](partIndex: Int, it: Iterator[K])
+    (implicit kOk: OrderedKey[MPK, PK, K]): PartitionKeyInfo[MPK, PK] = {
     import kOk.kOrd
     import kOk.pkOrd
-    import Ordering.Implicits._
 
     assert(it.hasNext)
 
-    val k0 = it.next()
-    val t0 = kOk.project(k0)
+    val pkb = new PartitionKeyInfoBuilder[MPK, PK, K]
+    it.foreach(pkb.update)
 
-    var minT = t0
-    var maxT = t0
-    var sortedness = KSORTED
-    var prevK = k0
-    var prevT = t0
-
-    while (it.hasNext) {
-      val k = it.next()
-      val t = kOk.project(k)
-
-      if (t < prevT)
-        sortedness = UNSORTED
-      else if (k < prevK)
-        sortedness = sortedness.min(TSORTED)
-
-      if (t < minT)
-        minT = t
-      if (t > maxT)
-        maxT = t
-
-      prevK = k
-      prevT = t
-    }
-
-    PartitionKeyInfo(partIndex, sortedness, minT, maxT)
+    pkb.result(partIndex)
   }
 }

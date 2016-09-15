@@ -17,12 +17,12 @@ object OrderedDependency {
     val lastPartition = if (partitionId == p1.rangeBounds.length)
       p2.numPartitions - 1
     else
-      p2.getPartitionT(p1.rangeBounds(partitionId))
+      p2.getPartitionPK(p1.rangeBounds(partitionId))
 
     if (partitionId == 0)
       (0, lastPartition)
     else {
-      val startPartition = p2.getPartitionT(p1.rangeBounds(partitionId - 1))
+      val startPartition = p2.getPartitionPK(p1.rangeBounds(partitionId - 1))
       (startPartition, lastPartition)
     }
   }

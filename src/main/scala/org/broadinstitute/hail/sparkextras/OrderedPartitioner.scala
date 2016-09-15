@@ -14,7 +14,7 @@ import scala.util.Random
 import scala.util.hashing.{MurmurHash3, byteswap32}
 
 case class OrderedPartitioner[PK, K](rangeBounds: Array[PK], nPartitions: Int, ascending: Boolean = true)
-  (implicit val kOk: OrderedKey[PK, K])
+  (implicit val kOk: OrderedKey[_, PK, K])
   extends Partitioner {
 
   import kOk.pkct
@@ -22,7 +22,7 @@ case class OrderedPartitioner[PK, K](rangeBounds: Array[PK], nPartitions: Int, a
   import Ordering.Implicits._
 
   require(nPartitions == 0 && rangeBounds.isEmpty || nPartitions == rangeBounds.length + 1,
-    s"nPartitions = $nPartitions, ranges = ${rangeBounds.length}")
+    s"nPartitions = $nPartitions, ranges = ${ rangeBounds.length }")
   require(rangeBounds.isEmpty || rangeBounds.zip(rangeBounds.tail).forall { case (left, right) => left < right })
 
   def write(out: ObjectOutputStream) {
@@ -34,14 +34,14 @@ case class OrderedPartitioner[PK, K](rangeBounds: Array[PK], nPartitions: Int, a
 
   var binarySearch: (Array[PK], PK) => Int = OrderedPartitioner.makeBinarySearch[PK]
 
-  def getPartition(key: Any): Int = getPartitionT(kOk.project(key.asInstanceOf[K]))
+  def getPartition(key: Any): Int = getPartitionPK(kOk.project(key.asInstanceOf[K]))
 
   /**
     * Code mostly copied from:
     *   org.apache.spark.RangePartitioner.getPartition(key: Any)
     *   version 1.5.0
     **/
-  def getPartitionT(key: PK): Int = {
+  def getPartitionPK(key: PK): Int = {
 
     var partition = 0
     if (rangeBounds.length <= 128) {
@@ -84,16 +84,17 @@ case class OrderedPartitioner[PK, K](rangeBounds: Array[PK], nPartitions: Int, a
     result
   }
 
-  def mapMonotonic[K2](implicit k2Ok: OrderedKey[PK, K2]): OrderedPartitioner[PK, K2] = {
+  def mapMonotonic[K2](implicit k2Ok: OrderedKey[_, PK, K2]): OrderedPartitioner[PK, K2] = {
     new OrderedPartitioner(rangeBounds, nPartitions, ascending)
   }
 }
 
 object OrderedPartitioner {
-  def empty[PK, K](implicit kOk: OrderedKey[PK, K]): OrderedPartitioner[PK, K] =
+  def empty[PK, K](implicit kOk: OrderedKey[_, PK, K]): OrderedPartitioner[PK, K] =
     new OrderedPartitioner[PK, K](Array.empty(kOk.pkct), 0)
 
-  def read[PK, K](in: ObjectInputStream, partitions: Int)(implicit kOk: OrderedKey[PK, K]): OrderedPartitioner[PK, K] = {
+  def read[PK, K](in: ObjectInputStream, partitions: Int)
+    (implicit kOk: OrderedKey[_, PK, K]): OrderedPartitioner[PK, K] = {
     val ascending = in.readBoolean()
     val rangeBounds = in.readObject().asInstanceOf[Array[PK]]
     OrderedPartitioner(rangeBounds, partitions, ascending)
