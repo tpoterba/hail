@@ -4,6 +4,7 @@ from pyhail.utils import TextTableConfig
 
 from py4j.protocol import Py4JJavaError
 
+
 class VariantDataset(object):
     def __init__(self, hc, jvds):
         self.hc = hc
@@ -191,8 +192,25 @@ class VariantDataset(object):
         return self.hc.run_command(self, pargs)
 
     def annotate_global_table(self, input, root, config=None):
-        """Load delimited text file (text table) into global annotations as
-        Array[Struct].
+        """Load delimited text file (text table) into global annotations
+        as an ``Array[Struct]``.
+
+        **Example**
+
+         >>> conf = pyhail.TextTableConfig(impute=True)
+         >>> vds = (hc.read('data/example.vds')
+         >>>   .annotate_global_table('data/global_table.tsv', 'global.gene_annotations', config=conf))
+
+
+         **Using the** ``root`` **argument**
+
+         The ``root`` argument determines the annotation path for the
+         generated ``Array[Struct]``.  If your table has columns ``GENE``,
+          ``PLI``, and ``EXAC_LOF_COUNT``, then ``root='global.genes'``
+          creates the an array of structs ``{Sample, Sex, Batch}`` at
+          ``global.genes``, which gives you access to the paths like
+          ``global.genes[0].GENE``, or ``global.genes.map(s => s.EXAC_LOF_COUNT)``
+
 
         :param str input: Input text file.
 
@@ -451,7 +469,11 @@ class VariantDataset(object):
                 self.jvds, other.jvds, code, root))
 
     def cache(self):
-        """Cache in memory.  cache is the same as persist("MEMORY_ONLY")."""
+        """Cache in memory.  cache is the same as persist("MEMORY_ONLY").
+
+           See :py:meth:`~pyhail.VariantDataset.persist` for more detail
+           on memory and disk checkpointing.
+        """
 
         pargs = ['cache']
         return self.hc.run_command(self, pargs)
@@ -540,10 +562,28 @@ class VariantDataset(object):
             pargs.append('--print-missing')
         return self.hc.run_command(self, pargs)
 
-    def export_plink(self, output, fam_expr = 'id = s.id'):
+    def export_plink(self, output, fam_expr='id = s.id'):
         """Export as PLINK .bed/.bim/.fam
 
+        **Example**
+
+        >>> vds.export_plink('data/plink')
+
+        Hail's output is designed to mirror Plink's own VCF conversion
+        using the following command:
+```
+plink --vcf /path/to/file.vcf --make-bed --out sample --const-fid --keep-allele-order
+```
+
+All differences between Hail's output and Plink's are enumerated below.
+ - **.bed file**: equivalent within multiallelic split variant ordering
+ - **.fam file**: agrees when Plink is run with `--const-fid` argument (FID is set to "0")
+ - **.bim file**: ID field will be different.  The above Plink command will copy the "RSID" field of the VCF into the .bim ID column, leaving huge numbers of IDs as ".".  Instead, Hail will encode each variant with an ID in the format "CHR:POS:REF:ALT".
+
+
         :param str output: Output file base.  Will write .bed, .bim and .fam files.
+
+        :param str fam_expr: expression to generate FID in resulting .fam file
 
         """
 
@@ -553,9 +593,79 @@ class VariantDataset(object):
     def export_samples(self, output, condition, types=None):
         """Export sample information to delimited text file.
 
+
+        **Example**
+
+        Export a TSV with sample ID and 5 computed principal components.
+
+        >>> vds.export_samples('data/pca.tsv',
+        >>>   'ID = s.id, PC1 = sa.pca.PC1, PC2 = sa.pca.PC2,'
+        >>>   'PC3 =, sa.pca.PC3, PC4 = sa.pca.PC4, PC5 = sa.pca.PC5')
+
+        Or use the "splat" star syntax to produce the same result:
+
+        >>> vds.export_samples('data/pca.tsv',
+        >>>   'ID = s.id, sa.pca.*')
+
+
+        It is also possible to export without identifiers, which will result in
+        a file with no header. In this case, the expressions should look like
+        the example below:
+
+        >>> vds.export_samples('data/file.tsv', 's.id, sa.qc.gqMean')
+
+        *Note:* Either all fields must be named, or no field must be named.
+
+        In the common case that a group of annotations needs to be exported (for
+        example, the annotations produced by ``sampleqc``), one can use the
+        ``struct.*`` syntax.  This syntax produces one column per field in the
+        struct, and names them according to the struct field name.
+
+        For example, the following invocation (assuming ``sa.qc`` was generated
+        by :py:meth:`.sample_qc`):
+
+        >>> vds.export_samples('data/file.tsv', 'sample = s.id, sa.qc.*')
+
+        will produce the following set of columns::
+
+            sample  callRate  nCalled  nNotCalled  nHomRef  ...
+
+        Note that using the ``.*`` syntax always results in named arguments, so it
+        is not possible to export header-less files in this manner.  However,
+        naming the "splatted" struct will apply the name in front of each column
+        like so:
+
+        >>> vds.export_samples('data/file.tsv', 'sample = s.id, QC = sa.qc.*')
+
+        which produces these columns::
+
+            sample  QC.callRate  QC.nCalled  QC.nNotCalled  QC.nHomRef  ...
+
+
+        **Notes**
+
+        This module takes a comma-delimited list of fields or expressions to
+        print. These fields will be printed in the order they appear in the
+        expression in the header and on each line.
+
+        One line per sample in the VDS will be printed.  The accessible namespace includes:
+
+        - ``s.id`` (sample ID)
+        - ``sa`` (sample annotations)
+        - ``global`` (global annotations)
+        - ``gs`` (genotype column `aggregable <reference.html#aggregables>`_)
+
+        **Designating output with an expression**
+
+        Much like the filtering methods, exporting allows flexible expressions
+        to be written on the command line. While the filtering methods expect an
+        expression that evaluates to true or false, this method expects a
+        comma-separated list of fields to print. These fields *must* take the
+        form ``IDENTIFIER = <expression>``.
+
         :param str output: Output file.
 
-        :param str condition: Annotation expression for values to export.
+        :param str condition: Export expression to determine column names and computations.
 
         :param types: Path to write types of exported values.
         :type types: str or None
@@ -931,8 +1041,140 @@ class VariantDataset(object):
         return self.hc.run_command(self, pargs)
 
     def logreg(self, test, y, covariates=None, root=None):
-        """Test each variant for association using the logistic regression
+        r"""Test each variant for association using the logistic regression
         model.
+
+        The `logreg` command performs, for each variant, a significance
+        test of the genotype in predicting a binary (case-control)
+        phenotype based on the logistic regression model. Hail supports
+        the Wald test, likelihood ratio test (LRT), and Rao score test.
+        Hail only includes samples for which phenotype and all covariates
+        are defined. For each variant, Hail imputes missing genotypes as
+        the mean of called genotypes.
+
+        Assuming there are sample annotations 'sa.pheno.isCase',
+        'sa.cov.age', 'sa.cov.isFemale', and 'sa.cov.PC1', the command:
+
+        >>> vds.logreg('wald', 'sa.pheno.isCase', covariates='sa.cov.age,sa.cov.isFemale,sa.cov.PC1')
+
+        considers a model of the form
+
+        .. math::
+        \mathrm{Prob}(\mathrm{isCase}) = \mathrm{sigmoid}(\beta_0 + \beta_1 \, \mathrm{gt} + \beta_2 \, \mathrm{age} + \beta_3 \, \mathrm{isMale} + \beta_4 \, \mathrm{PC1} + \varepsilon), \quad \varepsilon \sim \mathrm{N}(0, \sigma^2)
+
+        where :math:`\mathrm{sigmoid}` is the ` sigmoid function <https://en.wikipedia.org/wiki/Sigmoid_function>`_,
+        the genotype :math:`\mathrm{gt}` is coded as :math:`0` for HomRef, :math:`1` for
+        Het, and :math:`2` for HomVar, and the Boolean covariate :math:`\mathrm{isFemale}`
+        is coded as :math:`1` for true (female) and :math:`0` for false (male). The null
+        model sets :math:`\beta_1 = 0`.
+
+        The resulting variant annotations depend on the test statistic as shown in
+        the tables below. These annotations can then be accessed by other methods,
+        including exporting to TSV with other variant annotations.
+
+        **Annotations**
+
+        ``Wald`` adds the following annotations:
+
+         - **va.logreg.wald.beta** (*Double*) -- fit genotype coefficient, :math:`\hat\beta_1`
+
+         - **va.logreg.wald.se** (*Double*) -- estimated standard error, :math:`\widehat{\mathrm{se}}`
+
+         - **va.logreg.wald.zstat** (*Double*) -- Wald :math:`z`-statistic,
+           equal to :math:`\hat\beta_1 / \widehat{\mathrm{se}}`
+
+         - **va.logreg.wald.pval** (*Double*) -- Wald test :math:`p`-value
+           testing :math:`\beta_1 = 0`
+
+         - **va.logreg.wald.pval** (*Double*) -- Wald test :math:`p`-value
+           testing :math:`\beta_1 = 0`
+
+         - **va.logreg.fit.nIter** (*Int*) -- number of iterations
+           until convergence, explosion, or reaching the max (25)
+
+         - **va.logreg.fit.converged** (*Boolean*) -- true if
+           iteration converged
+
+         - **va.logreg.fit.exploded** (*Boolean*) -- true if
+           iteration exploded
+
+        ``LRT`` adds the following annotations:
+
+         - **va.logreg.lrt.beta** (*Double*) -- fit genotype coefficient, :math:`\hat\beta_1`
+
+         - **va.logreg.lrt.chi2** (*Double*) -- likelihood ratio
+           test statistic (deviance) testing :math:`\beta_1 = 0`
+
+         - **va.logreg.lrt.pval** (*Double*) -- likelihood ratio
+           test :math:`p`-value
+
+         - **va.logreg.fit.nIter** (*Int*) -- number of iterations
+           until convergence, explosion, or reaching the max (25)
+
+         - **va.logreg.fit.converged** (*Boolean*) -- true if
+           iteration converged
+
+         - **va.logreg.fit.exploded** (*Boolean*) -- true if
+           iteration exploded
+
+        ``Score`` adds the following annotations:
+
+         - **va.logreg.score.chi2** (*Double*) -- score statistic
+           testing :math:`\beta_1 = 0`
+
+         - **va.logreg.score.pval** (*Double*) -- score test
+           :math:`p`-value
+
+        We consider iteration to have converged when every coordinate of $\beta$
+        changes by less than $10^{-6}$. Up to 25 iterations are attempted; in
+        testing we find 4 or 5 iterations nearly always suffice. Convergence may
+        also fail due to explosion, which refers to low-level numerical linear
+        algebra exceptions caused by manipulating ill-conditioned matrices.
+        Explosion may result from (nearly) linearly dependent covariates or
+        complete `separation <https://en.wikipedia.org/wiki/Separation_(statistics)>`_.
+
+        A more common situation in genetics is quasi-complete seperation, e.g.
+        variants that are observed only in cases (or controls). Such variants
+        inevitably arise when testing millions of variants with very low minor
+        allele count. The maximum likelihood estimate of $\beta$ under logistic
+        regression is then undefined but convergence may still occur after a
+        large number of iterations due to a very flat likelihood surface. In
+        testing, we find that such variants produce a secondary bump from 10 to
+        15 iterations in the histogram of number of iterations per variant. We
+        also find that this faux convergence produces large standard errors and
+        large (insignificant) :math:`p`-values. To not miss such variants,
+        consider using Firth logistic regression, linear regression, or
+        group-based tests.
+
+        Here's a concrete illustration of quasi-complete seperation in R.
+        Suppose we have 2010 samples distributed as follows for a particular variant:
+
+        \- | HomRef | Het | HomVar
+        ---|---|---|---
+        Case | 1000 | 10 | 0
+        Control | 1000 | 0 | 0
+
+The following R code fits the (standard) logistic, Firth logistic, and linear regression models to this data, where $x$ is genotype, $y$ is phenotype, and `logistf` is from the `logistf` package.
+```
+x <- c(rep(0,1000), rep(1,1000), rep(1,10)
+y <- c(rep(0,1000), rep(0,1000), rep(1,10))
+logfit <- glm(y ~ x, family=binomial())
+firthfit <- logistf(y ~ x)
+linfit <- lm(y ~ x)
+```
+The resulting $p$-values for the genotype coefficient are $0.991$, $0.00085$, and $0.0016$, respectively. The erroneous value $0.991$ is due to quasi-complete separation. Moving one of the 10 hets from case to control eliminates this quasi-complete separation; the p-values from R are then $0.0373$, $0.0111$, and $0.0116$, respectively, as expected for a less significant association.
+
+Phenotype and covariate sample annotations may also be specified using [programmatic expressions](reference.html#HailExpressionLanguage) without identifiers, such as
+```
+if (sa.isFemale) sa.cov.age else (2 * sa.cov.age + 10)
+```
+For Boolean covariate types, true is coded as 1 and false as 0. In particular, for the sample annotation `sa.fam.isCase` added by importing a `.fam` file with case-control phenotype, case is $1$ and control is $0$.
+
+Hail's logistic regression tests correspond to the `b.wald`, `b.lrt`, and `b.score` tests in [EPACTS](http://genome.sph.umich.edu/wiki/EPACTS#Single_Variant_Tests). For each variant, Hail imputes missing genotypes as the mean of called genotypes, whereas EPACTS subsets to those samples with called genotypes. Hence, Hail and EPACTS results will currently only agree for variants with no missing genotypes.
+
+See [Recommended joint and meta-analysis strategies for case-control association testing of single low-count variants](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4049324/) for an empirical comparison of the logistic Wald, LRT, score, and Firth tests. The theoretical foundations of the Wald, likelihood ratio, and score tests may be found in Chapter 3 of Gesine Reinert's notes [Statistical Theory](http://www.stats.ox.ac.uk/~reinert/stattheory/theoryshort09.pdf).
+</div>
+
 
         :param str test: Statistical test, one of: wald, lrt, or score.
 
@@ -1361,7 +1603,7 @@ class VariantDataset(object):
         :rtype: KeyTable
 
         """
-        
+
         if isinstance(variant_condition, list):
             variant_condition = ','.join(variant_condition)
         if isinstance(genotype_condition, list):
