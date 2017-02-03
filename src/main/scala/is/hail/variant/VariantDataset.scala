@@ -229,7 +229,8 @@ object VariantDataset {
     }.spanByKey().map(kv => {
       // combine variant rows with different sample groups (no shuffle)
       val variant = kv._1
-      val annotations = kv._2.head._1 // just use first annotation
+      val annotations = kv._2.head._1
+      // just use first annotation
       val genotypes = kv._2.flatMap(_._2) // combine genotype streams
       (variant, (annotations, genotypes))
     })
@@ -544,17 +545,86 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
           insertSplit(insertIndex(va, Some(index)), Some(wasSplit))
         })
         .map({
-          case (v,(va,gs)) =>
+          case (v, (va, gs)) =>
             ec.setAll(localGlobalAnnotation, v, va)
             aggregateOption.foreach(f => f(v, va, gs))
             f()
         }).toArray
 
-      inserters.zipWithIndex.foldLeft(va){
-        case (va,(inserter, i)) =>
-          inserter(va, Some(annotations.map(_(i).getOrElse(Annotation.empty)).toArray[Any]: IndexedSeq[Any]))
+      inserters.zipWithIndex.foldLeft(va) {
+        case (va, (inserter, i)) =>
+          inserter(va, Some(annotations.map(_ (i).getOrElse(Annotation.empty)).toArray[Any]: IndexedSeq[Any]))
       }
 
     }.copy(vaSignature = finalType)
   }
+
+  def annotateGlobalExpr(expr: String): VariantDataset = {
+    val ec = EvalContext(Map(
+      "global" -> (0, vds.globalSignature)))
+
+    val (paths, types, f) = Parser.parseAnnotationExprs(expr, ec, Option(Annotation.GLOBAL_HEAD))
+
+    val inserterBuilder = mutable.ArrayBuilder.make[Inserter]
+
+    val finalType = (paths, types).zipped.foldLeft(vds.globalSignature) { case (v, (ids, signature)) =>
+      val (s, i) = v.insert(signature, ids)
+      inserterBuilder += i
+      s
+    }
+
+    val inserters = inserterBuilder.result()
+
+    ec.set(0, vds.globalAnnotation)
+    val ga = inserters
+      .zip(f())
+      .foldLeft(vds.globalAnnotation) { case (a, (ins, res)) =>
+        ins(a, res)
+      }
+
+    vds.copy(globalAnnotation = ga,
+      globalSignature = finalType)
+  }
+
+  def annotateGlobalList(path: String, root: String, asSet: Boolean = false): VariantDataset = {
+    val textList = vds.sparkContext.hadoopConfiguration.readFile(path) { in =>
+      Source.fromInputStream(in)
+        .getLines()
+        .toArray
+    }
+
+    val (sig, toInsert) =
+      if (asSet)
+        (TSet(TString), textList.toSet)
+      else
+        (TArray(TString), textList: IndexedSeq[String])
+
+    val rootPath = Parser.parseAnnotationRoot(root, "global")
+
+    val (newGlobalSig, inserter) = vds.insertGlobal(sig, rootPath)
+
+    vds.copy(
+      globalAnnotation = inserter(vds.globalAnnotation, Some(toInsert)),
+      globalSignature = newGlobalSig)
+  }
+
+  def annotateGlobalTable(path: String, root: String,
+    config: TextTableConfiguration = TextTableConfiguration()): VariantDataset = {
+    val annotationPath = Parser.parseAnnotationRoot(root, Annotation.GLOBAL_HEAD)
+
+    val (struct, rdd) = TextTableReader.read(vds.sparkContext)(Array(path), config)
+    val arrayType = TArray(struct)
+
+    val (finalType, inserter) = vds.insertGlobal(arrayType, annotationPath)
+
+    val table = rdd
+      .map(_.value)
+      .collect(): IndexedSeq[Annotation]
+
+    vds.copy(
+      globalAnnotation = inserter(vds.globalAnnotation, Some(table)),
+      globalSignature = finalType)
+  }
+
+
 }
