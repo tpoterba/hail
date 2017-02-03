@@ -4,7 +4,6 @@ import java.util.Properties
 
 import org.apache.hadoop
 import is.hail.annotations.Annotation
-import is.hail.driver.ImportAnnotationsTable.buildInserter
 import is.hail.expr.{EvalContext, Parser, TStruct, Type}
 import is.hail.io.bgen.BgenLoader
 import is.hail.io.gen.GenLoader
@@ -212,7 +211,7 @@ case class HailContext(sc: SparkContext, sqlContext: SQLContext) {
       val ec = EvalContext(Map(
         "va" -> (0, TStruct.empty),
         "table" -> (1, struct)))
-      buildInserter(code, TStruct.empty, ec, Annotation.VARIANT_HEAD)
+      Annotation.buildInserter(code, TStruct.empty, ec, Annotation.VARIANT_HEAD)
     }.getOrElse((struct, (_: Annotation, anno: Option[Annotation]) => anno.orNull))
 
     val ec = EvalContext(struct.fields.map(f => (f.name, f.typ)): _*)
