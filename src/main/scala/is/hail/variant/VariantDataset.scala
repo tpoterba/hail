@@ -3,7 +3,7 @@ package is.hail.variant
 import java.io.FileNotFoundException
 
 import is.hail.annotations.Annotation
-import is.hail.driver.Main
+import is.hail.driver.{HailConfiguration, Main, SplitMulti}
 import is.hail.expr.{JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type}
 import is.hail.sparkextras.{OrderedPartitioner, OrderedRDD}
 import is.hail.utils._
@@ -19,7 +19,6 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.{SparkContext, SparkEnv}
 import is.hail.utils._
-import is.hail.driver.{HailConfiguration, Main}
 import is.hail.annotations._
 import is.hail.check.Gen
 import is.hail.expr.{EvalContext, _}
@@ -500,5 +499,62 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       out.write(sb.result())
     }
 
+  }
+
+  def annotateAllelesExpr(expr: String, propagateGQ: Boolean = false): VariantDataset = {
+    val isDosage = vds.isDosage
+
+    val (vas2, insertIndex) = vds.vaSignature.insert(TInt, "aIndex")
+    val (vas3, insertSplit) = vas2.insert(TBoolean, "wasSplit")
+    val localGlobalAnnotation = vds.globalAnnotation
+
+    val aggregationST = Map(
+      "global" -> (0, vds.globalSignature),
+      "v" -> (1, TVariant),
+      "va" -> (2, vas3),
+      "g" -> (3, TGenotype),
+      "s" -> (4, TSample),
+      "sa" -> (5, vds.saSignature))
+    val ec = EvalContext(Map(
+      "global" -> (0, vds.globalSignature),
+      "v" -> (1, TVariant),
+      "va" -> (2, vas3),
+      "gs" -> (3, TAggregable(TGenotype, aggregationST))))
+
+    val (paths, types, f) = Parser.parseAnnotationExprs(expr, ec, Some(Annotation.VARIANT_HEAD))
+
+    val inserterBuilder = mutable.ArrayBuilder.make[Inserter]
+    val finalType = (paths, types).zipped.foldLeft(vds.vaSignature) { case (vas, (ids, signature)) =>
+      val (s, i) = vas.insert(TArray(signature), ids)
+      inserterBuilder += i
+      s
+    }
+    val inserters = inserterBuilder.result()
+
+    val aggregateOption = Aggregators.buildVariantAggregations(vds, ec)
+
+    vds.mapAnnotations { case (v, va, gs) =>
+
+      val annotations = SplitMulti.split(v, va, gs,
+        propagateGQ = propagateGQ,
+        compress = true,
+        keepStar = true,
+        isDosage = isDosage,
+        insertSplitAnnots = { (va, index, wasSplit) =>
+          insertSplit(insertIndex(va, Some(index)), Some(wasSplit))
+        })
+        .map({
+          case (v,(va,gs)) =>
+            ec.setAll(localGlobalAnnotation, v, va)
+            aggregateOption.foreach(f => f(v, va, gs))
+            f()
+        }).toArray
+
+      inserters.zipWithIndex.foldLeft(va){
+        case (va,(inserter, i)) =>
+          inserter(va, Some(annotations.map(_(i).getOrElse(Annotation.empty)).toArray[Any]: IndexedSeq[Any]))
+      }
+
+    }.copy(vaSignature = finalType)
   }
 }
