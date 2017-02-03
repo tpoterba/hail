@@ -4,7 +4,7 @@ import java.io.FileNotFoundException
 
 import is.hail.annotations.Annotation
 import is.hail.driver.{HailConfiguration, Main, SplitMulti}
-import is.hail.expr.{JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type}
+import is.hail.expr.{EvalContext, JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type, _}
 import is.hail.sparkextras.{OrderedPartitioner, OrderedRDD}
 import is.hail.utils._
 import org.apache.hadoop
@@ -21,14 +21,16 @@ import org.apache.spark.{SparkContext, SparkEnv}
 import is.hail.utils._
 import is.hail.annotations._
 import is.hail.check.Gen
-import is.hail.expr.{EvalContext, _}
 import is.hail.io.vcf.BufferedLineIterator
 import is.hail.sparkextras._
 import org.json4s._
 import org.json4s.jackson.{JsonMethods, Serialization}
 import org.apache.kudu.spark.kudu.{KuduContext, _}
 import Variant.orderedKey
+import is.hail.driver.AnnotateSamplesTable.buildInserter
+import is.hail.driver.AnnotateSamplesVDS.buildInserter
 import is.hail.io.annotators.IntervalListAnnotator
+import is.hail.io.plink.{FamFileConfig, PlinkLoader}
 import is.hail.keytable.KeyTable
 import is.hail.methods.{Aggregators, Filter}
 import is.hail.utils
@@ -626,5 +628,125 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       globalSignature = finalType)
   }
 
+  def annotateSamplesExpr(expr: String): VariantDataset = {
+    val ec = Aggregators.sampleEC(vds)
+
+    val (paths, types, f) = Parser.parseAnnotationExprs(expr, ec, Some(Annotation.SAMPLE_HEAD))
+
+    val inserterBuilder = mutable.ArrayBuilder.make[Inserter]
+    val finalType = (paths, types).zipped.foldLeft(vds.saSignature) { case (sas, (ids, signature)) =>
+      val (s, i) = sas.insert(signature, ids)
+      inserterBuilder += i
+      s
+    }
+    val inserters = inserterBuilder.result()
+
+    val sampleAggregationOption = Aggregators.buildSampleAggregations(vds, ec)
+
+    ec.set(0, vds.globalAnnotation)
+    val newAnnotations = vds.sampleIdsAndAnnotations.map { case (s, sa) =>
+      sampleAggregationOption.foreach(f => f.apply(s))
+      ec.set(1, s)
+      ec.set(2, sa)
+      f().zip(inserters)
+        .foldLeft(sa) { case (sa, (v, inserter)) =>
+          inserter(sa, v)
+        }
+    }
+
+    vds.copy(
+      sampleAnnotations = newAnnotations,
+      saSignature = finalType
+    )
+  }
+
+  def annotateSamplesFam(path: String, root: String, config: FamFileConfig = FamFileConfig()): VariantDataset = {
+    if (!path.endsWith(".fam"))
+      fatal("input file must end in .fam")
+
+    val (info, signature) = PlinkLoader.parseFam(path, config, vds.sparkContext.hadoopConfiguration)
+
+    val duplicateIds = info.map(_._1).duplicates().toArray
+    if (duplicateIds.nonEmpty) {
+      val n = duplicateIds.length
+      fatal(
+        s"""found $n duplicate sample ${ plural(n, "id") }:
+           |  @1""".stripMargin, duplicateIds)
+    }
+
+    vds.annotateSamples(info.toMap, signature, root)
+  }
+
+  def annotateSamplesList(path: String, root: String): VariantDataset = {
+
+    val samplesInList = vds.sparkContext.hadoopConfiguration.readLines(path) { lines =>
+      if (lines.isEmpty)
+        warn(s"Empty annotation file given: $path")
+
+      lines.map(_.value).toSet
+    }
+
+    val sampleAnnotations = vds.sampleIds.map { s => (s, samplesInList.contains(s)) }.toMap
+    vds.annotateSamples(sampleAnnotations, TBoolean, root)
+  }
+
+  def annotateSamplesTable(path: String, sampleExpr: String,
+    root: Option[String] = None, code: Option[String] = None,
+    config: TextTableConfiguration = TextTableConfiguration()): VariantDataset = {
+
+    val (isCode, annotationExpr) = (root, code) match {
+      case (Some(r), None) => (false, r)
+      case (None, Some(c)) => (true, c)
+      case _ => fatal("this module requires one of `root' or 'code', but not both")
+    }
+
+    val (struct, rdd) = TextTableReader.read(vds.sparkContext)(Array(path), config)
+
+    val (finalType, inserter): (Type, (Annotation, Option[Annotation]) => Annotation) =
+      if (isCode) {
+        val ec = EvalContext(Map(
+          "sa" -> (0, vds.saSignature),
+          "table" -> (1, struct)))
+        buildInserter(annotationExpr, vds.saSignature, ec, Annotation.SAMPLE_HEAD)
+      } else
+        vds.insertSA(struct, Parser.parseAnnotationRoot(annotationExpr, Annotation.SAMPLE_HEAD))
+
+    val sampleQuery = struct.parseInStructScope[String](sampleExpr)
+
+    val map = rdd
+      .flatMap {
+        _.map { a =>
+          sampleQuery(a).map(s => (s, a))
+        }.value
+      }
+      .collect()
+      .toMap
+
+    vds.annotateSamples(map.get _, finalType, inserter)
+  }
+
+  def annotateSamplesVDS(other: VariantDataset,
+    root: Option[String] = None,
+    code: Option[String] = None): VariantDataset = {
+
+    val (isCode, annotationExpr) = (root, code) match {
+      case (Some(r), None) => (false, r)
+      case (None, Some(c)) => (true, c)
+      case _ => fatal("this module requires one of `root' or 'code', but not both")
+    }
+
+    val (finalType, inserter): (Type, (Annotation, Option[Annotation]) => Annotation) =
+      if (isCode) {
+        val ec = EvalContext(Map(
+          "sa" -> (0, vds.saSignature),
+          "vds" -> (1, other.saSignature)))
+        buildInserter(annotationExpr, vds.saSignature, ec, Annotation.SAMPLE_HEAD)
+      } else
+        vds.insertSA(other.saSignature, Parser.parseAnnotationRoot(annotationExpr, Annotation.SAMPLE_HEAD))
+
+    val m = other.sampleIdsAndAnnotations.toMap
+    vds
+      .annotateSamples(m.get _, finalType, inserter)
+  }
 
 }

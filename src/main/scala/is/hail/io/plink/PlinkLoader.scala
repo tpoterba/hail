@@ -14,7 +14,9 @@ import scala.collection.mutable
 
 case class SampleInfo(sampleIds: Array[String], annotations: IndexedSeq[Annotation], signatures: TStruct)
 
-case class FamFileConfig(isQuantitative: Boolean, delimiter: String, missingValue: String)
+case class FamFileConfig(isQuantitative: Boolean = false,
+  delimiter: String = "\\t",
+  missingValue: String = "NA")
 
 object PlinkLoader {
   def expectedBedSize(nSamples: Int, nVariants: Long): Long = 3 + nVariants * ((nSamples + 3) / 4)
