@@ -10,6 +10,7 @@ import is.hail.annotations._
 import is.hail.expr._
 import is.hail.sparkextras.{OrderedRDD, ReorderedPartitionsRDD, ReorderedPartitionsRDDPartition}
 import is.hail.variant._
+import org.apache.hadoop
 
 import scala.collection.JavaConversions._
 import scala.collection.mutable
@@ -96,6 +97,26 @@ object VCFReport {
 
 
 object LoadVCF {
+
+  def globAllVCFs(arguments: Array[String], hConf: hadoop.conf.Configuration, forcegz: Boolean = false): Array[String] = {
+    val inputs = hConf.globAll(arguments)
+
+    if (inputs.isEmpty)
+      fatal("arguments refer to no files")
+
+    inputs.foreach { input =>
+      if (!input.endsWith(".vcf")
+        && !input.endsWith(".vcf.bgz")) {
+        if (input.endsWith(".vcf.gz")) {
+          if (!forcegz)
+            fatal(".gz cannot be loaded in parallel, use .bgz or -f override")
+        } else
+          fatal("unknown input file type")
+      }
+    }
+    inputs
+  }
+
   def lineRef(s: String): String = {
     var i = 0
     var t = 0
