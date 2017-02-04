@@ -3,7 +3,7 @@ package is.hail.variant
 import java.io.FileNotFoundException
 
 import is.hail.annotations.{Annotation, _}
-import is.hail.driver.{Main, SplitMulti}
+import is.hail.driver.{ExportGEN, Main, SplitMulti}
 import is.hail.expr.{EvalContext, JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type, _}
 import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
 import is.hail.io.plink.{FamFileConfig, PlinkLoader}
@@ -919,4 +919,76 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     vds.sampleVariants(keep.toDouble / vds.countVariants())
   }
 
+  def exportGen(out: String) {
+    require(vds.wasSplit, "method `exportGen' requires a split dataset")
+
+    def writeSampleFile() {
+      //FIXME: should output all relevant sample annotations such as phenotype, gender, ...
+      vds.sparkContext.hadoopConfiguration.writeTable(out + ".sample",
+        "ID_1 ID_2 missing" :: "0 0 0" :: vds.sampleIds.map(s => s"$s $s 0").toList)
+    }
+
+
+    def formatDosage(d: Double): String = d.formatted("%.4f")
+
+    def appendRow(sb: StringBuilder, v: Variant, va: Annotation, gs: Iterable[Genotype], rsidQuery: Querier, varidQuery: Querier) {
+      sb.append(v.contig)
+      sb += ' '
+      sb.append(varidQuery(va).getOrElse(v.toString))
+      sb += ' '
+      sb.append(rsidQuery(va).getOrElse("."))
+      sb += ' '
+      sb.append(v.start)
+      sb += ' '
+      sb.append(v.ref)
+      sb += ' '
+      sb.append(v.alt)
+
+      for (gt <- gs) {
+        val dosages = gt.dosage.getOrElse(ExportGEN.emptyDosage)
+        sb += ' '
+        sb.append(formatDosage(dosages(0)))
+        sb += ' '
+        sb.append(formatDosage(dosages(1)))
+        sb += ' '
+        sb.append(formatDosage(dosages(2)))
+      }
+    }
+
+    def writeGenFile() {
+      val varidSignature = vds.vaSignature.getOption("varid")
+      val varidQuery: Querier = varidSignature match {
+        case Some(_) => val (t, q) = vds.queryVA("va.varid")
+          t match {
+            case TString => q
+            case _ => a => None
+          }
+        case None => a => None
+      }
+
+      val rsidSignature = vds.vaSignature.getOption("rsid")
+      val rsidQuery: Querier = rsidSignature match {
+        case Some(_) => val (t, q) = vds.queryVA("va.rsid")
+          t match {
+            case TString => q
+            case _ => a => None
+          }
+        case None => a => None
+      }
+
+      val isDosage = vds.isDosage
+
+      vds.rdd.mapPartitions { it: Iterator[(Variant, (Annotation, Iterable[Genotype]))] =>
+        val sb = new StringBuilder
+        it.map { case (v, (va, gs)) =>
+          sb.clear()
+          appendRow(sb, v, va, gs, rsidQuery, varidQuery)
+          sb.result()
+        }
+      }.writeTable(out + ".gen", None)
+    }
+
+    writeSampleFile()
+    writeGenFile()
+  }
 }
