@@ -1,31 +1,13 @@
-package is.hail.driver
+package is.hail.misc
 
-import org.apache.hadoop
 import java.io.InputStream
-import is.hail.io.compress._
-import org.kohsuke.args4j.{Option => Args4jOption}
 
-object BGZipBlocks extends Command {
+import is.hail.io.compress.BGzipInputStream
+import org.apache.hadoop
 
-  class Options extends BaseOptions {
-    @Args4jOption(required = true, name = "-i", aliases = Array("--input"), usage = "Input file")
-    var input: String = _
-
-  }
-
-  def newOptions = new Options
-
-  def name = "bgzipblocks"
-
-  def description = "Print block starts of block gzip (bgz) file"
-
-  def supportsMultiallelic = true
-
-  def requiresVDS = false
-
-  override def hidden = true
-
-  def run(state: State, options: Options): State = {
+object BGZipBlocks {
+  //Print block starts of block gzip (bgz) file
+  def apply(hadoopConf: hadoop.conf.Configuration, file: String) {
     var buf = new Array[Byte](64 * 1024)
 
     // position of `buf[0]' in input stream
@@ -53,12 +35,12 @@ object BGZipBlocks extends Command {
           }
         }
       }
+
       f()
     }
 
-    val hConf = state.hadoopConf
-    val hPath = new hadoop.fs.Path(options.input)
-    val fs = hPath.getFileSystem(hConf)
+    val hPath = new hadoop.fs.Path(file)
+    val fs = hPath.getFileSystem(hadoopConf)
 
     // no decompression codec
     val is = fs.open(hPath)
@@ -73,7 +55,5 @@ object BGZipBlocks extends Command {
     }
 
     is.close()
-
-    state
   }
 }
