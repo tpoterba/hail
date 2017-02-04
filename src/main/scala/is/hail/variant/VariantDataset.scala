@@ -3,7 +3,7 @@ package is.hail.variant
 import java.io.FileNotFoundException
 
 import is.hail.annotations.{Annotation, _}
-import is.hail.driver.{ExportGEN, Main, SplitMulti}
+import is.hail.io._
 import is.hail.expr.{EvalContext, JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type, _}
 import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
 import is.hail.io.plink.{FamFileConfig, PlinkLoader}
@@ -919,17 +919,19 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     vds.sampleVariants(keep.toDouble / vds.countVariants())
   }
 
-  def exportGen(out: String) {
+  def exportGen(path: String) {
     require(vds.wasSplit, "method `exportGen' requires a split dataset")
 
     def writeSampleFile() {
       //FIXME: should output all relevant sample annotations such as phenotype, gender, ...
-      vds.sparkContext.hadoopConfiguration.writeTable(out + ".sample",
+      vds.sparkContext.hadoopConfiguration.writeTable(path + ".sample",
         "ID_1 ID_2 missing" :: "0 0 0" :: vds.sampleIds.map(s => s"$s $s 0").toList)
     }
 
 
     def formatDosage(d: Double): String = d.formatted("%.4f")
+
+    val emptyDosage = Array(0d, 0d, 0d)
 
     def appendRow(sb: StringBuilder, v: Variant, va: Annotation, gs: Iterable[Genotype], rsidQuery: Querier, varidQuery: Querier) {
       sb.append(v.contig)
@@ -945,7 +947,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       sb.append(v.alt)
 
       for (gt <- gs) {
-        val dosages = gt.dosage.getOrElse(ExportGEN.emptyDosage)
+        val dosages = gt.dosage.getOrElse(emptyDosage)
         sb += ' '
         sb.append(formatDosage(dosages(0)))
         sb += ' '
@@ -985,10 +987,59 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
           appendRow(sb, v, va, gs, rsidQuery, varidQuery)
           sb.result()
         }
-      }.writeTable(out + ".gen", None)
+      }.writeTable(path + ".gen", None)
     }
 
     writeSampleFile()
     writeGenFile()
+  }
+
+  def exportGenotypes(path: String, expr: String, typeFile: Boolean,
+    printRef: Boolean = false, printMissing: Boolean = false) {
+    val symTab = Map(
+      "v" -> (0, TVariant),
+      "va" -> (1, vds.vaSignature),
+      "s" -> (2, TSample),
+      "sa" -> (3, vds.saSignature),
+      "g" -> (4, TGenotype),
+      "global" -> (5, vds.globalSignature))
+
+    val ec = EvalContext(symTab)
+    ec.set(5, vds.globalAnnotation)
+    val (names, ts, f) = Parser.parseExportExprs(expr, ec)
+
+    val hadoopConf = vds.sparkContext.hadoopConfiguration
+    if (typeFile) {
+      hadoopConf.delete(path + ".types", recursive = false)
+      val typeInfo = names
+        .getOrElse(ts.indices.map(i => s"_$i").toArray)
+        .zip(ts)
+      exportTypes(path + ".types", hadoopConf, typeInfo)
+    }
+
+    hadoopConf.delete(path, recursive = true)
+
+    val sampleIdsBc = vds.sparkContext.broadcast(vds.sampleIds)
+    val sampleAnnotationsBc = vds.sparkContext.broadcast(vds.sampleAnnotations)
+
+    val localPrintRef = printRef
+    val localPrintMissing = printMissing
+
+    val filterF: Genotype => Boolean =
+      g => (!g.isHomRef || localPrintRef) && (!g.isNotCalled || localPrintMissing)
+
+    val lines = vds.mapPartitionsWithAll { it =>
+      val sb = new StringBuilder()
+      it
+        .filter { case (v, va, s, sa, g) => filterF(g) }
+        .map { case (v, va, s, sa, g) =>
+          ec.setAll(v, va, s, sa, g)
+          sb.clear()
+
+          f().foreachBetween(x => sb.append(x))(sb += '\t')
+          sb.result()
+        }
+    }.writeTable(path, names.map(_.mkString("\t")))
+
   }
 }
