@@ -6,7 +6,7 @@ import is.hail.annotations.{Annotation, _}
 import is.hail.io._
 import is.hail.expr.{EvalContext, JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type, _}
 import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
-import is.hail.io.plink.{FamFileConfig, PlinkLoader}
+import is.hail.io.plink.{ExportBedBimFam, FamFileConfig, PlinkLoader}
 import is.hail.io.vcf.BufferedLineIterator
 import is.hail.keytable.KeyTable
 import is.hail.methods.{Aggregators, CalculateConcordance, DuplicateReport, Filter}
@@ -19,6 +19,7 @@ import org.apache.kudu.spark.kudu.{KuduContext, _}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.storage.StorageLevel
 import org.json4s.jackson.{JsonMethods, Serialization}
 import org.json4s.{JArray, JBool, JInt, JObject, JString, JValue, _}
 
@@ -1040,6 +1041,96 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
           sb.result()
         }
     }.writeTable(path, names.map(_.mkString("\t")))
+  }
 
+  def exportPlink(path: String, famExpr: String = "id = s.id") {
+    require(vds.wasSplit, "method `exportPlink' requires a split dataset")
+
+    val ec = EvalContext(Map(
+      "s" -> (0, TSample),
+      "sa" -> (1, vds.saSignature),
+      "global" -> (2, vds.globalSignature)))
+
+    ec.set(2, vds.globalAnnotation)
+
+    type Formatter = (Option[Any]) => String
+
+    val formatID: Formatter = _.map(_.asInstanceOf[String]).getOrElse("0")
+    val formatIsFemale: Formatter = _.map { a =>
+      if (a.asInstanceOf[Boolean])
+        "2"
+      else
+        "1"
+    }.getOrElse("0")
+    val formatIsCase: Formatter = _.map { a =>
+      if (a.asInstanceOf[Boolean])
+        "2"
+      else
+        "1"
+    }.getOrElse("-9")
+    val formatQPheno: Formatter = a => a.map(_.toString).getOrElse("-9")
+
+    val famColumns: Map[String, (Type, Int, Formatter)] = Map(
+      "famID" -> (TString, 0, formatID),
+      "id" -> (TString, 1, formatID),
+      "patID" -> (TString, 2, formatID),
+      "matID" -> (TString, 3, formatID),
+      "isFemale" -> (TBoolean, 4, formatIsFemale),
+      "qPheno" -> (TDouble, 5, formatQPheno),
+      "isCase" -> (TBoolean, 5, formatIsCase))
+
+    val (names, types, f) = Parser.parseNamedExprs(famExpr, ec)
+
+    val famFns: Array[(Array[Option[Any]]) => String] = Array(
+      _ => "0", _ => "0", _ => "0", _ => "0", _ => "-9", _ => "-9")
+
+    (names.zipWithIndex, types).zipped.foreach { case ((name, i), t) =>
+      famColumns.get(name) match {
+        case Some((colt, j, formatter)) =>
+          if (colt != t)
+            fatal("invalid type for .fam file column $h: expected $colt, got $t")
+          famFns(j) = (a: Array[Option[Any]]) => formatter(a(i))
+
+        case None =>
+          fatal(s"no .fam file column $name")
+      }
+    }
+
+    val spaceRegex = """\s+""".r
+    val badSampleIds = vds.sampleIds.filter(id => spaceRegex.findFirstIn(id).isDefined)
+    if (badSampleIds.nonEmpty) {
+      fatal(
+        s"""Found ${ badSampleIds.length } sample IDs with whitespace
+           |  Please run `renamesamples' to fix this problem before exporting to plink format
+           |  Bad sample IDs: @1 """.stripMargin, badSampleIds)
+    }
+
+    val bedHeader = Array[Byte](108, 27, 1)
+
+    val plinkRDD = vds.rdd
+      .mapValuesWithKey { case (v, (va, gs)) => ExportBedBimFam.makeBedRow(gs) }
+      .persist(StorageLevel.MEMORY_AND_DISK)
+
+    plinkRDD.map { case (v, bed) => bed }
+      .saveFromByteArrays(path + ".bed", header = Some(bedHeader))
+
+    plinkRDD.map { case (v, bed) => ExportBedBimFam.makeBimRow(v) }
+      .writeTable(path + ".bim")
+
+    plinkRDD.unpersist()
+
+    val famRows = vds
+      .sampleIdsAndAnnotations
+      .map { case (s, sa) =>
+        ec.setAll(s, sa)
+        val a = f()
+        famFns.map(_ (a)).mkString("\t")
+      }
+
+    vds.sparkContext.hadoopConfiguration.writeTextFile(path + ".fam")(out =>
+      famRows.foreach(line => {
+        out.write(line)
+        out.write("\n")
+      }))
   }
 }
