@@ -8,7 +8,8 @@ import is.hail.expr.{EvalContext, JSONAnnotationImpex, Parser, SparkAnnotationIm
 import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
 import is.hail.io.plink.{FamFileConfig, PlinkLoader}
 import is.hail.io.vcf.BufferedLineIterator
-import is.hail.methods.{Aggregators, Filter}
+import is.hail.keytable.KeyTable
+import is.hail.methods.{Aggregators, CalculateConcordance, Filter}
 import is.hail.sparkextras.{OrderedPartitioner, OrderedRDD}
 import is.hail.utils._
 import is.hail.variant.Variant.orderedKey
@@ -882,5 +883,11 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       } else vds.insertVA(other.vaSignature, Parser.parseAnnotationRoot(annotationExpr, Annotation.VARIANT_HEAD))
 
     vds.annotateVariants(other.variantsAndAnnotations, finalType, inserter)
+  }
+
+  def concordance(other: VariantDataset): (IndexedSeq[IndexedSeq[Long]], VariantDataset, VariantDataset) = {
+    require(vds.wasSplit && other.wasSplit, "method `concordance' requires both left and right datasets to be split.")
+
+    CalculateConcordance(vds, other)
   }
 }

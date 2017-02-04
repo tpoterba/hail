@@ -2,6 +2,7 @@ package is.hail.methods
 
 import is.hail.annotations.Annotation
 import is.hail.expr._
+import is.hail.keytable.KeyTable
 import is.hail.sparkextras.OrderedRDD
 import is.hail.utils._
 import is.hail.variant._
@@ -59,7 +60,7 @@ class ConcordanceCombiner extends Serializable {
 
 object CalculateConcordance {
 
-  def apply(left: VariantDataset, right: VariantDataset): (VariantDataset, VariantDataset) = {
+  def apply(left: VariantDataset, right: VariantDataset): (IndexedSeq[IndexedSeq[Long]], VariantDataset, VariantDataset) = {
     require(left.wasSplit && right.wasSplit, "passed unsplit dataset to Concordance")
     val overlap = left.sampleIds.toSet.intersect(right.sampleIds.toSet)
     if (overlap.isEmpty)
@@ -209,6 +210,6 @@ object CalculateConcordance {
       wasSplit = true),
       variantResults)
 
-    (samples, variants)
+    (global.toAnnotation, samples, variants)
   }
 }
