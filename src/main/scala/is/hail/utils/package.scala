@@ -440,4 +440,23 @@ package object utils extends Logging
     def toJSON(x: T): JValue = decompose(x)
     def fromJSON(jv: JValue): T = jv.extract[T]
   }
+
+  def splitWarning(leftSplit: Boolean, left: String, rightSplit: Boolean, right: String) {
+    val msg =
+      """Merge behavior may not be as expected, as all alternate alleles are
+        |  part of the variant key.  See `annotatevariants' documentation for
+        |  more information.""".stripMargin
+    (leftSplit, rightSplit) match {
+      case (true, true) =>
+      case (false, false) => warn(
+        s"""annotating an unsplit $left from an unsplit $right
+           |  $msg""".stripMargin)
+      case (true, false) => warn(
+        s"""annotating a biallelic (split) $left from an unsplit $right
+           |  $msg""".stripMargin)
+      case (false, true) => warn(
+        s"""annotating an unsplit $left from a biallelic (split) $right
+           |  $msg""".stripMargin)
+    }
+  }
 }

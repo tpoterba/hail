@@ -2,44 +2,28 @@ package is.hail.variant
 
 import java.io.FileNotFoundException
 
-import is.hail.annotations.Annotation
-import is.hail.driver.{HailConfiguration, Main, SplitMulti}
+import is.hail.annotations.{Annotation, _}
+import is.hail.driver.{Main, SplitMulti}
 import is.hail.expr.{EvalContext, JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type, _}
+import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
+import is.hail.io.plink.{FamFileConfig, PlinkLoader}
+import is.hail.io.vcf.BufferedLineIterator
+import is.hail.methods.{Aggregators, Filter}
 import is.hail.sparkextras.{OrderedPartitioner, OrderedRDD}
 import is.hail.utils._
+import is.hail.variant.Variant.orderedKey
+import is.hail.variant.LocusImplicits.orderedKey
 import org.apache.hadoop
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{Row, SQLContext}
-import org.apache.spark.sql.types.{StringType, StructField, StructType}
-import org.json4s.{JArray, JBool, JInt, JObject, JString, JValue}
-import org.json4s.jackson.{JsonMethods, Serialization}
-import org.apache.hadoop
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, SQLContext}
-import org.apache.spark.{SparkContext, SparkEnv}
-import is.hail.utils._
-import is.hail.annotations._
-import is.hail.check.Gen
-import is.hail.io.vcf.BufferedLineIterator
-import is.hail.sparkextras._
-import org.json4s._
-import org.json4s.jackson.{JsonMethods, Serialization}
 import org.apache.kudu.spark.kudu.{KuduContext, _}
-import Variant.orderedKey
-import is.hail.driver.AnnotateSamplesTable.buildInserter
-import is.hail.driver.AnnotateSamplesVDS.buildInserter
-import is.hail.io.annotators.IntervalListAnnotator
-import is.hail.io.plink.{FamFileConfig, PlinkLoader}
-import is.hail.keytable.KeyTable
-import is.hail.methods.{Aggregators, Filter}
-import is.hail.utils
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.{Row, SQLContext}
+import org.json4s.jackson.{JsonMethods, Serialization}
+import org.json4s.{JArray, JBool, JInt, JObject, JString, JValue, _}
 
 import scala.collection.mutable
 import scala.io.Source
 import scala.language.implicitConversions
-import scala.reflect.ClassTag
-import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 
 object VariantDataset {
@@ -740,7 +724,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
         val ec = EvalContext(Map(
           "sa" -> (0, vds.saSignature),
           "vds" -> (1, other.saSignature)))
-        buildInserter(annotationExpr, vds.saSignature, ec, Annotation.SAMPLE_HEAD)
+        Annotation.buildInserter(annotationExpr, vds.saSignature, ec, Annotation.SAMPLE_HEAD)
       } else
         vds.insertSA(other.saSignature, Parser.parseAnnotationRoot(annotationExpr, Annotation.SAMPLE_HEAD))
 
@@ -749,4 +733,154 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       .annotateSamples(m.get _, finalType, inserter)
   }
 
+  def annotateVariantsBED(path: String, root: String, all: Boolean = false): VariantDataset = {
+    val annotationPath = Parser.parseAnnotationRoot(root, Annotation.VARIANT_HEAD)
+    BedAnnotator(path, vds.sparkContext.hadoopConfiguration) match {
+      case (is, None) =>
+        vds.annotateIntervals(is, annotationPath)
+
+      case (is, Some((t, m))) =>
+        vds.annotateIntervals(is, t, m, all = all, annotationPath)
+    }
+  }
+
+  def annotateVariantsExpr(expr: String): VariantDataset = {
+    val localGlobalAnnotation = vds.globalAnnotation
+
+    val ec = Aggregators.variantEC(vds)
+    val (paths, types, f) = Parser.parseAnnotationExprs(expr, ec, Some(Annotation.VARIANT_HEAD))
+
+    val inserterBuilder = mutable.ArrayBuilder.make[Inserter]
+    val finalType = (paths, types).zipped.foldLeft(vds.vaSignature) { case (vas, (ids, signature)) =>
+      val (s, i) = vas.insert(signature, ids)
+      inserterBuilder += i
+      s
+    }
+    val inserters = inserterBuilder.result()
+
+    val aggregateOption = Aggregators.buildVariantAggregations(vds, ec)
+
+    vds.mapAnnotations { case (v, va, gs) =>
+      ec.setAll(localGlobalAnnotation, v, va)
+
+      aggregateOption.foreach(f => f(v, va, gs))
+      f().zip(inserters)
+        .foldLeft(va) { case (va, (v, inserter)) =>
+          inserter(va, v)
+        }
+    }.copy(vaSignature = finalType)
+  }
+
+  def annotateVariantsIntervals(path: String, root: String, all: Boolean = false): VariantDataset = {
+    val annotationPath = Parser.parseAnnotationRoot(root, Annotation.VARIANT_HEAD)
+
+    IntervalListAnnotator(path, vds.sparkContext.hadoopConfiguration) match {
+      case (is, Some((m, t))) =>
+        vds.annotateIntervals(is, m, t, all = all, annotationPath)
+
+      case (is, None) =>
+        vds.annotateIntervals(is, annotationPath)
+    }
+  }
+
+  def annotateVariantsLoci(path: String, locusExpr: String,
+    root: Option[String] = None, code: Option[String] = None,
+    config: TextTableConfiguration = TextTableConfiguration()): VariantDataset =
+    annotateVariantsLoci(List(path), locusExpr, root, code, config)
+
+
+  def annotateVariantsLoci(paths: Seq[String], locusExpr: String,
+    root: Option[String] = None, code: Option[String] = None,
+    config: TextTableConfiguration = TextTableConfiguration()): VariantDataset = {
+    val files = vds.sparkContext.hadoopConfiguration.globAll(paths)
+    if (files.isEmpty)
+      fatal("Arguments referred to no files")
+
+    val (struct, rdd) = TextTableReader.read(vds.sparkContext)(files, config, vds.nPartitions)
+
+    val (isCode, annotationExpr) = (root, code) match {
+      case (Some(r), None) => (false, r)
+      case (None, Some(c)) => (true, c)
+      case _ => fatal("this module requires one of `root' or 'code', but not both")
+    }
+
+    val (finalType, inserter): (Type, (Annotation, Option[Annotation]) => Annotation) =
+      if (isCode) {
+        val ec = EvalContext(Map(
+          "va" -> (0, vds.vaSignature),
+          "table" -> (1, struct)))
+        Annotation.buildInserter(annotationExpr, vds.vaSignature, ec, Annotation.VARIANT_HEAD)
+      } else vds.insertVA(struct, Parser.parseAnnotationRoot(annotationExpr, Annotation.VARIANT_HEAD))
+
+    val locusQuery = struct.parseInStructScope[Locus](locusExpr)
+
+
+    import is.hail.variant.LocusImplicits.orderedKey
+    val lociRDD = rdd.flatMap {
+      _.map { a =>
+        locusQuery(a).map(l => (l, a))
+      }.value
+    }.toOrderedRDD(vds.rdd.orderedPartitioner.mapMonotonic)
+
+    vds.annotateLoci(lociRDD, finalType, inserter)
+  }
+
+  def annotateVariantsTable(path: String, variantExpr: String,
+    root: Option[String] = None, code: Option[String] = None,
+    config: TextTableConfiguration = TextTableConfiguration()): VariantDataset =
+    annotateVariantsTable(List(path), variantExpr, root, code, config)
+
+  def annotateVariantsTable(paths: Seq[String], variantExpr: String,
+    root: Option[String] = None, code: Option[String] = None,
+    config: TextTableConfiguration = TextTableConfiguration()): VariantDataset = {
+    val files = vds.sparkContext.hadoopConfiguration.globAll(paths)
+    if (files.isEmpty)
+      fatal("Arguments referred to no files")
+
+    val (struct, rdd) = TextTableReader.read(vds.sparkContext)(files, config, vds.nPartitions)
+
+    val (isCode, annotationExpr) = (root, code) match {
+      case (Some(r), None) => (false, r)
+      case (None, Some(c)) => (true, c)
+      case _ => fatal("this module requires one of `root' or 'code', but not both")
+    }
+
+    val (finalType, inserter): (Type, (Annotation, Option[Annotation]) => Annotation) =
+      if (isCode) {
+        val ec = EvalContext(Map(
+          "va" -> (0, vds.vaSignature),
+          "table" -> (1, struct)))
+        Annotation.buildInserter(annotationExpr, vds.vaSignature, ec, Annotation.VARIANT_HEAD)
+      } else vds.insertVA(struct, Parser.parseAnnotationRoot(annotationExpr, Annotation.VARIANT_HEAD))
+
+    val variantQuery = struct.parseInStructScope[Variant](variantExpr)
+
+    val keyedRDD = rdd.flatMap {
+      _.map { a =>
+        variantQuery(a).map(v => (v, a))
+      }.value
+    }.toOrderedRDD(vds.rdd.orderedPartitioner)
+
+    vds.annotateVariants(keyedRDD, finalType, inserter)
+  }
+
+  def annotateVariantsVDS(other: VariantDataset,
+    root: Option[String] = None, code: Option[String] = None): VariantDataset = {
+
+    val (isCode, annotationExpr) = (root, code) match {
+      case (Some(r), None) => (false, r)
+      case (None, Some(c)) => (true, c)
+      case _ => fatal("this module requires one of `root' or 'code', but not both")
+    }
+
+    val (finalType, inserter): (Type, (Annotation, Option[Annotation]) => Annotation) =
+      if (isCode) {
+        val ec = EvalContext(Map(
+          "va" -> (0, vds.vaSignature),
+          "vds" -> (1, other.vaSignature)))
+        Annotation.buildInserter(annotationExpr, vds.vaSignature, ec, Annotation.VARIANT_HEAD)
+      } else vds.insertVA(other.vaSignature, Parser.parseAnnotationRoot(annotationExpr, Annotation.VARIANT_HEAD))
+
+    vds.annotateVariants(other.variantsAndAnnotations, finalType, inserter)
+  }
 }
