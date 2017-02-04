@@ -348,7 +348,7 @@ class AggregatorSuite extends SparkSuite {
   @Test def filterMap() {
     val vds = VariantSampleMatrix
       .gen(sc, VSMSubgen.random.copy(sampleIdGen=Gen.const(Array("a", "b"))))
-      .filter(vds => vds.nVariants > 0)
+      .filter(vds => vds.countVariants > 0)
       .sample()
     var s = State(sc, sqlContext, vds)
     s = FilterSamplesExpr.run(s, Array("-c", "s == \"a\"", "--keep"))

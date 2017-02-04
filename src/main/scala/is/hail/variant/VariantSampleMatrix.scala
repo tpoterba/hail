@@ -181,7 +181,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
 
   def variantsAndAnnotations: OrderedRDD[Locus, Variant, Annotation] = rdd.mapValuesWithKey { case (v, (va, gs)) => va }.asOrderedRDD
 
-  def nVariants: Long = variants.count()
+  def countVariants(): Long = variants.count()
 
   def expand(): RDD[(Variant, String, T)] =
     mapWithKeys[(Variant, String, T)]((v, s, g) => (v, s, g))

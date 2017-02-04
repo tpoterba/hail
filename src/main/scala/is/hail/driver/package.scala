@@ -37,7 +37,7 @@ package object driver {
         }
         (nVar, Some(nCalled))
       } else
-        (vds.nVariants, None)
+        (vds.countVariants, None)
 
     CountResult(vds.nSamples, nVariants, nCalled)
   }

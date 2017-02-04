@@ -266,7 +266,7 @@ class VSMSuite extends SparkSuite {
     s = Read.run(s, Array("--skip-genotypes", "-i", f))
     s = FilterVariantsExpr.run(s, Array("--keep", "-c", "va.info.AF[0] < 0.01"))
 
-    assert(s.vds.nVariants == 234)
+    assert(s.vds.countVariants == 234)
   }
 
   @Test def testSkipDropSame() {

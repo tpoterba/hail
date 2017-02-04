@@ -38,7 +38,7 @@ class ImputeSexSuite extends SparkSuite {
     val plinkSafeBiallelicVDS = VariantSampleMatrix.gen(sc, VSMSubgen.plinkSafeBiallelic)
       .resize(1000)
       .map(vds => vds.filterVariants { case (v, va, gs) => v.isAutosomalOrPseudoAutosomal && v.contig.toUpperCase != "X" && v.contig.toUpperCase != "Y" })
-      .filter(vds => vds.nVariants > 2 && vds.nSamples >= 2)
+      .filter(vds => vds.countVariants > 2 && vds.nSamples >= 2)
 
     property("hail generates same results as PLINK v1.9") =
       forAll(plinkSafeBiallelicVDS) { case (vds: VariantSampleMatrix[Genotype]) =>
@@ -50,7 +50,7 @@ class ImputeSexSuite extends SparkSuite {
         s = VariantQC.run(s)
         s = FilterVariantsExpr.run(s, Array("--keep", "-c", "va.qc.AC > 1 && va.qc.AF >= 1e-8 && va.qc.nCalled * 2 - va.qc.AC > 1 && va.qc.AF <= 1 - 1e-8"))
 
-        if (s.vds.nSamples < 5 || s.vds.nVariants < 5) {
+        if (s.vds.nSamples < 5 || s.vds.countVariants < 5) {
           true
         } else {
           val localRoot = tmpDir.createLocalTempFile("plinksexCheck")

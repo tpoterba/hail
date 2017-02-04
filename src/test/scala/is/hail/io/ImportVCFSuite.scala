@@ -39,7 +39,7 @@ class ImportVCFSuite extends SparkSuite {
   @Test def symbolicOrSV() {
     var s = State(sc, sqlContext)
     s = ImportVCF.run(s, Array("src/test/resources/symbolicVariant.vcf"))
-    val n = s.vds.nVariants
+    val n = s.vds.countVariants
 
     assert(n == 1)
     assert(VCFReport.accumulators.head._2.value(VCFReport.Symbolic) == 2)
@@ -77,7 +77,7 @@ class ImportVCFSuite extends SparkSuite {
     var s2 = State(sc, sqlContext)
     s2 = ImportVCF.run(s2, Array("src/test/resources/samplepart*.vcf"))
 
-    assert(s.vds.nVariants == s2.vds.nVariants)
+    assert(s.vds.countVariants == s2.vds.countVariants)
   }
 
   @Test def testUndeclaredInfo() {

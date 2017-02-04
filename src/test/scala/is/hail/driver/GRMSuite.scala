@@ -135,7 +135,7 @@ class GRMSuite extends SparkSuite {
         tGen = VSMSubgen.realistic.tGen(_).filter(_.isCalled))
         .gen(sc)
         // plink fails with fewer than 2 samples, no variants
-        .filter(vsm => vsm.nSamples > 1 && vsm.nVariants > 0),
+        .filter(vsm => vsm.nSamples > 1 && vsm.countVariants > 0),
       Gen.oneOf("rel", "gcta-grm", "gcta-grm-bin")) {
       (vsm: VariantSampleMatrix[Genotype], format: String) =>
 
@@ -145,7 +145,7 @@ class GRMSuite extends SparkSuite {
 
         val sampleIds = s.vds.sampleIds
         val nSamples = s.vds.nSamples
-        val nVariants = s.vds.nVariants.toInt
+        val nVariants = s.vds.countVariants.toInt
         assert(nVariants > 0)
 
         ExportPlink.run(s, Array("-o", bFile))

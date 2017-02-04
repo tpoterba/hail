@@ -94,7 +94,7 @@ class TextTableSuite extends SparkSuite {
     val outPath = tmpDir.createTempFile("annotationOut", ".tsv")
     val outTypesPath = tmpDir.createLocalTempFile("annotationOut", ".types")
     val p = Prop.forAll(VariantSampleMatrix.gen(sc, VSMSubgen.realistic)
-      .filter(vds => vds.nVariants > 0 && vds.vaSignature != TDouble)) { vds: VariantDataset =>
+      .filter(vds => vds.countVariants > 0 && vds.vaSignature != TDouble)) { vds: VariantDataset =>
 
       var state = State(sc, sqlContext, vds)
       state = ExportVariants.run(state, Array("-o", outPath, "-c", "v = v, va = va", "-t", outTypesPath))

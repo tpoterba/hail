@@ -36,7 +36,7 @@ class LoadBgenSuite extends SparkSuite {
     var s = State(sc, sqlContext, null)
     s = IndexBGEN.run(s, Array(bgen))
     s = ImportBGEN.run(s, Array("-s", sampleFile, "-n", "10", bgen))
-    assert(s.vds.nSamples == nSamples && s.vds.nVariants == nVariants)
+    assert(s.vds.nSamples == nSamples && s.vds.countVariants == nVariants)
 
     val genVDS = ImportGEN.run(s, Array("-s", sampleFile, gen)).vds
     val bgenVDS = s.vds
@@ -71,7 +71,7 @@ class LoadBgenSuite extends SparkSuite {
     val compGen = for (vds <- VariantSampleMatrix.gen(sc,
       VSMSubgen.dosage.copy(vGen = VariantSubgen.biallelic.gen.map(v => v.copy(contig = "01")),
         sampleIdGen = Gen.distinctBuildableOf[IndexedSeq, String](Gen.identifier.filter(_ != "NA"))))
-      .filter(_.nVariants > 0)
+      .filter(_.countVariants > 0)
       .map(_.copy(wasSplit = true));
       nPartitions <- choose(1, 10))
       yield (vds, nPartitions)
@@ -115,7 +115,7 @@ class LoadBgenSuite extends SparkSuite {
         val importedVds = q.vds
 
         assert(importedVds.nSamples == vds.nSamples)
-        assert(importedVds.nVariants == vds.nVariants)
+        assert(importedVds.nVariants == vds.countVariants)
         assert(importedVds.sampleIds == vds.sampleIds)
 
         val importedVariants = importedVds.variants

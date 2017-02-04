@@ -17,7 +17,7 @@ class FilterAllelesSuite extends SparkSuite {
     Prop.forAll(VSMSubgen.random.gen(sc)) { vds =>
       val s = FilterAlleles.run(State(sc, sqlContext, vds),
         Array("--keep", "--subset", "-c", "false", "-a", noop))
-      s.vds.nVariants == 0
+      s.vds.countVariants == 0
     }.check()
   }
 
@@ -25,7 +25,7 @@ class FilterAllelesSuite extends SparkSuite {
     Prop.forAll(VSMSubgen.random.gen(sc)) { vds =>
       val s = FilterAlleles.run(State(sc, sqlContext, vds),
         Array("--keep", "--subset", "-c", "true", "-a", noop))
-      s.vds.nVariants == vds.nVariants
+      s.vds.countVariants == vds.countVariants
     }.check()
   }
 

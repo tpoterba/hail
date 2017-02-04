@@ -20,7 +20,7 @@ object DownsampleVariants extends Command {
   def requiresVDS = true
 
   def run(state: State, options: Options): State = {
-    val nVariants = state.vds.nVariants
+    val nVariants = state.vds.countVariants
     val vds = state.vds
     state.copy(vds = vds.sampleVariants(options.keep.toDouble / nVariants))
   }

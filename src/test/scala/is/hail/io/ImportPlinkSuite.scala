@@ -18,7 +18,7 @@ class ImportPlinkSuite extends SparkSuite {
 
   object Spec extends Properties("ImportPlink") {
     val compGen = for (vds: VariantDataset <- VariantSampleMatrix.gen[Genotype](sc, VSMSubgen.random);
-      nPartitions: Int <- choose(1, PlinkLoader.expectedBedSize(vds.nSamples, vds.nVariants).toInt.min(10))) yield (vds, nPartitions)
+      nPartitions: Int <- choose(1, PlinkLoader.expectedBedSize(vds.nSamples, vds.countVariants).toInt.min(10))) yield (vds, nPartitions)
 
     property("import generates same output as export") =
       forAll(compGen) { case (vds: VariantSampleMatrix[Genotype], nPartitions: Int) =>
@@ -30,7 +30,7 @@ class ImportPlinkSuite extends SparkSuite {
 
         s = SplitMulti.run(s, Array[String]())
         s = ExportPlink.run(s, Array("-o", truthRoot))
-        if (s.vds.nSamples == 0 || s.vds.nVariants == 0) {
+        if (s.vds.nSamples == 0 || s.vds.countVariants == 0) {
           try {
             s = ImportPlink.run(s, Array("--bfile", truthRoot, "-n", nPartitions.toString))
             false

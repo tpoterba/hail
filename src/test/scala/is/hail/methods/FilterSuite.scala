@@ -19,13 +19,13 @@ class FilterSuite extends SparkSuite {
       .vds.nSamples == 63)
 
     assert(FilterVariantsExpr.run(state, Array("--remove", "-c", "v.start >= 14066228"))
-      .vds.nVariants == 173)
+      .vds.countVariants == 173)
 
     assert(FilterVariantsExpr.run(state, Array("--keep", "-c", "va.pass"))
-      .vds.nVariants == 312)
+      .vds.countVariants == 312)
 
     assert(FilterVariantsExpr.run(state, Array("--keep", "-c", "va.info.AN == 200"))
-      .vds.nVariants == 310)
+      .vds.countVariants == 310)
 
     /*
     assert(FilterVariants.run(state, Array("--keep", "-c", "va.info.AC.contains(20)"))
@@ -33,14 +33,14 @@ class FilterSuite extends SparkSuite {
       */
 
     assert(FilterVariantsExpr.run(state, Array("--keep", "-c", """va.filters.contains("VQSRTrancheSNP99.60to99.80")"""))
-      .vds.nVariants == 3)
+      .vds.countVariants == 3)
 
     // FIXME: rsid of "." should be treated as missing value
     assert(FilterVariantsExpr.run(state, Array("--keep", "-c", """va.rsid != ".""""))
-      .vds.nVariants == 258)
+      .vds.countVariants == 258)
 
     assert(FilterVariantsExpr.run(state, Array("--remove", "-c", """va.rsid == ".""""))
-      .vds.nVariants == 258)
+      .vds.countVariants == 258)
 
     val stateWithSampleQC = SampleQC.run(state, Array.empty[String])
 
@@ -56,22 +56,22 @@ class FilterSuite extends SparkSuite {
     val stateWithVariantQC = VariantQC.run(state, Array.empty[String])
 
     assert(FilterVariantsExpr.run(stateWithVariantQC, Array("--keep", "-c", "va.qc.nCalled < 100"))
-      .vds.nVariants == 36)
+      .vds.countVariants == 36)
 
     assert(FilterVariantsExpr.run(stateWithVariantQC, Array("--keep", "-c", "va.qc.nHomVar > 0 && va.qc.nHet > 0"))
-      .vds.nVariants == 104)
+      .vds.countVariants == 104)
 
     assert(FilterVariantsExpr.run(stateWithVariantQC, Array("--keep", "-c", "va.qc.rHetHomVar > 0"))
-      .vds.nVariants == 104)
+      .vds.countVariants == 104)
 
     assert(FilterVariantsExpr.run(stateWithVariantQC, Array("--keep", "-c", "va.qc.rHetHomVar >= 0"))
-      .vds.nVariants == 117)
+      .vds.countVariants == 117)
 
     assert(FilterVariantsExpr.run(stateWithVariantQC, Array("--remove", "-c", "isMissing(va.qc.rHetHomVar)"))
-      .vds.nVariants == 117)
+      .vds.countVariants == 117)
 
     assert(FilterVariantsExpr.run(stateWithVariantQC, Array("--keep", "-c", "isDefined(va.qc.rHetHomVar)"))
-      .vds.nVariants == 117)
+      .vds.countVariants == 117)
 
     val highGQ = FilterGenotypes.run(state, Array("--remove", "-c", "g.gq < 20"))
       .vds.expand().collect()
@@ -123,9 +123,9 @@ class FilterSuite extends SparkSuite {
 
     assert(FilterSamplesList.run(state, Array("--remove", "-i", "src/test/resources/filter.sample_list")).vds.nSamples == 5)
 
-    assert(FilterVariantsIntervals.run(state, Array("--keep", "-i", "src/test/resources/filter.interval_list")).vds.nVariants == 6)
+    assert(FilterVariantsIntervals.run(state, Array("--keep", "-i", "src/test/resources/filter.interval_list")).vds.countVariants == 6)
 
-    assert(FilterVariantsIntervals.run(state, Array("--remove", "-i", "src/test/resources/filter.interval_list")).vds.nVariants == 2)
+    assert(FilterVariantsIntervals.run(state, Array("--remove", "-i", "src/test/resources/filter.interval_list")).vds.countVariants == 2)
 
   }
 
@@ -133,7 +133,7 @@ class FilterSuite extends SparkSuite {
     val vds = LoadVCF(sc, "src/test/resources/multipleChromosomes.vcf")
     val s = SplitMulti.run(State(sc, sqlContext, vds), Array.empty[String])
     val s2 = FilterVariantsExpr.run(s, Array("--keep", "-c", """ "^\\d+$" ~ v.contig """))
-    assert(s.vds.nVariants == s2.vds.nVariants)
+    assert(s.vds.countVariants == s2.vds.countVariants)
   }
 
   @Test def MissingTest() {
@@ -170,7 +170,7 @@ class FilterSuite extends SparkSuite {
       .copy(vaSignature = sigs)
     val state = SplitMulti.run(State(sc, sqlContext, vds), Array.empty[String])
     val s2 = FilterVariantsExpr.run(state, Array("--keep", "-c", "va.`weird name \\t test` > 500"))
-    assert(s2.vds.nVariants == vds.nVariants)
+    assert(s2.vds.countVariants == vds.countVariants)
 
     TestUtils.interceptFatal("invalid escape character.*backtick identifier.*\\\\i")(
       FilterVariantsExpr.run(state, Array("--keep", "-c", "va.`bad\\input` == 5")))

@@ -495,7 +495,7 @@ class ImportAnnotationsSuite extends SparkSuite {
   @Test def testAnnotationsVDSReadWrite() {
     val outPath = tmpDir.createTempFile("annotationOut", ".vds")
     val p = Prop.forAll(VariantSampleMatrix.gen(sc, VSMSubgen.realistic)
-      .filter(vds => vds.nVariants > 0)) { vds: VariantDataset =>
+      .filter(vds => vds.countVariants > 0)) { vds: VariantDataset =>
 
       var state = State(sc, sqlContext, vds)
       hadoopConf.delete(outPath, recursive = true)

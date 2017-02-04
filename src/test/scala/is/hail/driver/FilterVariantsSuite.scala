@@ -46,6 +46,6 @@ class FilterVariantsSuite extends SparkSuite {
     s = ImportVCF.run(s, Array("src/test/resources/sample2.vcf"))
     s = FilterVariantsAll.run(s)
 
-    assert(s.vds.nVariants == 0)
+    assert(s.vds.countVariants == 0)
   }
 }

@@ -901,10 +901,13 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
         }
         (nVar, Some(nCalled))
       } else
-        (vds.nVariants, None)
+        (vds.countVariants, None)
 
     CountResult(vds.nSamples, nVariants, nCalled)
   }
 
+  def downsampleVariants(keep: Long): VariantDataset = {
+    vds.sampleVariants(keep.toDouble / vds.countVariants())
+  }
 
 }
