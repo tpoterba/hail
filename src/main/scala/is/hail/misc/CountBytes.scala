@@ -1,6 +1,7 @@
-package is.hail.driver
+package is.hail.misc
 
-import org.apache.hadoop.conf.Configuration
+
+import org.apache.hadoop
 import org.apache.hadoop.fs.{FSDataInputStream, FileSystem, Path}
 import org.apache.hadoop.io.LongWritable
 import org.apache.hadoop.io.compress.SplittableCompressionCodec
@@ -8,6 +9,7 @@ import org.apache.hadoop.mapreduce.{InputSplit => NewInputSplit, RecordReader =>
 import org.apache.hadoop.mapreduce.lib.input.{FileInputFormat => NewFileInputFormat, FileSplit => NewFileSplit}
 import is.hail.io.compress.BGzipInputStream
 import is.hail.utils.richUtils.RichHadoopConfiguration
+import org.apache.spark.SparkContext
 import org.kohsuke.args4j.{Argument, Option => Args4jOption}
 
 import scala.collection.JavaConverters._
@@ -117,34 +119,15 @@ class CountBytesInputFormat extends NewFileInputFormat[LongWritable, LongWritabl
   }
 }
 
-object CountBytes extends Command {
+object CountBytes {
+  // count the number of bytes in a file
+  def apply(files: Seq[String], sc: SparkContext, forceBGZ:  Boolean = false) {
 
-  class Options extends BaseOptions {
-    @Args4jOption(name = "--force-bgz", usage = "Force load .gz file using BGzip codec")
-    var forceBGz: Boolean = false
+    val jobConf = new hadoop.conf.Configuration(sc.hadoopConfiguration)
 
-    @Argument(usage = "<files...>")
-    var arguments: java.util.ArrayList[String] = new java.util.ArrayList[String]()
-  }
-
-  def newOptions = new Options
-
-  def name = "countbytes"
-
-  def description = "Count number of bytes in file"
-
-  def supportsMultiallelic = true
-
-  def requiresVDS = false
-
-  override def hidden = true
-
-  def run(state: State, options: Options): State = {
-    val jobConf = new Configuration(state.hadoopConf)
-
-    jobConf.set("forceBGz", options.forceBGz.toString)
+    jobConf.set("forceBGz", forceBGZ.toString)
     val bytes =
-      state.sc.newAPIHadoopFile[LongWritable, LongWritable, CountBytesInputFormat](options.arguments.asScala.mkString(","),
+      sc.newAPIHadoopFile[LongWritable, LongWritable, CountBytesInputFormat](files.mkString(","),
         classOf[CountBytesInputFormat],
         classOf[LongWritable],
         classOf[LongWritable],
@@ -153,7 +136,5 @@ object CountBytes extends Command {
         .aggregate(0L)(_ + _, _ + _)
 
     println(s"bytes = $bytes")
-
-    state
   }
 }
