@@ -9,7 +9,7 @@ import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
 import is.hail.io.plink.{FamFileConfig, PlinkLoader}
 import is.hail.io.vcf.BufferedLineIterator
 import is.hail.keytable.KeyTable
-import is.hail.methods.{Aggregators, CalculateConcordance, Filter}
+import is.hail.methods.{Aggregators, CalculateConcordance, DuplicateReport, Filter}
 import is.hail.sparkextras.{OrderedPartitioner, OrderedRDD}
 import is.hail.utils._
 import is.hail.variant.Variant.orderedKey
@@ -904,6 +904,15 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
         (vds.countVariants, None)
 
     CountResult(vds.nSamples, nVariants, nCalled)
+  }
+
+  def deduplicate(): VariantDataset = {
+    DuplicateReport.initialize()
+
+    val acc = DuplicateReport.accumulator
+    vds.copy(rdd = vds.rdd.mapPartitions({ it =>
+      new SortedDistinctPairIterator(it, (v: Variant) => acc += v)
+    }, preservesPartitioning = true).asOrderedRDD)
   }
 
   def downsampleVariants(keep: Long): VariantDataset = {
