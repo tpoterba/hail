@@ -890,4 +890,21 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
     CalculateConcordance(vds, other)
   }
+
+  def count(countGenotypes: Boolean = false): CountResult = {
+    val (nVariants, nCalled) =
+      if (countGenotypes) {
+        val (nVar, nCalled) = vds.rdd.map { case (v, (va, gs)) =>
+          (1L, gs.count(_.isCalled).toLong)
+        }.fold((0L, 0L)) { (comb, x) =>
+          (comb._1 + x._1, comb._2 + x._2)
+        }
+        (nVar, Some(nCalled))
+      } else
+        (vds.nVariants, None)
+
+    CountResult(vds.nSamples, nVariants, nCalled)
+  }
+
+
 }
