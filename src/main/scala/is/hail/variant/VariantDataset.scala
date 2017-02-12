@@ -400,24 +400,6 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     }.asOrderedRDD)
   }
 
-  def filterVariantsExpr(cond: String, keep: Boolean): VariantDataset = {
-    val localGlobalAnnotation = vds.globalAnnotation
-    val ec = Aggregators.variantEC(vds)
-
-    val f: () => Option[Boolean] = Parser.parseTypedExpr[Boolean](cond, ec)
-
-    val aggregatorOption = Aggregators.buildVariantAggregations(vds, ec)
-
-    val p = (v: Variant, va: Annotation, gs: Iterable[Genotype]) => {
-      aggregatorOption.foreach(f => f(v, va, gs))
-
-      ec.setAll(localGlobalAnnotation, v, va)
-      Filter.keepThis(f(), keep)
-    }
-
-    vds.filterVariants(p)
-  }
-
   def aggregateIntervals(intervalList: String, expr: String, out: String) {
 
     val vas = vds.vaSignature
@@ -1333,13 +1315,6 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
   }
 
   /**
-    * Discard all samples in current dataset
-    */
-  def filterSamplesAll(): VariantDataset = {
-    vds.dropSamples()
-  }
-
-  /**
     * Filter samples using the Hail expression language.
     *
     * @param filterExpr Filter expression involving `s' (sample) and `sa' (sample annotations)
@@ -1382,5 +1357,29 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     val p = (s: String, sa: Annotation) => Filter.keepThis(samples.contains(s), !remove)
 
     vds.filterSamples(p)
+  }
+
+  /**
+    * Filter variants using the Hail expression language.
+    * @param filterExpr filter expression
+    * @param remove remove variants where filterExpr evaluates to true, rather than keeping only these
+    * @return
+    */
+  def filterVariantsExpr(filterExpr: String, remove: Boolean = false): VariantDataset = {
+    val localGlobalAnnotation = vds.globalAnnotation
+    val ec = Aggregators.variantEC(vds)
+
+    val f: () => Option[Boolean] = Parser.parseTypedExpr[Boolean](filterExpr, ec)
+
+    val aggregatorOption = Aggregators.buildVariantAggregations(vds, ec)
+
+    val p = (v: Variant, va: Annotation, gs: Iterable[Genotype]) => {
+      aggregatorOption.foreach(f => f(v, va, gs))
+
+      ec.setAll(localGlobalAnnotation, v, va)
+      Filter.keepThis(f(), !remove)
+    }
+
+    vds.filterVariants(p)
   }
 }

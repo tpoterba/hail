@@ -19,6 +19,7 @@ import org.json4s._
 import org.json4s.jackson.{JsonMethods, Serialization}
 import org.apache.kudu.spark.kudu.{KuduContext, _}
 import Variant.orderedKey
+import is.hail.io.annotators.IntervalListAnnotator
 import is.hail.keytable.KeyTable
 import is.hail.methods.{Aggregators, Filter}
 import is.hail.utils
@@ -301,6 +302,12 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
       }
     }
   }
+
+  def filterIntervals(path: String, keep: Boolean = true): VariantSampleMatrix[T] = {
+    filterIntervals(IntervalListAnnotator.read(path, sparkContext.hadoopConfiguration, prune = true), keep)
+  }
+
+  def dropVariants(): VariantSampleMatrix[T] = copy(rdd = OrderedRDD.empty(sparkContext))
 
   def dropSamples(): VariantSampleMatrix[T] =
     copy(sampleIds = IndexedSeq.empty[String],
