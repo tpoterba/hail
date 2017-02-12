@@ -8,7 +8,7 @@ import is.hail.io._
 import is.hail.expr.{EvalContext, JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type, _}
 import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
 import is.hail.io.plink.{ExportBedBimFam, FamFileConfig, PlinkLoader}
-import is.hail.io.vcf.BufferedLineIterator
+import is.hail.io.vcf.{BufferedLineIterator, ExportVCF}
 import is.hail.keytable.KeyTable
 import is.hail.methods.{Aggregators, CalculateConcordance, DuplicateReport, Filter}
 import is.hail.sparkextras.{OrderedPartitioner, OrderedRDD}
@@ -1247,5 +1247,16 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
     SolrConnector.exportVariants(vds, variantExpr, genotypeExpr, collection, url, zkHost, exportMissing,
       exportRef, drop, numShards, blockSize)
+  }
+
+  /**
+    *
+    * @param path output path
+    * @param append append file to header
+    * @param exportPP export Hail PLs as a PP format field
+    * @param parallel export VCF in parallel using the path argument as a directory
+    */
+  def exportVCF(path: String, append: Option[String] = None, exportPP: Boolean = false, parallel: Boolean = false) {
+    ExportVCF(vds, path, append, exportPP, parallel)
   }
 }

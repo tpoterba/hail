@@ -1,39 +1,14 @@
-package is.hail.driver
+package is.hail.io.vcf
 
-import org.apache.spark.sql.Row
+import is.hail.annotations.{Annotation, Querier}
+import is.hail.expr.{Field, TArray, TBoolean, TChar, TDouble, TInt, TIterable, TSet, TString, TStruct, Type}
 import is.hail.utils._
-import is.hail.annotations._
-import is.hail.expr._
-import is.hail.variant.{Genotype, Variant}
-import org.kohsuke.args4j.{Option => Args4jOption}
+import is.hail.variant.{Genotype, Variant, VariantDataset}
+import org.apache.spark.sql.Row
 
 import scala.io.Source
 
-object ExportVCF extends Command {
-
-  class Options extends BaseOptions {
-    @Args4jOption(name = "-a", usage = "Append file to header")
-    var append: String = _
-
-    @Args4jOption(required = true, name = "-o", aliases = Array("--output"), usage = "Output file")
-    var output: String = _
-
-    @Args4jOption(name = "--export-pp", usage = "Export Hail PLs as a PP format field")
-    var exportPP: Boolean = false
-
-    @Args4jOption(name = "--parallel", usage = "Export VCF in parallel")
-    var parallel: Boolean = false
-  }
-
-  def newOptions = new Options
-
-  def name = "exportvcf"
-
-  def description = "Write current dataset as VCF file"
-
-  def supportsMultiallelic = true
-
-  def requiresVDS = true
+object ExportVCF {
 
   def infoNumber(t: Type): String = t match {
     case TBoolean => "0"
@@ -147,8 +122,8 @@ object ExportVCF extends Command {
     }
   }
 
-  def run(state: State, options: Options): State = {
-    val vds = state.vds
+  def apply(vds: VariantDataset, path: String, append: Option[String] = None, exportPP: Boolean = false,
+    parallel: Boolean = false) {
     val vas = vds.vaSignature
 
     val infoSignature = vds.vaSignature
@@ -159,9 +134,6 @@ object ExportVCF extends Command {
     }.getOrElse((a: Annotation) => None)
 
     val hasSamples = vds.nSamples > 0
-
-    val exportPP = options.exportPP
-    val parallel = options.parallel
 
     def header: String = {
       val sb = new StringBuilder()
@@ -203,8 +175,8 @@ object ExportVCF extends Command {
         sb.append("\">\n")
       })
 
-      if (options.append != null) {
-        state.hadoopConf.readFile(options.append) { s =>
+      append.foreach { f =>
+        vds.sparkContext.hadoopConfiguration.readFile(f) { s =>
           Source.fromInputStream(s)
             .getLines()
             .filterNot(_.isEmpty)
@@ -230,7 +202,7 @@ object ExportVCF extends Command {
         case TString => true
         case t => warn(
           s"""found `rsid' field, but it was an unexpected type `$t'.  Emitting missing RSID.
-              |  Expected ${ TString }""".stripMargin)
+             |  Expected ${ TString }""".stripMargin)
           false
       }.map(_ => vds.queryVA("va.rsid")._2)
 
@@ -239,7 +211,7 @@ object ExportVCF extends Command {
         case TDouble => true
         case t => warn(
           s"""found `qual' field, but it was an unexpected type `$t'.  Emitting missing QUAL.
-              |  Expected ${ TDouble }""".stripMargin)
+             |  Expected ${ TDouble }""".stripMargin)
           false
       }.map(_ => vds.queryVA("va.qual")._2)
 
@@ -249,7 +221,7 @@ object ExportVCF extends Command {
         case t =>
           warn(
             s"""found `filters' field, but it was an unexpected type `$t'.  Emitting missing FILTERS.
-                |  Expected ${ TSet(TString) }""".stripMargin)
+               |  Expected ${ TSet(TString) }""".stripMargin)
           false
       }.map(_ => vds.queryVA("va.filters")._2)
 
@@ -324,8 +296,6 @@ object ExportVCF extends Command {
         appendRow(sb, v, va, gs)
         sb.result()
       }
-    }.writeTable(options.output, Some(header), parallelWrite = parallel)
-    state
+    }.writeTable(path, Some(header), parallelWrite = parallel)
   }
-
 }
