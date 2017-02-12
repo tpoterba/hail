@@ -1383,11 +1383,74 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     vds.filterVariants(p)
   }
 
+  /**
+    *
+    * @param path output path
+    * @param format output format: one of rel, gcta-grm, gcta-grm-bin
+    * @param idFile write ID file to this path
+    * @param nFile N file path, used with gcta-grm-bin only
+    */
   def grm(path: String, format: String, idFile: Option[String] = None, nFile: Option[String] = None) {
     GRM(vds, path, format, idFile, nFile)
   }
 
   def hardCalls(): VariantDataset = {
     vds.mapValues { g => Genotype(g.gt, g.fakeRef) }
+  }
+
+  /**
+    *
+    * @param path Output path for the IBD matrix
+    * @param computeMafExpr An expression for the minor allele frequency of the current variant, `v', given
+    *                       the variant annotations `va'. If unspecified, MAF will be estimated from the dataset
+    * @param bounded Allows the estimations for Z0, Z1, Z2, and PI_HAT to take on biologically-nonsense values
+    *                (e.g. outside of [0,1]).
+    * @param parallelWrite This option writes the IBD table as a directory of sharded files. Without this option,
+    *                      the output is coalesced to a single file
+    * @param minimum Sample pairs with a PI_HAT below this value will not be included in the output. Must be in [0,1]
+    * @param maximum Sample pairs with a PI_HAT above this value will not be included in the output. Must be in [0,1]
+    */
+  def ibd(path: String, computeMafExpr: Option[String] = None, bounded: Boolean = true, parallelWrite: Boolean = false,
+    minimum: Option[Double] = None, maximum: Option[Double] = None) {
+
+    minimum.foreach(min => optionCheckInRangeInclusive(0.0, 1.0)("minimum", min))
+    maximum.foreach(max => optionCheckInRangeInclusive(0.0, 1.0)("maximum", max))
+
+    minimum.liftedZip(maximum).foreach { case (min, max) =>
+      if (min <= max) {
+        fatal(s"minimum must be less than or equal to maximum: $min, $max")
+      }
+    }
+
+    val computeMaf = computeMafExpr.map(IBD.generateComputeMaf(vds.vaSignature, _))
+
+    IBD(vds, computeMaf, bounded, minimum, maximum)
+      .map { case ((i, j), ibd) =>
+        s"$i\t$j\t${ ibd.ibd.Z0 }\t${ ibd.ibd.Z1 }\t${ ibd.ibd.Z2 }\t${ ibd.ibd.PI_HAT }"
+      }
+      .writeTable(path, Some("SAMPLE_ID_1\tSAMPLE_ID_2\tZ0\tZ1\tZ2\tPI_HAT"), parallelWrite)
+  }
+
+  /**
+    *
+    * @param mafThreshold Minimum minor allele frequency threshold
+    * @param includePAR Include pseudoautosomal regions
+    * @param fFemaleThreshold Samples are called females if F < femaleThreshold
+    * @param fMaleThreshold Samples are called males if F > maleThreshold
+    * @param popFreqExpr Use an annotation expression for estimate of MAF rather than computing from the data
+    */
+  def imputeSex(mafThreshold: Double = 0.0, includePAR: Boolean = false, fFemaleThreshold: Double = 0.2,
+    fMaleThreshold: Double = 0.8, popFreqExpr: Option[String] = None): VariantDataset = {
+
+    val result = ImputeSexPlink(vds,
+      mafThreshold,
+      includePAR,
+      fMaleThreshold,
+      fFemaleThreshold,
+      popFreqExpr)
+
+    val signature = ImputeSexPlink.schema
+
+    vds.annotateSamples(result, signature, "sa.imputesex")
   }
 }
