@@ -1235,15 +1235,15 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     * @param blockSize Variants per SolrClient.add
     */
   def exportVariantsSolr(variantExpr: String,
-  genotypeExpr: String,
-  collection: String = null,
-  url: String = null,
-  zkHost: String = null,
-  exportMissing: Boolean = false,
-  exportRef: Boolean = false,
-  drop: Boolean = false,
-  numShards: Int = 1,
-  blockSize: Int = 100) {
+    genotypeExpr: String,
+    collection: String = null,
+    url: String = null,
+    zkHost: String = null,
+    exportMissing: Boolean = false,
+    exportRef: Boolean = false,
+    drop: Boolean = false,
+    numShards: Int = 1,
+    blockSize: Int = 100) {
 
     SolrConnector.exportVariants(vds, variantExpr, genotypeExpr, collection, url, zkHost, exportMissing,
       exportRef, drop, numShards, blockSize)
@@ -1286,12 +1286,12 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     val sas = vds.saSignature
 
     val symTab = Map(
-      "v" ->(0, TVariant),
-      "va" ->(1, vas),
-      "s" ->(2, TSample),
-      "sa" ->(3, sas),
-      "g" ->(4, TGenotype),
-      "global" -> (5, vds.globalSignature) )
+      "v" -> (0, TVariant),
+      "va" -> (1, vas),
+      "s" -> (2, TSample),
+      "sa" -> (3, sas),
+      "g" -> (4, TGenotype),
+      "global" -> (5, vds.globalSignature))
 
 
     val ec = EvalContext(symTab)
@@ -1314,5 +1314,21 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
         else
           noCall
       })
+  }
+
+  /**
+    * Remove multiallelic variants from this dataset.
+    *
+    * Useful for running methods that require biallelic variants without calling the more expensive split_multi step.
+    */
+  def filterMulti(): VariantDataset = {
+    if (vds.wasSplit) {
+      warn("called redundant `filtermulti' on an already split or multiallelic-filtered VDS")
+      vds
+    } else {
+      vds.filterVariants {
+        case (v, va, gs) => v.isBiallelic
+      }.copy(wasSplit = true)
+    }
   }
 }
