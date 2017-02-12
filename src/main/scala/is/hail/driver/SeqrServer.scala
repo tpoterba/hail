@@ -2,6 +2,7 @@ package is.hail.driver
 
 import com.datastax.driver.core.{DataType, Session}
 import com.datastax.driver.core.querybuilder.QueryBuilder
+import is.hail.io.CassandraConnector
 import org.apache.solr.client.solrj.{SolrClient, SolrQuery}
 import org.apache.solr.client.solrj.impl.{CloudSolrClient, HttpSolrClient}
 import is.hail.utils._
@@ -408,7 +409,7 @@ object SeqrServerCommand extends Command {
       if (solrOnly)
         null
       else
-        CassandraStuff.getSession(options.address)
+        CassandraConnector.getSession(options.address)
 
     val solrService = new SeqrService(solrOnly, jsonFields, solr, cassSession, options.keyspace, options.table)
 

@@ -335,7 +335,7 @@ case class HailContext(sc: SparkContext, sqlContext: SQLContext) {
     if (inputs.isEmpty)
       fatal("arguments refer to no files")
 
-    val vdses = inputs.map(input => VariantSampleMatrix.read(sqlContext, input,
+    val vdses = inputs.map(input => VariantDataset.read(sqlContext, input,
       skipGenotypes = sitesOnly, skipVariants = samplesOnly))
 
     val sampleIds = vdses.head.sampleIds

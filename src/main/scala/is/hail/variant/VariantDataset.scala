@@ -3,6 +3,7 @@ package is.hail.variant
 import java.io.FileNotFoundException
 
 import is.hail.annotations.{Annotation, _}
+import is.hail.driver.SplitMulti
 import is.hail.io._
 import is.hail.expr.{EvalContext, JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type, _}
 import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
@@ -60,7 +61,7 @@ object VariantDataset {
         s"""
            |corrupt VDS: invalid metadata file.
            |  Recreate VDS with current version of Hail.
-           |  caught exception: ${ Main.expandException(e) }
+           |  caught exception: ${ expandException(e) }
          """.stripMargin)
     }
 
@@ -693,7 +694,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
         val ec = EvalContext(Map(
           "sa" -> (0, vds.saSignature),
           "table" -> (1, struct)))
-        buildInserter(annotationExpr, vds.saSignature, ec, Annotation.SAMPLE_HEAD)
+        Annotation.buildInserter(annotationExpr, vds.saSignature, ec, Annotation.SAMPLE_HEAD)
       } else
         vds.insertSA(struct, Parser.parseAnnotationRoot(annotationExpr, Annotation.SAMPLE_HEAD))
 
@@ -1132,5 +1133,119 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
         out.write(line)
         out.write("\n")
       }))
+  }
+
+  def exportSamples(path: String, expr: String, typeFile: Boolean) {
+    val localGlobalAnnotation = vds.globalAnnotation
+
+    val ec = Aggregators.sampleEC(vds)
+
+    val (names, types, f) = Parser.parseExportExprs(expr, ec)
+    val hadoopConf = vds.sparkContext.hadoopConfiguration
+    if (typeFile) {
+      hadoopConf.delete(path + ".types", recursive = false)
+      val typeInfo = names
+        .getOrElse(types.indices.map(i => s"_$i").toArray)
+        .zip(types)
+      exportTypes(path + ".types", hadoopConf, typeInfo)
+    }
+
+    val sampleAggregationOption = Aggregators.buildSampleAggregations(vds, ec)
+
+    hadoopConf.delete(path, recursive = true)
+
+    val sb = new StringBuilder()
+    val lines = for ((s, sa) <- vds.sampleIdsAndAnnotations) yield {
+      sampleAggregationOption.foreach(f => f.apply(s))
+      sb.clear()
+      ec.setAll(localGlobalAnnotation, s, sa)
+      f().foreachBetween(x => sb.append(x))(sb += '\t')
+      sb.result()
+    }
+
+    hadoopConf.writeTable(path, lines, names.map(_.mkString("\t")))
+  }
+
+  def exportVariants(path: String, expr: String, typeFile: Boolean) {
+    val vas = vds.vaSignature
+    val hConf = vds.sparkContext.hadoopConfiguration
+
+    val localGlobalAnnotations = vds.globalAnnotation
+    val ec = Aggregators.variantEC(vds)
+
+    val (names, types, f) = Parser.parseExportExprs(expr, ec)
+
+    val hadoopConf = vds.sparkContext.hadoopConfiguration
+    if (typeFile) {
+      hadoopConf.delete(path + ".types", recursive = false)
+      val typeInfo = names
+        .getOrElse(types.indices.map(i => s"_$i").toArray)
+        .zip(types)
+      exportTypes(path + ".types", hadoopConf, typeInfo)
+    }
+
+    val variantAggregations = Aggregators.buildVariantAggregations(vds, ec)
+
+    hadoopConf.delete(path, recursive = true)
+
+    vds.rdd
+      .mapPartitions { it =>
+        val sb = new StringBuilder()
+        it.map { case (v, (va, gs)) =>
+          variantAggregations.foreach { f => f(v, va, gs) }
+          ec.setAll(localGlobalAnnotations, v, va)
+          sb.clear()
+          f().foreachBetween(x => sb.append(x))(sb += '\t')
+          sb.result()
+        }
+      }.writeTable(path, names.map(_.mkString("\t")))
+  }
+
+  /**
+    *
+    * @param address Cassandra contact point to connect to
+    * @param keySpace Cassandra keyspace
+    * @param table Cassandra table
+    * @param genotypeExpr comma-separated list of fields/computations to be exported
+    * @param variantExpr comma-separated list of fields/computations to be exported
+    * @param drop drop and re-create Cassandra table before exporting
+    * @param exportRef export HomRef calls
+    * @param exportMissing export missing genotypes
+    * @param blockSize size of exported batch
+    */
+  def exportVariantsCassandra(address: String, genotypeExpr: String, keySpace: String,
+    table: String, variantExpr: String, drop: Boolean = false, exportRef: Boolean = false,
+    exportMissing: Boolean = false, blockSize: Int = 100) {
+
+    CassandraConnector.exportVariants(vds, address, keySpace, table, genotypeExpr,
+      variantExpr, drop, exportRef, exportMissing, blockSize)
+  }
+
+  /**
+    *
+    * @param variantExpr comma-separated list of fields/computations to be exported
+    * @param genotypeExpr comma-separated list of fields/computations to be exported
+    * @param collection SolrCloud collection
+    * @param url Solr instance (URL) to connect to
+    * @param zkHost Zookeeper host string to connect to
+    * @param exportMissing export missing genotypes
+    * @param exportRef export HomRef calls
+    * @param drop delete and re-create solr collection before exporting
+    * @param numShards number of shards to split the collection into
+    * @param blockSize Variants per SolrClient.add
+    */
+  def exportVariantsSolr(variantExpr: String,
+  genotypeExpr: String,
+  collection: String = null,
+  url: String = null,
+  zkHost: String = null,
+  exportMissing: Boolean = false,
+  exportRef: Boolean = false,
+  drop: Boolean = false,
+  numShards: Int = 1,
+  blockSize: Int = 100) {
+
+    SolrConnector.exportVariants(vds, variantExpr, genotypeExpr, collection, url, zkHost, exportMissing,
+      exportRef, drop, numShards, blockSize)
   }
 }

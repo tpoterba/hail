@@ -1,72 +1,22 @@
-package is.hail.driver
+package is.hail.io
 
 import java.util
 
+import is.hail.driver.Main
+import is.hail.expr.{EvalContext, Parser, TBoolean, TDouble, TFloat, TGenotype, TInt, TIterable, TLong, TSample, TString, TVariant, Type}
+import is.hail.utils.StringEscapeUtils.escapeStringSimple
+import is.hail.utils.{fatal, info, warn}
+import is.hail.variant.VariantDataset
 import org.apache.solr.client.solrj.{SolrClient, SolrResponse}
 import org.apache.solr.client.solrj.impl.{CloudSolrClient, HttpSolrClient}
-import org.apache.solr.client.solrj.request.schema.SchemaRequest
 import org.apache.solr.client.solrj.request.CollectionAdminRequest
+import org.apache.solr.client.solrj.request.schema.SchemaRequest
 import org.apache.solr.common.{SolrException, SolrInputDocument}
-import is.hail.utils._
-import is.hail.expr._
-import org.kohsuke.args4j.{Option => Args4jOption}
-import is.hail.utils.StringEscapeUtils._
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.util.Random
 
-object ExportVariantsSolr extends Command with Serializable {
-
-  class Options extends BaseOptions {
-    @Args4jOption(name = "-c",
-      usage = "SolrCloud collection")
-    var collection: String = _
-
-    @Args4jOption(name = "--export-missing", usage = "export missing genotypes")
-    var exportMissing = false
-
-    @Args4jOption(name = "--export-ref", usage = "export HomRef calls")
-    var exportRef = false
-
-    @Args4jOption(required = true, name = "-v",
-      usage = "comma-separated list of fields/computations to be exported")
-    var variantCondition: String = _
-
-    @Args4jOption(required = true, name = "-g",
-      usage = "comma-separated list of fields/computations to be exported")
-    var genotypeCondition: String = _
-
-    @Args4jOption(name = "-u", aliases = Array("--url"),
-      usage = "Solr instance (URL) to connect to")
-    var url: String = _
-
-    @Args4jOption(name = "-z", aliases = Array("--zk-host"),
-      usage = "Zookeeper host string to connect to")
-    var zkHost: String = _
-
-    @Args4jOption(name = "-d", aliases = Array("--drop"),
-      usage = "delete and re-create solr collection before exporting")
-    var drop: Boolean = false
-
-    @Args4jOption(name = "-s", aliases = Array("--num-shards"),
-      usage = "number of shards to split the collection into. Default: 1")
-    var numShards: Int = 1
-
-    @Args4jOption(name = "--block-size", usage = "Variants per SolrClient.add")
-    var blockSize = 100
-  }
-
-  def newOptions = new Options
-
-  def name = "exportvariantssolr"
-
-  def description = "Export variant information to Solr"
-
-  def supportsMultiallelic = true
-
-  def requiresVDS = true
-
+object SolrConnector {
   def toSolrType(t: Type): String = t match {
     case TInt => "int"
     case TLong => "long"
@@ -153,18 +103,21 @@ object ExportVariantsSolr extends Command with Serializable {
       cc
     }
 
-  def run(state: State, options: Options): State = {
-    val sc = state.vds.sparkContext
-    val vds = state.vds
+  def exportVariants(vds: VariantDataset,
+    variantExpr: String,
+    genotypeExpr: String,
+    collection: String = null,
+    url: String = null,
+    zkHost: String = null,
+    exportMissing: Boolean = false,
+    exportRef: Boolean = false,
+    drop: Boolean = false,
+    numShards: Int = 1,
+    blockSize: Int = 100) {
+
+    val sc = vds.sparkContext
     val vas = vds.vaSignature
     val sas = vds.saSignature
-    val gCond = options.genotypeCondition
-    val vCond = options.variantCondition
-    val collection = options.collection
-    val exportMissing = options.exportMissing
-    val exportRef = options.exportRef
-    val drop = options.drop
-    val numShards = options.numShards
 
     val vSymTab = Map(
       "v" -> (0, TVariant),
@@ -172,7 +125,7 @@ object ExportVariantsSolr extends Command with Serializable {
     val vEC = EvalContext(vSymTab)
     val vA = vEC.a
 
-    val vparsed = Parser.parseSolrNamedArgs(vCond, vEC)
+    val vparsed = Parser.parseSolrNamedArgs(variantExpr, vEC)
 
     val gSymTab = Map(
       "v" -> (0, TVariant),
@@ -183,10 +136,7 @@ object ExportVariantsSolr extends Command with Serializable {
     val gEC = EvalContext(gSymTab)
     val gA = gEC.a
 
-    val gparsed = Parser.parseSolrNamedArgs(gCond, gEC)
-
-    val url = options.url
-    val zkHost = options.zkHost
+    val gparsed = Parser.parseSolrNamedArgs(genotypeExpr, gEC)
 
     if (url == null && zkHost == null)
       fatal("one of -u or -z required")
@@ -263,7 +213,7 @@ object ExportVariantsSolr extends Command with Serializable {
 
     val sampleIdsBc = sc.broadcast(vds.sampleIds)
     val sampleAnnotationsBc = sc.broadcast(vds.sampleAnnotations)
-    val localBlockSize = options.blockSize
+    val localBlockSize = blockSize
     val maxRetryInterval = 3 * 60 * 1000 // 3m
 
     vds.rdd.foreachPartition { it =>
@@ -332,13 +282,11 @@ object ExportVariantsSolr extends Command with Serializable {
             }
           }
         }
-      
+
       processResponse("commit",
         solr.commit())
 
       solr.close()
     }
-
-    state
   }
 }
