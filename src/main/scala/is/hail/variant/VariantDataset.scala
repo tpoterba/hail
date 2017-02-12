@@ -1382,4 +1382,8 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
     vds.filterVariants(p)
   }
+
+  def grm(path: String, format: String, idFile: Option[String] = None, nFile: Option[String] = None) {
+    GRM(vds, path, format, idFile, nFile)
+  }
 }
