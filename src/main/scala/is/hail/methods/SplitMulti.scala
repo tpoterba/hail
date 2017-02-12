@@ -1,33 +1,10 @@
-package is.hail.driver
+package is.hail.methods
 
+import is.hail.annotations.Annotation
+import is.hail.variant.{Genotype, GenotypeBuilder, GenotypeStreamBuilder, Variant}
 import is.hail.utils._
-import is.hail.annotations._
-import is.hail.expr.{TBoolean, TInt, TStruct}
-import is.hail.variant._
-import org.kohsuke.args4j.{Option => Args4jOption}
 
-object SplitMulti extends Command {
-  def name = "splitmulti"
-
-  def description = "Split multi-allelic sites in the current dataset"
-
-  class Options extends BaseOptions {
-    @Args4jOption(required = false, name = "--propagate-gq", usage = "Propagate GQ instead of computing from PL")
-    var propagateGQ: Boolean = false
-
-    @Args4jOption(required = false, name = "--no-compress", usage = "Don't compress genotype streams")
-    var noCompress: Boolean = false
-
-    @Args4jOption(required = false, name = "--keep-star-alleles", usage = "Do not filter * alleles")
-    var keepStar: Boolean = false
-
-  }
-
-  def newOptions = new Options
-
-  def supportsMultiallelic = true
-
-  def requiresVDS = true
+object SplitMulti {
 
   def splitGT(gt: Int, i: Int): Int = {
     val p = Genotype.gtPair(gt)
@@ -137,51 +114,4 @@ object SplitMulti extends Command {
     if (str == "A" || str == "R" || str == "G")
       "."
     else str
-
-  def run(state: State, options: Options): State = {
-    val vds = state.vds
-    if (vds.wasSplit) {
-      warn("called redundant `splitmulti' on an already split VDS")
-      return state
-    }
-
-    val propagateGQ = options.propagateGQ
-    val noCompress = options.noCompress
-    val isDosage = vds.isDosage
-    val keepStar = options.keepStar
-
-    val (vas2, insertIndex) = vds.vaSignature.insert(TInt, "aIndex")
-    val (vas3, insertSplit) = vas2.insert(TBoolean, "wasSplit")
-
-    val vas4 = vas3.getAsOption[TStruct]("info").map { s =>
-      val updatedInfoSignature = TStruct(s.fields.map { f =>
-        f.attrs.get("Number").map(splitNumber) match {
-          case Some(n) => f.copy(attrs = f.attrs + ("Number" -> n))
-          case None => f
-        }
-      })
-      val (newSignature, _) = vas3.insert(updatedInfoSignature, "info")
-      newSignature
-    }.getOrElse(vas3)
-
-    val newVDS = state.vds.copy(
-      wasSplit = true,
-      vaSignature = vas4,
-      rdd = vds.rdd.flatMap { case (v, (va, gs)) =>
-        split(v, va, gs,
-          propagateGQ = propagateGQ,
-          compress = !noCompress,
-          keepStar = keepStar,
-          isDosage = isDosage,
-          insertSplitAnnots = { (va, index, wasSplit) =>
-            insertSplit(insertIndex(va, Some(index)), Some(wasSplit))
-          })
-      }
-        .map { case (v, (va, gs)) =>
-          (v, (va, gs.toGenotypeStream(v, isDosage, compress = !noCompress): Iterable[Genotype]))
-        }
-        .orderedRepartitionBy(vds.rdd.orderedPartitioner))
-
-    state.copy(vds = newVDS)
-  }
 }

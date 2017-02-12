@@ -1571,4 +1571,54 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
   }
 
   def sampleQC(): VariantDataset = SampleQC(vds)
+
+  /**
+    *
+    * @param propagateGQ Propagate GQ instead of computing from PL
+    * @param compress Don't compress genotype streams
+    * @param keepStar Do not filter * alleles
+    */
+  def splitMulti(propagateGQ: Boolean = false, compress: Boolean = true, keepStar: Boolean = false): VariantDataset = {
+    if (vds.wasSplit) {
+      warn("called redundant `splitMulti' on an already split VDS")
+      return vds
+    }
+
+    val localPropagateGQ = propagateGQ
+    val localCompress = compress
+    val isDosage = vds.isDosage
+    val localKeepStar = keepStar
+
+    val (vas2, insertIndex) = vds.vaSignature.insert(TInt, "aIndex")
+    val (vas3, insertSplit) = vas2.insert(TBoolean, "wasSplit")
+
+    val vas4 = vas3.getAsOption[TStruct]("info").map { s =>
+      val updatedInfoSignature = TStruct(s.fields.map { f =>
+        f.attrs.get("Number").map(SplitMulti.splitNumber) match {
+          case Some(n) => f.copy(attrs = f.attrs + ("Number" -> n))
+          case None => f
+        }
+      })
+      val (newSignature, _) = vas3.insert(updatedInfoSignature, "info")
+      newSignature
+    }.getOrElse(vas3)
+
+    vds.copy(
+      wasSplit = true,
+      vaSignature = vas4,
+      rdd = vds.rdd.flatMap { case (v, (va, gs)) =>
+        SplitMulti.split(v, va, gs,
+          propagateGQ = localPropagateGQ,
+          compress = !localCompress,
+          keepStar = localKeepStar,
+          isDosage = isDosage,
+          insertSplitAnnots = { (va, index, wasSplit) =>
+            insertSplit(insertIndex(va, Some(index)), Some(wasSplit))
+          })
+      }
+        .map { case (v, (va, gs)) =>
+          (v, (va, gs.toGenotypeStream(v, isDosage, compress = !localCompress): Iterable[Genotype]))
+        }
+        .orderedRepartitionBy(vds.rdd.orderedPartitioner))
+  }
 }
