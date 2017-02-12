@@ -1274,4 +1274,45 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     remove: Boolean = false, downcode: Boolean = false, subset: Boolean = false): VariantDataset = {
     FilterAlleles(vds, filterExpr, annotationExpr, filterAlteredGenotypes, remove, downcode, subset)
   }
+
+  /**
+    *
+    * @param filterExpr filter expression involving v (Variant), va (variant annotations), s (sample),
+    *                   sa (sample annotations), and g (genotype), which returns a boolean value
+    * @param remove remove genotypes where filterExpr evaluates to true, rather than keep them
+    */
+  def filterGenotypes(filterExpr: String, remove: Boolean = false): VariantDataset = {
+    val vas = vds.vaSignature
+    val sas = vds.saSignature
+
+    val symTab = Map(
+      "v" ->(0, TVariant),
+      "va" ->(1, vas),
+      "s" ->(2, TSample),
+      "sa" ->(3, sas),
+      "g" ->(4, TGenotype),
+      "global" -> (5, vds.globalSignature) )
+
+
+    val ec = EvalContext(symTab)
+    ec.set(5, vds.globalAnnotation)
+    val f: () => Option[Boolean] = Parser.parseTypedExpr[Boolean](filterExpr, ec)
+
+    val sampleIdsBc = vds.sampleIdsBc
+    val sampleAnnotationsBc = vds.sampleAnnotationsBc
+
+    (vds.sampleIds, vds.sampleAnnotations).zipped.map((_, _))
+
+    val noCall = Genotype()
+    val keep = !remove
+    vds.mapValuesWithAll(
+      (v: Variant, va: Annotation, s: String, sa: Annotation, g: Genotype) => {
+        ec.setAll(v, va, s, sa, g)
+
+        if (Filter.keepThis(f(), keep))
+          g
+        else
+          noCall
+      })
+  }
 }
