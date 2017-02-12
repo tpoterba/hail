@@ -10,7 +10,7 @@ import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
 import is.hail.io.plink.{ExportBedBimFam, FamFileConfig, PlinkLoader}
 import is.hail.io.vcf.{BufferedLineIterator, ExportVCF}
 import is.hail.keytable.KeyTable
-import is.hail.methods.{Aggregators, CalculateConcordance, DuplicateReport, Filter}
+import is.hail.methods._
 import is.hail.sparkextras.{OrderedPartitioner, OrderedRDD}
 import is.hail.utils._
 import is.hail.variant.Variant.orderedKey
@@ -1258,5 +1258,20 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     */
   def exportVCF(path: String, append: Option[String] = None, exportPP: Boolean = false, parallel: Boolean = false) {
     ExportVCF(vds, path, append, exportPP, parallel)
+  }
+
+  /**
+    *
+    * @param filterExpr Filter expression involving v (variant), va (variant annotations), and aIndex (allele index)
+    * @param annotationExpr Annotation modifying expression involving v (new variant), va (old variant annotations),
+    *                       and aIndices (maps from new to old indices)
+    * @param filterAlteredGenotypes any call that contains a filtered allele is set to missing instead
+    * @param remove Remove variants matching condition
+    * @param downcode downcodes the PL and AD. Genotype and GQ are set based on the resulting PLs
+    * @param subset subsets the PL and AD. Genotype and GQ are set based on the resulting PLs
+    */
+  def filterAlleles(filterExpr: String, annotationExpr: String = "va = va", filterAlteredGenotypes: Boolean = false,
+    remove: Boolean = false, downcode: Boolean = false, subset: Boolean = false): VariantDataset = {
+    FilterAlleles(vds, filterExpr, annotationExpr, filterAlteredGenotypes, remove, downcode, subset)
   }
 }
