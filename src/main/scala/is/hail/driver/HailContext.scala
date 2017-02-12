@@ -13,7 +13,7 @@ import is.hail.io.vcf.LoadVCF
 import is.hail.keytable.KeyTable
 import is.hail.stats.{BaldingNicholsModel, Distribution, UniformDist}
 import is.hail.utils.{log, _}
-import is.hail.variant.{Genotype, Variant, VariantDataset, VariantMetadata, VariantSampleMatrix}
+import is.hail.variant.{Genotype, VSMSubgen, Variant, VariantDataset, VariantMetadata, VariantSampleMatrix}
 import org.apache.log4j.{LogManager, PropertyConfigurator}
 import org.apache.spark.deploy.SparkHadoopUtil
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
@@ -462,6 +462,8 @@ case class HailContext(sc: SparkContext, sqlContext: SQLContext) {
 
   def dataframeToKeytable(df: DataFrame, keys: Array[String] = Array.empty[String]): KeyTable =
     KeyTable.fromDF(df, keys)
+
+  def genDataset(): VariantDataset = VSMSubgen.realistic.gen(sc).sample()
 
   def stop() {
     sc.stop()
