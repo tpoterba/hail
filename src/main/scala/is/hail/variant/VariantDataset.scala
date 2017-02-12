@@ -1490,4 +1490,54 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       sampleAnnotations = vds.sampleAnnotations ++ right.sampleAnnotations,
       rdd = joined)
   }
+
+  /**
+    *
+    * @param pathBase output root filename
+    * @param famFile path to pedigree .fam file
+    */
+  def mendelErrors(pathBase: String, famFile: String) {
+
+    val ped = Pedigree.read(famFile, vds.sparkContext.hadoopConfiguration, vds.sampleIds)
+    val men = MendelErrors(vds, ped.completeTrios)
+
+    men.writeMendel(pathBase + ".mendel")
+    men.writeMendelL(pathBase + ".lmendel")
+    men.writeMendelF(pathBase + ".fmendel")
+    men.writeMendelI(pathBase + ".imendel")
+  }
+
+  /**
+    *
+    * @param scoresRoot Sample annotation path for scores (period-delimited path starting in 'sa')
+    * @param k Number of principal components
+    * @param loadingsRoot Variant annotation path for site loadings (period-delimited path starting in 'va')
+    * @param eigenRoot Global annotation path for eigenvalues (period-delimited path starting in 'global'
+    * @param asArrays Store score and loading results as arrays, rather than structs
+    */
+  def pca(scoresRoot: String, k: Int = 10, loadingsRoot: Option[String] = None, eigenRoot: Option[String] = None,
+    asArrays: Boolean = false): VariantDataset = {
+    if (k < 1)
+      fatal(
+        s"""requested invalid number of components: $k
+           |  Expect componenents >= 1""".stripMargin)
+
+    info(s"Running PCA with $k components...")
+
+    val pcSchema = SamplePCA.pcSchema(asArrays, k)
+
+    val (scores, loadings, eigenvalues) =
+      SamplePCA(vds, k, loadingsRoot.isDefined, eigenRoot.isDefined, asArrays)
+
+    var ret = vds.annotateSamples(scores, pcSchema, scoresRoot)
+
+    loadings.foreach { rdd =>
+      ret = ret.annotateVariants(rdd.orderedRepartitionBy(vds.rdd.orderedPartitioner), pcSchema, loadingsRoot.get)
+    }
+
+    eigenvalues.foreach { eig =>
+      ret = ret.annotateGlobal(eig, pcSchema, eigenRoot.get)
+    }
+    ret
+  }
 }
