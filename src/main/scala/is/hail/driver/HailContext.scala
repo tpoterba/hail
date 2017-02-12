@@ -375,6 +375,16 @@ case class HailContext(sc: SparkContext, sqlContext: SQLContext) {
     vdses(0).copy(rdd = sc.union(vdses.map(_.rdd)).toOrderedRDD)
   }
 
+  /**
+    *
+    * @param path path to Kudu database
+    * @param table table name
+    * @param master Kudu master address
+    */
+  def readKudu(path: String, table: String, master: String): VariantDataset = {
+    VariantDataset.readKudu(sqlContext, path, table, master)
+  }
+
   def writePartitioning(path: String) {
     VariantSampleMatrix.writePartitioning(sqlContext, path)
   }

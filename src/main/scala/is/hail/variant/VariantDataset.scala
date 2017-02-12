@@ -1540,4 +1540,33 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     }
     ret
   }
+
+  /**
+    *
+    * @param path ID mapping file
+    */
+  def renameSamples(path: String): VariantDataset = {
+    val m = vds.sparkContext.hadoopConfiguration.readFile(path) { s =>
+      Source.fromInputStream(s)
+        .getLines()
+        .map {
+          _.split("\t") match {
+            case Array(old, news) => (old, news)
+            case _ =>
+              fatal("Invalid input. Use two tab-separated columns.")
+          }
+        }.toMap
+    }
+
+    val newSamples = mutable.Set.empty[String]
+    val newSampleIds = vds.sampleIds
+      .map { s =>
+        val news = m.getOrElse(s, s)
+        if (newSamples.contains(news))
+          fatal(s"duplicate sample ID `$news' after rename")
+        newSamples += news
+        news
+      }
+    vds.copy(sampleIds = newSampleIds)
+  }
 }
