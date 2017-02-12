@@ -1569,4 +1569,6 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       }
     vds.copy(sampleIds = newSampleIds)
   }
+
+  def sampleQC(): VariantDataset = SampleQC(vds)
 }

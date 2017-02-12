@@ -1,11 +1,12 @@
-package is.hail.driver
+package is.hail.methods
 
-import org.apache.spark.util.StatCounter
+import is.hail.annotations.Annotation
+import is.hail.driver.HailConfiguration
+import is.hail.expr.TStruct
 import is.hail.utils._
-import is.hail.annotations._
+import is.hail.variant.{Genotype, Variant, VariantDataset}
 import is.hail.expr._
-import is.hail.variant._
-import org.kohsuke.args4j.{Option => Args4jOption}
+import org.apache.spark.util.StatCounter
 
 import scala.collection.mutable
 
@@ -72,43 +73,43 @@ class SampleQCCombiner extends Serializable {
 
   def merge(v: Variant, ACs: Array[Int], g: Genotype): SampleQCCombiner = {
 
-      g.gt match{
+    g.gt match {
 
-        case Some(0) =>
-          nHomRef += 1
+      case Some(0) =>
+        nHomRef += 1
 
-        case Some(gt) =>
-          val nonRefAlleleIndices = Genotype.gtPair(gt).alleleIndices.filter(_ > 0)
+      case Some(gt) =>
+        val nonRefAlleleIndices = Genotype.gtPair(gt).alleleIndices.filter(_ > 0)
 
-          nonRefAlleleIndices.foreach({
-            ai =>
-              val altAllele = v.altAlleles(ai - 1)
-              if(altAllele.isSNP){
-                nSNP += 1
-                if(altAllele.isTransition)
-                  nTi += 1
-                else{
-                  assert(altAllele.isTransversion)
-                  nTv += 1
-                }
-              }else if(altAllele.isInsertion)
-                nIns +=1
-              else if(altAllele.isDeletion)
-                nDel += 1
+        nonRefAlleleIndices.foreach({
+          ai =>
+            val altAllele = v.altAlleles(ai - 1)
+            if (altAllele.isSNP) {
+              nSNP += 1
+              if (altAllele.isTransition)
+                nTi += 1
+              else {
+                assert(altAllele.isTransversion)
+                nTv += 1
+              }
+            } else if (altAllele.isInsertion)
+              nIns += 1
+            else if (altAllele.isDeletion)
+              nDel += 1
 
-              if (ACs(ai - 1) == 1)
-                nSingleton += 1
-          })
+            if (ACs(ai - 1) == 1)
+              nSingleton += 1
+        })
 
-          if(nonRefAlleleIndices.length == 1 || nonRefAlleleIndices(0) != nonRefAlleleIndices(1))
-            nHet +=1
-          else
-            nHomVar += 1
+        if (nonRefAlleleIndices.length == 1 || nonRefAlleleIndices(0) != nonRefAlleleIndices(1))
+          nHet += 1
+        else
+          nHomVar += 1
 
-        case None =>
-          nNotCalled += 1
+      case None =>
+        nNotCalled += 1
 
-      }
+    }
 
     if (g.isCalled) {
       g.dp.foreach { v =>
@@ -226,29 +227,7 @@ class SampleQCCombiner extends Serializable {
       divNull(nIns, nDel))
 }
 
-object SampleQC extends Command {
-
-  class Options extends BaseOptions {
-
-    @Args4jOption(required = false, name = "-o", aliases = Array("--output"),
-      usage = "Output file")
-    var output: String = _
-
-    @Args4jOption(name = "-b", aliases = Array("--branching-factor"),
-      usage = "Branching factor to use in tree aggregate")
-    var branchingFactor: java.lang.Integer = _
-  }
-
-  def newOptions = new Options
-
-  def name = "sampleqc"
-
-  def description = "Compute per-sample QC metrics"
-
-  def supportsMultiallelic = true
-
-  def requiresVDS = true
-
+object SampleQC {
   def results(vds: VariantDataset): Map[String, SampleQCCombiner] = {
     val depth = HailConfiguration.treeAggDepth(vds.nPartitions)
     vds.sampleIds.iterator
@@ -260,9 +239,9 @@ object SampleQC extends Command {
             val ACs = gs.foldLeft(Array.fill(v.nAltAlleles)(0))({
               case (acc, g) =>
                 g.gt
-                    .filter( _ >0)
-                    .foreach( call => Genotype.gtPair(call).alleleIndices.filter(_ > 0).foreach(x => acc(x - 1) += 1)
-                )
+                  .filter(_ > 0)
+                  .foreach(call => Genotype.gtPair(call).alleleIndices.filter(_ > 0).foreach(x => acc(x - 1) += 1)
+                  )
                 acc
             })
             for ((g, i) <- gs.iterator.zipWithIndex)
@@ -277,54 +256,11 @@ object SampleQC extends Command {
       .toMap
   }
 
-  /*
-  def results(vds: VariantDataset): RDD[(Int, SampleQCCombiner)] = {
-
-    /*
-    val singletons = sSingletonVariants(vds)
-    val singletonsBc = vds.sparkContext.broadcast(singletons)
-    vds
-      .aggregateBySampleWithKeys(new SampleQCCombiner)(
-        (comb, v, s, g) => comb.merge(v, singletonsBc.value(v), g),
-        (comb1, comb2) => comb1.merge(comb2))
-        */
-
-    val localSamplesBc = vds.sparkContext.broadcast(vds.localSamples)
-    vds
-      .rdd
-      .mapPartitions[(Int, SampleQCCombiner)] { (it: Iterator[(Variant, Annotation, Iterable[Genotype])]) =>
-      val zeroValue = Array.fill[SampleQCCombiner](localSamplesBc.value.length)(new SampleQCCombiner)
-      localSamplesBc.value.iterator
-        .zip(it.foldLeft(zeroValue) { case (acc, (v, va, gs)) =>
-          val vIsSingleton = gs.iterator.existsExactly1(_.isCalledNonRef)
-          for ((g, i) <- gs.iterator.zipWithIndex)
-            acc(i) = acc(i).merge(v, vIsSingleton, g)
-          acc
-        }.iterator)
-    }.foldByKey(new SampleQCCombiner)((comb1, comb2) => comb1.merge(comb2))
-  } */
-
-  def run(state: State, options: Options): State = {
-    val vds = state.vds
-
-    val output = options.output
+  def apply(vds: VariantDataset): VariantDataset = {
 
     val r = results(vds)
-
-    if (output != null) {
-      val sb = new StringBuilder()
-      state.hadoopConf.delete(output, recursive = true)
-      state.hadoopConf.writeTable(output, r.map { case (s, comb) =>
-          sb.clear()
-          sb.append(s)
-          sb += '\t'
-          comb.emit(sb)
-          sb.result()
-        }, Some("Sample\t" + SampleQCCombiner.header))
-    }
-
-    state.copy(vds = vds.annotateSamples(SampleQCCombiner.signature, List("qc"), { (x: String) =>
+    vds.annotateSamples(SampleQCCombiner.signature, List("qc"), { (x: String) =>
       r.get(x).map(_.asAnnotation)
-    }))
+    })
   }
 }
