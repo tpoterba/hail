@@ -1386,4 +1386,8 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
   def grm(path: String, format: String, idFile: Option[String] = None, nFile: Option[String] = None) {
     GRM(vds, path, format, idFile, nFile)
   }
+
+  def hardCalls(): VariantDataset = {
+    vds.mapValues { g => Genotype(g.gt, g.fakeRef) }
+  }
 }
