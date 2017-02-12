@@ -1453,4 +1453,41 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
     vds.annotateSamples(result, signature, "sa.imputesex")
   }
+
+  /**
+    *
+    * @param right right-hand dataset with which to join
+    */
+  def join(right: VariantDataset): VariantDataset = {
+    if (vds.wasSplit != right.wasSplit) {
+      warn(
+        s"""cannot join split and unsplit datasets
+           |  left was split: ${ vds.wasSplit }
+           |  light was split: ${ right.wasSplit }""".stripMargin)
+    }
+
+    if (vds.saSignature != right.saSignature) {
+      fatal(
+        s"""cannot join datasets with different sample schemata
+           |  left sample schema: @1
+           |  right sample schema: @2""".stripMargin,
+        vds.saSignature.toPrettyString(compact = true, printAttrs = true),
+        right.saSignature.toPrettyString(compact = true, printAttrs = true))
+    }
+
+    val newSampleIds = vds.sampleIds ++ right.sampleIds
+    val duplicates = newSampleIds.duplicates()
+    if (duplicates.nonEmpty)
+      fatal("duplicate sample IDs: @1", duplicates)
+
+    val joined = vds.rdd.orderedInnerJoinDistinct(right.rdd)
+      .mapValues { case ((lva, lgs), (rva, rgs)) =>
+        (lva, lgs ++ rgs)
+      }.asOrderedRDD
+
+    vds.copy(
+      sampleIds = newSampleIds,
+      sampleAnnotations = vds.sampleAnnotations ++ right.sampleAnnotations,
+      rdd = joined)
+  }
 }
