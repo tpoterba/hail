@@ -1331,4 +1331,56 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       }.copy(wasSplit = true)
     }
   }
+
+  /**
+    * Discard all samples in current dataset
+    */
+  def filterSamplesAll(): VariantDataset = {
+    vds.dropSamples()
+  }
+
+  /**
+    * Filter samples using the Hail expression language.
+    *
+    * @param filterExpr Filter expression involving `s' (sample) and `sa' (sample annotations)
+    * @param remove remove samples where filterExpr evaluates to true, rather than keeping only these
+    */
+  def filterSamplesExpr(filterExpr: String, remove: Boolean = false): VariantDataset = {
+    val localGlobalAnnotation = vds.globalAnnotation
+
+    val keep = !remove
+    val sas = vds.saSignature
+
+    val ec = Aggregators.sampleEC(vds)
+
+    val f: () => Option[Boolean] = Parser.parseTypedExpr[Boolean](filterExpr, ec)
+
+    val sampleAggregationOption = Aggregators.buildSampleAggregations(vds, ec)
+
+    val sampleIds = vds.sampleIds
+    val p = (s: String, sa: Annotation) => {
+      sampleAggregationOption.foreach(f => f.apply(s))
+      ec.setAll(localGlobalAnnotation, s, sa)
+      Filter.keepThis(f(), keep)
+    }
+
+    vds.filterSamples(p)
+  }
+
+  /**
+    * Filter samples using a text file containing sample IDs
+    * @param path path to sample list file
+    * @param remove remove listed samples rather than keeping them
+    */
+  def filterSamplesList(path: String, remove: Boolean = false): VariantDataset = {
+    val samples = vds.sparkContext.hadoopConfiguration.readFile(path) { reader =>
+      Source.fromInputStream(reader)
+        .getLines()
+        .filter(line => !line.isEmpty)
+        .toSet
+    }
+    val p = (s: String, sa: Annotation) => Filter.keepThis(samples.contains(s), !remove)
+
+    vds.filterSamples(p)
+  }
 }
