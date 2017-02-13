@@ -5,23 +5,17 @@ import org.testng.annotations.Test
 
 class JoinSuite extends SparkSuite {
   @Test def test() {
-    var sjoined = State(sc, sqlContext)
-    sjoined = ImportVCF.run(sjoined, Array("src/test/resources/joined.vcf"))
-
-    var s = State(sc, sqlContext)
+    val joined = hc.importVCF("src/test/resources/joined.vcf")
 
     val joinedPath = tmpDir.createTempFile("joined", "vds")
 
-    s = ImportVCF.run(s, Array("src/test/resources/joinright.vcf"))
-    s = Put.run(s, Array("-n", "right"))
 
-    s = ImportVCF.run(s, Array("src/test/resources/joinleft.vcf"))
-
-    s = Join.run(s, Array("-r", "right"))
+    val left = hc.importVCF("src/test/resources/joinleft.vcf")
+    val right = hc.importVCF("src/test/resources/joinright.vcf")
 
     // make sure joined VDS writes
-    s = Write.run(s, Array("-o", joinedPath))
+    left.join(right).write(joinedPath)
 
-    assert(sjoined.vds.same(s.vds))
+    assert(joined.same(hc.read(joinedPath)))
   }
 }
