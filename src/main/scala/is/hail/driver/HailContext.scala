@@ -245,7 +245,15 @@ case class HailContext private(sc: SparkContext,
       TStruct.empty, finalType, TStruct.empty), keyedRDD)
   }
 
-  def importBgen(files: Seq[String],
+  def importBgen(file: String,
+    sampleFile: Option[String] = None,
+    tolerance: Double = 0.2,
+    nPartitions: Option[Int] = None,
+    compress: Boolean = true): VariantDataset = {
+    importBgens(List(file), sampleFile, tolerance, nPartitions, compress)
+  }
+
+  def importBgens(files: Seq[String],
     sampleFile: Option[String] = None,
     tolerance: Double = 0.2,
     nPartitions: Option[Int] = None,
@@ -264,7 +272,16 @@ case class HailContext private(sc: SparkContext,
     BgenLoader.load(this, inputs, sampleFile, tolerance, compress, nPartitions)
   }
 
-  def importGen(files: Seq[String],
+  def importGen(file: String,
+    sampleFile: String,
+    chromosome: Option[String] = None,
+    nPartitions: Option[Int] = None,
+    tolerance: Double = 0.2,
+    compress: Boolean = true): VariantDataset = {
+    importGens(List(file), sampleFile, chromosome, nPartitions, tolerance, compress)
+  }
+
+  def importGens(files: Seq[String],
     sampleFile: String,
     chromosome: Option[String] = None,
     nPartitions: Option[Int] = None,
