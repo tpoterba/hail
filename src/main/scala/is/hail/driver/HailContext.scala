@@ -336,6 +336,16 @@ case class HailContext private(sc: SparkContext,
       ffConfig, nPartitions)
   }
 
+  def importPlinkBFile(bfileRoot: String,
+    nPartitions: Option[Int] = None,
+    delimiter: String = "\\\\s+",
+    missing: String = "NA",
+    quantPheno: Boolean = false,
+    compress: Boolean = true): VariantDataset = {
+    importPlink(bfileRoot + ".bed", bfileRoot + ".bim", bfileRoot + ".fam",
+      nPartitions, delimiter, missing, quantPheno, compress)
+  }
+
   def read(file: String, sitesOnly: Boolean = false, samplesOnly: Boolean = false): VariantDataset = {
     readAll(List(file), sitesOnly, samplesOnly)
   }

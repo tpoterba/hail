@@ -627,7 +627,8 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
     )
   }
 
-  def annotateSamplesFam(path: String, root: String, config: FamFileConfig = FamFileConfig()): VariantDataset = {
+  def annotateSamplesFam(path: String, root: String = "sa.fam",
+    config: FamFileConfig = FamFileConfig()): VariantDataset = {
     if (!path.endsWith(".fam"))
       fatal("input file must end in .fam")
 

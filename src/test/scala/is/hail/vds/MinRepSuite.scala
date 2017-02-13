@@ -19,8 +19,5 @@ class MinRepSuite extends SparkSuite{
       .compare(Variant("1",10, "GCTAA", Array("GCAAA","G"))) == 0)
     assert(Variant("1",10, "GCTAA", Array("GCAAA","GCCAA")).minrep
       .compare(Variant("1",12, "T", Array("A","C"))) == 0)
-
   }
-
-
 }
