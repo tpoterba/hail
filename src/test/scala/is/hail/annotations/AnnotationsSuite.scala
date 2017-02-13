@@ -120,7 +120,7 @@ class AnnotationsSuite extends SparkSuite {
     // Check that VDS can be written to disk and retrieved while staying the same
     val f = tmpDir.createTempFile("sample", extension = ".vds")
     vds2.write(f)
-    val readBack = hc.read(List(f))
+    val readBack = hc.read(f)
 
     assert(readBack.same(vds2))
   }
@@ -132,7 +132,7 @@ class AnnotationsSuite extends SparkSuite {
 
     val f = tmpDir.createTempFile("sample", extension = ".vds")
     vds1.write(f)
-    val vds3 = hc.read(List(f))
+    val vds3 = hc.read(f)
     assert(vds3.same(vds1))
   }
 

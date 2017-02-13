@@ -3,7 +3,6 @@ package is.hail.io
 import org.apache.spark.rdd.RDD
 import is.hail.SparkSuite
 import is.hail.annotations.Annotation
-import is.hail.driver.{ImportGEN, State}
 import org.testng.annotations.Test
 import is.hail.variant._
 import is.hail.utils._

@@ -5,7 +5,6 @@ import is.hail.utils._
 import is.hail.variant.{VSMSubgen, VariantSampleMatrix}
 import is.hail.check.Prop._
 import is.hail.variant._
-import is.hail.driver.{HardCalls, State}
 import org.testng.annotations.Test
 
 class HardCallsSuite extends SparkSuite {
