@@ -132,34 +132,29 @@ class GRMSuite extends SparkSuite {
       VSMSubgen.realistic.copy(
         vGen = VariantSubgen.plinkCompatible.gen,
         tGen = VSMSubgen.realistic.tGen(_).filter(_.isCalled))
-        .gen(sc)
+        .gen(hc)
         // plink fails with fewer than 2 samples, no variants
-        .filter(vsm => vsm.nSamples > 1 && vsm.countVariants > 0),
+        .filter(vsm => vsm.nSamples > 1 && vsm.countVariants > 0)
+        .map(_.splitMulti()),
       Gen.oneOf("rel", "gcta-grm", "gcta-grm-bin")) {
-      (vsm: VariantSampleMatrix[Genotype], format: String) =>
+      case (vds, format) =>
 
-        var s = State(sc, sqlContext)
-        s = s.copy(vds = vsm)
-        s = SplitMulti.run(s, Array.empty[String])
-
-        val sampleIds = s.vds.sampleIds
-        val nSamples = s.vds.nSamples
-        val nVariants = s.vds.countVariants.toInt
+        val sampleIds = vds.sampleIds
+        val nSamples = vds.nSamples
+        val nVariants = vds.countVariants().toInt
         assert(nVariants > 0)
 
-        ExportPlink.run(s, Array("-o", bFile))
+        vds.exportPlink(bFile)
 
         format match {
           case "rel" =>
             s"plink --bfile ${ uriPath(bFile) } --make-rel --out ${ uriPath(bFile) }" !
 
-            assert(loadIDFile(bFile + ".rel.id").toIndexedSeq
-              == vsm.sampleIds)
+            assert(loadIDFile(bFile + ".rel.id").toIndexedSeq == vds.sampleIds)
 
-            GRM.run(s, Array("--id-file", relIDFile, "-f", "rel", "-o", relFile))
+            vds.grm(relFile, format = "rel", idFile = Some(relIDFile))
 
-            assert(loadIDFile(relIDFile).toIndexedSeq
-              == vsm.sampleIds)
+            assert(loadIDFile(relIDFile).toIndexedSeq == vds.sampleIds)
 
             compare(loadRel(nSamples, bFile + ".rel"),
               loadRel(nSamples, relFile))
@@ -167,10 +162,9 @@ class GRMSuite extends SparkSuite {
           case "gcta-grm" =>
             s"plink --bfile ${ uriPath(bFile) } --make-grm-gz --out ${ uriPath(bFile) }" !
 
-            assert(loadIDFile(bFile + ".grm.id").toIndexedSeq
-              == vsm.sampleIds)
+            assert(loadIDFile(bFile + ".grm.id").toIndexedSeq == vds.sampleIds)
 
-            GRM.run(s, Array("-f", "gcta-grm", "-o", grmFile))
+            vds.grm(grmFile, format = "gcta-grm")
 
             compare(loadGRM(nSamples, nVariants, bFile + ".grm.gz"),
               loadGRM(nSamples, nVariants, grmFile))
@@ -178,9 +172,9 @@ class GRMSuite extends SparkSuite {
           case "gcta-grm-bin" =>
             s"plink --bfile ${ uriPath(bFile) } --make-grm-bin --out ${ uriPath(bFile) }" !
 
-            assert(loadIDFile(bFile + ".grm.id").toIndexedSeq == vsm.sampleIds)
+            assert(loadIDFile(bFile + ".grm.id").toIndexedSeq == vds.sampleIds)
 
-            GRM.run(s, Array("-f", "gcta-grm-bin", "-o", grmBinFile, "--N-file", grmNBinFile))
+            vds.grm(grmBinFile, format = "gcta-grm-bin", nFile = Some(grmNBinFile))
 
             (compare(loadBin(nSamples, bFile + ".grm.bin"),
               loadBin(nSamples, grmBinFile))
