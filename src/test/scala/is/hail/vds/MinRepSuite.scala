@@ -1,4 +1,4 @@
-package is.hail.driver
+package is.hail.vds
 
 import is.hail.SparkSuite
 import is.hail.variant.Variant

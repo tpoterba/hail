@@ -1,4 +1,4 @@
-package is.hail.driver
+package is.hail.vds
 
 import is.hail.SparkSuite
 import is.hail.annotations._
@@ -6,7 +6,6 @@ import is.hail.check.Prop
 import is.hail.expr.{TChar, TStruct}
 import is.hail.utils._
 import is.hail.variant.{AltAllele, Genotype, VSMSubgen, Variant, VariantMetadata, VariantSampleMatrix}
-import org.scalatest.Matchers._
 import org.testng.annotations.Test
 
 class FilterAllelesSuite extends SparkSuite {

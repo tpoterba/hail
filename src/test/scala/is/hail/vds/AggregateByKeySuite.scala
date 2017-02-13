@@ -1,4 +1,4 @@
-package is.hail.driver
+package is.hail.vds
 
 import is.hail.SparkSuite
 import is.hail.expr.TLong
@@ -9,7 +9,7 @@ import org.testng.annotations.Test
 class AggregateByKeySuite extends SparkSuite {
   @Test def replicateSampleAggregation() {
     val inputVCF = "src/test/resources/sample.vcf"
-    val vds = hc.importVCF(List(inputVCF))
+    val vds = hc.importVCF(inputVCF)
       .annotateSamplesExpr("sa.nHet = gs.filter(g => g.isHet).count()")
 
     val kt = vds.aggregateByKey("Sample = s", "nHet = g.map(g => g.isHet.toInt).sum()")
@@ -27,7 +27,7 @@ class AggregateByKeySuite extends SparkSuite {
 
   @Test def replicateVariantAggregation() {
     val inputVCF = "src/test/resources/sample.vcf"
-    val vds = hc.importVCF(List(inputVCF))
+    val vds = hc.importVCF(inputVCF)
       .annotateVariantsExpr("va.nHet = gs.filter(g => g.isHet).count()")
 
     val kt = vds.aggregateByKey("Variant = v", "nHet = g.map(g => g.isHet.toInt).sum()")
@@ -45,7 +45,7 @@ class AggregateByKeySuite extends SparkSuite {
 
   @Test def replicateGlobalAggregation() {
     val inputVCF = "src/test/resources/sample.vcf"
-    var vds = hc.importVCF(List(inputVCF))
+    var vds = hc.importVCF(inputVCF)
       .annotateVariantsExpr("va.nHet = gs.filter(g => g.isHet).count().toInt")
 
     vds = vds.annotateGlobal(vds.queryVariants("variants.map(v => va.nHet).sum()")._1, TLong, "global.nHet")

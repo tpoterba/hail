@@ -1,14 +1,13 @@
-package is.hail.driver
+package is.hail.vds
 
 import java.io.DataInputStream
 
 import breeze.linalg.DenseMatrix
-import is.hail.utils._
+import is.hail.SparkSuite
 import is.hail.check.Prop._
 import is.hail.check.{Gen, Prop}
+import is.hail.utils._
 import is.hail.variant._
-import is.hail.SparkSuite
-import is.hail.utils.TempDir
 import org.testng.annotations.Test
 
 import scala.io.Source

@@ -1,10 +1,10 @@
-package is.hail.driver
+package is.hail.vds
 
 import is.hail.SparkSuite
-import is.hail.utils._
 import is.hail.check.Arbitrary._
 import is.hail.check.Prop._
 import is.hail.check.{Gen, Prop}
+import is.hail.utils._
 import org.testng.annotations.Test
 
 class FilterVariantsSuite extends SparkSuite {

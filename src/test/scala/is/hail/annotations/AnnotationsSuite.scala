@@ -25,7 +25,7 @@ class AnnotationsSuite extends SparkSuite {
           3. the strings stored in the AnnotationData classes convert correctly to the proper type
     */
 
-    val vds = hc.importVCF(List("src/test/resources/sample.vcf"))
+    val vds = hc.importVCF("src/test/resources/sample.vcf")
 
     val vas = vds.vaSignature
     val variantAnnotationMap = vds.variantsAndAnnotations.collect().toMap
@@ -114,7 +114,7 @@ class AnnotationsSuite extends SparkSuite {
     assert(passQuery(variantAnnotationMap(anotherVariant))
       .contains(false))
 
-    val vds2 = hc.importVCF(List("src/test/resources/sample2.vcf"))
+    val vds2 = hc.importVCF("src/test/resources/sample2.vcf")
     val vas2 = vds2.vaSignature
 
     // Check that VDS can be written to disk and retrieved while staying the same
@@ -126,8 +126,8 @@ class AnnotationsSuite extends SparkSuite {
   }
 
   @Test def testReadWrite() {
-    val vds1 = hc.importVCF(List("src/test/resources/sample.vcf"))
-    val vds2 = hc.importVCF(List("src/test/resources/sample.vcf"))
+    val vds1 = hc.importVCF("src/test/resources/sample.vcf")
+    val vds2 = hc.importVCF("src/test/resources/sample.vcf")
     assert(vds1.same(vds2))
 
     val f = tmpDir.createTempFile("sample", extension = ".vds")
@@ -144,7 +144,7 @@ class AnnotationsSuite extends SparkSuite {
       test overwriting behavior, deleting, appending, and querying.
     */
 
-    var vds = hc.importVCF(List("src/test/resources/sample.vcf")).cache()
+    var vds = hc.importVCF("src/test/resources/sample.vcf").cache()
 
     // clear everything
     val (emptyS, d1) = vds.deleteVA()
@@ -348,7 +348,7 @@ class AnnotationsSuite extends SparkSuite {
   }
 
   @Test def testWeirdNamesReadWrite() {
-    var vds = hc.importVCF(List("src/test/resources/sample.vcf"))
+    var vds = hc.importVCF("src/test/resources/sample.vcf")
       .splitMulti()
 
     val f = tmpDir.createTempFile("testwrite", extension = ".vds")
@@ -357,6 +357,6 @@ class AnnotationsSuite extends SparkSuite {
       .copy(vaSignature = newS)
     vds.write(f)
 
-    assert(hc.importVCF(List(f)).same(vds))
+    assert(hc.importVCF(f).same(vds))
   }
 }

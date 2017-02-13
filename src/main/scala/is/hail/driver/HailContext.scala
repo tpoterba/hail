@@ -395,7 +395,20 @@ case class HailContext private(sc: SparkContext,
     VariantSampleMatrix.writePartitioning(sqlContext, path)
   }
 
-  def importVCF(files: Seq[String], force: Boolean = false,
+  def importVCF(file: String, force: Boolean = false,
+    forceBGZ: Boolean = false,
+    headerFile: Option[String] = None,
+    nPartitions: Option[Int] = None,
+    sitesOnly: Boolean = false,
+    storeGQ: Boolean = false,
+    ppAsPL: Boolean = false,
+    skipBadAD: Boolean = false,
+    compress: Boolean = true): VariantDataset = {
+    importVCFs(List(file), force, forceBGZ, headerFile, nPartitions, sitesOnly,
+      storeGQ, ppAsPL, skipBadAD, compress)
+  }
+
+  def importVCFs(files: Seq[String], force: Boolean = false,
     forceBGZ: Boolean = false,
     headerFile: Option[String] = None,
     nPartitions: Option[Int] = None,

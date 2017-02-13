@@ -12,7 +12,7 @@ class SplatSuite extends SparkSuite {
     val out3 = tmpDir.createLocalTempFile("out3", ".txt")
     val out4 = tmpDir.createLocalTempFile("out4", ".txt")
 
-    var vds = hc.importVCF(List("src/test/resources/sample2.vcf"))
+    var vds = hc.importVCF("src/test/resources/sample2.vcf")
       .splitMulti()
       .variantQC()
     vds.exportVariants(out1,
