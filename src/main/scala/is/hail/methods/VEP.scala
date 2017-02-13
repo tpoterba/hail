@@ -1,50 +1,17 @@
-package is.hail.driver
+package is.hail.methods
 
 import java.io.{FileInputStream, IOException}
 import java.util.Properties
 
-import org.apache.spark.storage.StorageLevel
-import is.hail.utils._
 import is.hail.annotations.Annotation
 import is.hail.expr._
-import is.hail.utils.richUtils.RichPairIterator
-import is.hail.variant._
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
-import org.kohsuke.args4j.{Option => Args4jOption}
-import scala.util.matching.Regex
-
+import is.hail.utils._
+import is.hail.variant.{Variant, VariantDataset}
+import org.apache.spark.storage.StorageLevel
+import org.json4s.jackson.JsonMethods
 import scala.collection.JavaConverters._
 
-object VEP extends Command {
-
-  class Options extends BaseOptions {
-    @Args4jOption(name = "--block-size", usage = "Variants per VEP invocation")
-    var blockSize = 1000
-
-    @Args4jOption(required = true, name = "--config", usage = "VEP configuration file")
-    var config: String = _
-
-    @Args4jOption(name = "-r", aliases = Array("--root"), usage = "Variant annotation path to store VEP output")
-    var root: String = "va.vep"
-
-    @Args4jOption(name = "--force", usage = "Force VEP annotation from scratch")
-    var force: Boolean = false
-
-    @Args4jOption(name = "--csq", usage = "Annotates with the VCF CSQ field as a string, rather than the full nested struct schema")
-    var csq: Boolean = false
-
-  }
-
-  def newOptions = new Options
-
-  def name = "vep"
-
-  def description = "Annotate variants with VEP"
-
-  def supportsMultiallelic = true
-
-  def requiresVDS = true
+object VEP {
 
   val vepSignature = TStruct(
     "assembly_name" -> TString,
@@ -175,6 +142,7 @@ object VEP extends Command {
       "variant_allele" -> TString)),
     "variant_class" -> TString)
 
+
   def printContext(w: (String) => Unit) {
     w("##fileformat=VCFv4.1")
     w("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT")
@@ -201,27 +169,25 @@ object VEP extends Command {
       a(4).split(","))
   }
 
-  def run(state: State, options: Options): State = {
-    val vds = state.vds
+  def annotate(vds: VariantDataset, config: String, root: String = "va.vep", csq: Boolean,
+    force: Boolean, blockSize: Int): VariantDataset = {
 
-    val csq = options.csq
-
-    val root = Parser.parseAnnotationRoot(options.root, Annotation.VARIANT_HEAD)
+    val root = Parser.parseAnnotationRoot(root, Annotation.VARIANT_HEAD)
 
     val rootType =
       vds.vaSignature.getOption(root)
         .filter { t =>
           val r = t == (if(csq) TString else vepSignature)
           if (!r) {
-            if (options.force)
-              warn(s"type for ${ options.root } does not match vep signature, overwriting.")
+            if (force)
+              warn(s"type for $root does not match vep signature, overwriting.")
             else
-              warn(s"type for ${ options.root } does not match vep signature.")
+              warn(s"type for $root does not match vep signature.")
           }
           r
         }
 
-    if (rootType.isEmpty && !options.force)
+    if (rootType.isEmpty && !force)
       fatal("for performance, you should annotate variants with pre-computed VEP annotations.  Cowardly refusing to VEP annotate from scratch.  Use --force to override.")
 
     val rootQuery = rootType
@@ -229,7 +195,7 @@ object VEP extends Command {
 
     val properties = try {
       val p = new Properties()
-      val is = new FileInputStream(options.config)
+      val is = new FileInputStream(config)
       p.load(is)
       is.close()
       p
@@ -281,7 +247,7 @@ object VEP extends Command {
 
     val csq_regex = "CSQ=[^;^\\t]+".r
 
-    val localBlockSize = options.blockSize
+    val localBlockSize = blockSize
 
     val annotations = vds.rdd.mapValues { case (va, gs) => va }
       .mapPartitions({ it =>
@@ -305,7 +271,7 @@ object VEP extends Command {
               if(csq) {
                 csq_regex.findFirstIn(s).map(x => (variantFromInput(s), x.substring(4)))
               }else{
-                val a = JSONAnnotationImpex.importAnnotation(parse(s), vepSignature)
+                val a = JSONAnnotationImpex.importAnnotation(JsonMethods.parse(s), vepSignature)
                 val v = variantFromInput(inputQuery(a).get.asInstanceOf[String])
                 Option((v, a))
               }
@@ -328,10 +294,7 @@ object VEP extends Command {
           }
       }.asOrderedRDD
 
-    val newVDS = vds.copy(rdd = newRDD,
+    vds.copy(rdd = newRDD,
       vaSignature = newVASignature)
-
-    state.copy(vds = newVDS)
   }
-
 }

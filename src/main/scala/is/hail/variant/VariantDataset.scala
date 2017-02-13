@@ -3,18 +3,15 @@ package is.hail.variant
 import java.io.FileNotFoundException
 
 import is.hail.annotations.{Annotation, _}
-import is.hail.driver.SplitMulti
-import is.hail.io._
 import is.hail.expr.{EvalContext, JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type, _}
+import is.hail.io._
 import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
 import is.hail.io.plink.{ExportBedBimFam, FamFileConfig, PlinkLoader}
 import is.hail.io.vcf.{BufferedLineIterator, ExportVCF}
-import is.hail.keytable.KeyTable
 import is.hail.methods._
 import is.hail.sparkextras.{OrderedPartitioner, OrderedRDD}
 import is.hail.utils._
 import is.hail.variant.Variant.orderedKey
-import is.hail.variant.LocusImplicits.orderedKey
 import org.apache.hadoop
 import org.apache.kudu.spark.kudu.{KuduContext, _}
 import org.apache.spark.rdd.RDD
@@ -1666,5 +1663,20 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
     if (foundError)
       fatal("found one or more type check errors")
+  }
+
+  def variantQC(): VariantDataset = VariantQC(vds)
+
+  /**
+    *
+    * @param config VEP configuration file
+    * @param root Variant annotation path to store VEP output
+    * @param csq Annotates with the VCF CSQ field as a string, rather than the full nested struct schema
+    * @param force Force VEP annotation from scratch
+    * @param blockSize Variants per VEP invocation
+    */
+  def vep(config: String, root: String = "va.vep", csq: Boolean = false, force: Boolean = false,
+    blockSize: Int = 1000): VariantDataset = {
+    VEP.annotate(vds, config, root, csq, force, blockSize)
   }
 }

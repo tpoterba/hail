@@ -1,15 +1,15 @@
-package is.hail.driver
+package is.hail.methods
 
-import org.apache.spark.rdd.RDD
-import org.apache.spark.storage.StorageLevel
-import org.apache.spark.util.StatCounter
-import is.hail.utils._
-import is.hail.annotations._
-import is.hail.expr._
+import is.hail.annotations.Annotation
+import is.hail.expr.{TStruct, _}
 import is.hail.stats.LeveneHaldane
-import is.hail.variant._
-import org.kohsuke.args4j.{Option => Args4jOption}
+import is.hail.utils._
+import is.hail.variant.{Genotype, Variant, VariantDataset}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.util.StatCounter
+
 import scala.collection.mutable
+
 
 object VariantQCCombiner {
   val header =
@@ -197,35 +197,16 @@ class VariantQCCombiner extends Serializable {
   }
 }
 
-object VariantQC extends Command {
-
-  class Options extends BaseOptions
-
-  def newOptions = new Options
-
-  def name = "variantqc"
-
-  def description = "Compute per-variant QC metrics"
-
+object VariantQC {
   def results(vds: VariantDataset): RDD[(Variant, VariantQCCombiner)] =
     vds
       .aggregateByVariant(new VariantQCCombiner)((comb, g) => comb.merge(g),
         (comb1, comb2) => comb1.merge(comb2))
 
-  def supportsMultiallelic = false
-
-  def requiresVDS = true
-
-  def run(state: State, options: Options): State = {
-    val vds = state.vds
-
+  def apply(vds: VariantDataset): VariantDataset = {
     val (newVAS, insertQC) = vds.vaSignature.insert(VariantQCCombiner.signature, "qc")
-    val newVDS = vds
-      .mapAnnotationsWithAggregate(new VariantQCCombiner, newVAS)((comb, v, va, s, sa, g) => comb.merge(g),
-        (comb1, comb2) => comb1.merge(comb2),
-        (va, comb) => insertQC(va, Some(comb.asAnnotation)))
-
-    state.copy(
-      vds = newVDS)
+    vds.mapAnnotationsWithAggregate(new VariantQCCombiner, newVAS)((comb, v, va, s, sa, g) => comb.merge(g),
+      (comb1, comb2) => comb1.merge(comb2),
+      (va, comb) => insertQC(va, Some(comb.asAnnotation)))
   }
 }
