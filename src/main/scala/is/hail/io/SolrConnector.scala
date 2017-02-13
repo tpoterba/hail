@@ -2,15 +2,14 @@ package is.hail.io
 
 import java.util
 
-import is.hail.driver.Main
 import is.hail.expr.{EvalContext, Parser, TBoolean, TDouble, TFloat, TGenotype, TInt, TIterable, TLong, TSample, TString, TVariant, Type}
 import is.hail.utils.StringEscapeUtils.escapeStringSimple
-import is.hail.utils.{fatal, info, warn}
+import is.hail.utils._
 import is.hail.variant.VariantDataset
-import org.apache.solr.client.solrj.{SolrClient, SolrResponse}
 import org.apache.solr.client.solrj.impl.{CloudSolrClient, HttpSolrClient}
 import org.apache.solr.client.solrj.request.CollectionAdminRequest
 import org.apache.solr.client.solrj.request.schema.SchemaRequest
+import org.apache.solr.client.solrj.{SolrClient, SolrResponse}
 import org.apache.solr.common.{SolrException, SolrInputDocument}
 
 import scala.collection.JavaConverters._
@@ -263,7 +262,7 @@ object SolrConnector {
             } catch {
               case t: Throwable =>
                 warn(s"caught exception while adding documents: ${
-                  Main.expandException(t)
+                  expandException(t)
                 }\n\tretrying")
 
                 try {
@@ -271,7 +270,7 @@ object SolrConnector {
                 } catch {
                   case t: Throwable =>
                     warn(s"caught exception while closing SorlClient: ${
-                      Main.expandException(t)
+                      expandException(t)
                     }\n\tignoring")
                 }
 

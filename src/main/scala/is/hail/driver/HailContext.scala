@@ -6,11 +6,13 @@ import org.apache.hadoop
 import is.hail.annotations.Annotation
 import is.hail.expr.{EvalContext, Parser, TStruct, Type}
 import is.hail.io.bgen.BgenLoader
-import is.hail.io.gen.GenLoader
+import is.hail.io.gen.{GenLoader, GenReport}
 import is.hail.expr._
 import is.hail.io.plink.{FamFileConfig, PlinkLoader}
-import is.hail.io.vcf.LoadVCF
+import is.hail.io.vcf.{LoadVCF, VCFReport}
 import is.hail.keytable.KeyTable
+import is.hail.methods.DuplicateReport
+import is.hail.misc.SeqrServer
 import is.hail.stats.{BaldingNicholsModel, Distribution, UniformDist}
 import is.hail.utils.{log, _}
 import is.hail.variant.{Genotype, VSMSubgen, Variant, VariantDataset, VariantMetadata, VariantSampleMatrix}
@@ -147,7 +149,15 @@ object HailContext {
     parquetCompression: String = "uncompressed",
     blockSize: Long = 1L,
     branchingFactor: Int = 50,
-    tmpDir: String = "/tmp") {
+    tmpDir: String = "/tmp"): HailContext = {
+
+    {
+      import breeze.linalg._
+      import breeze.linalg.operators.{OpMulMatrix, BinaryRegistry}
+
+      implicitly[BinaryRegistry[DenseMatrix[Double], Vector[Double], OpMulMatrix.type, DenseVector[Double]]].register(
+        DenseMatrix.implOpMulMatrix_DMD_DVD_eq_DVD)
+    }
 
     configureLogging(logFile, quiet, append)
 
@@ -172,7 +182,10 @@ object HailContext {
   }
 }
 
-case class HailContext private(sc: SparkContext, sqlContext: SQLContext, tmpDir: String, branchingFactor: Int) {
+case class HailContext private(sc: SparkContext,
+  sqlContext: SQLContext,
+  tmpDir: String,
+  branchingFactor: Int) {
   val hadoopConf: hadoop.conf.Configuration = sc.hadoopConfiguration
 
   def grep(regex: String, files: Seq[String], maxLines: Int = 100) {
@@ -228,7 +241,7 @@ case class HailContext private(sc: SparkContext, sqlContext: SQLContext, tmpDir:
       }.value
     }.toOrderedRDD
 
-    VariantSampleMatrix(VariantMetadata(Array.empty[String], IndexedSeq.empty[Annotation], Annotation.empty,
+    VariantSampleMatrix(this, VariantMetadata(Array.empty[String], IndexedSeq.empty[Annotation], Annotation.empty,
       TStruct.empty, finalType, TStruct.empty), keyedRDD)
   }
 
@@ -248,7 +261,7 @@ case class HailContext private(sc: SparkContext, sqlContext: SQLContext, tmpDir:
         fatal("unknown input file type")
     }
 
-    BgenLoader.load(sc, inputs, sampleFile, tolerance, compress, nPartitions)
+    BgenLoader.load(this, inputs, sampleFile, tolerance, compress, nPartitions)
   }
 
   def importGen(files: Seq[String],
@@ -295,7 +308,7 @@ case class HailContext private(sc: SparkContext, sqlContext: SQLContext, tmpDir:
 
     val signature = TStruct("rsid" -> TString, "varid" -> TString)
 
-    VariantSampleMatrix(VariantMetadata(samples).copy(isDosage = true),
+    VariantSampleMatrix(this, VariantMetadata(samples).copy(isDosage = true),
       sc.union(results.map(_.rdd)).toOrderedRDD)
       .copy(vaSignature = signature, wasSplit = true)
   }
@@ -306,16 +319,8 @@ case class HailContext private(sc: SparkContext, sqlContext: SQLContext, tmpDir:
     config: TextTableConfiguration = TextTableConfiguration()): KeyTable = {
 
     val inputs = hadoopConf.globAll(files)
-    KeyTable.importTextTable(sc, inputs, keyNames.mkString(","), nPartitions.getOrElse(sc.defaultMinPartitions), config)
+    KeyTable.importTextTable(this, inputs, keyNames.mkString(","), nPartitions.getOrElse(sc.defaultMinPartitions), config)
   }
-
-  def importPlink(bfile: String,
-    nPartitions: Option[Int] = None,
-    delimiter: String = "\\\\s+",
-    missing: String = "NA",
-    quantPheno: Boolean = false,
-    compress: Boolean = true): VariantDataset =
-    importPlink(bfile + ".bed", bfile + ".bim", bfile + ".fam", nPartitions, delimiter, missing, quantPheno, compress)
 
   def importPlink(bed: String, bim: String, fam: String,
     nPartitions: Option[Int] = None,
@@ -327,19 +332,16 @@ case class HailContext private(sc: SparkContext, sqlContext: SQLContext, tmpDir:
     val ffConfig = FamFileConfig(quantPheno, delimiter, missing)
     hadoopConf.setBoolean("compressGS", compress)
 
-    PlinkLoader(bed, bim, fam,
-      ffConfig, sc, nPartitions)
+    PlinkLoader(this, bed, bim, fam,
+      ffConfig, nPartitions)
   }
-
-  def read(file: String, sitesOnly: Boolean = false, samplesOnly: Boolean = false): VariantDataset =
-    read(List(file), sitesOnly, samplesOnly)
 
   def read(files: Seq[String], sitesOnly: Boolean = false, samplesOnly: Boolean = false): VariantDataset = {
     val inputs = hadoopConf.globAll(files)
     if (inputs.isEmpty)
       fatal("arguments refer to no files")
 
-    val vdses = inputs.map(input => VariantDataset.read(sqlContext, input,
+    val vdses = inputs.map(input => VariantDataset.read(this, input,
       skipGenotypes = sitesOnly, skipVariants = samplesOnly))
 
     val sampleIds = vdses.head.sampleIds
@@ -386,23 +388,12 @@ case class HailContext private(sc: SparkContext, sqlContext: SQLContext, tmpDir:
     * @param master Kudu master address
     */
   def readKudu(path: String, table: String, master: String): VariantDataset = {
-    VariantDataset.readKudu(sqlContext, path, table, master)
+    VariantDataset.readKudu(this, path, table, master)
   }
 
   def writePartitioning(path: String) {
     VariantSampleMatrix.writePartitioning(sqlContext, path)
   }
-
-  def importVCF(file: String, force: Boolean = false,
-    forceBGZ: Boolean = false,
-    headerFile: Option[String] = None,
-    nPartitions: Option[Int] = None,
-    sitesOnly: Boolean = false,
-    storeGQ: Boolean = false,
-    ppAsPL: Boolean = false,
-    skipBadAD: Boolean = false,
-    compress: Boolean = true): VariantDataset =
-    importVCF(List(file), force, forceBGZ, headerFile, nPartitions, sitesOnly, storeGQ, ppAsPL, skipBadAD, compress)
 
   def importVCF(files: Seq[String], force: Boolean = false,
     forceBGZ: Boolean = false,
@@ -424,7 +415,7 @@ case class HailContext private(sc: SparkContext, sqlContext: SQLContext, tmpDir:
       hadoopConf.set("io.compression.codecs",
         codecs.replaceAllLiterally("org.apache.hadoop.io.compress.GzipCodec", "is.hail.io.compress.BGzipCodecGZ"))
 
-    val vds = LoadVCF(sc,
+    val vds = LoadVCF(this,
       header,
       inputs,
       storeGQ,
@@ -472,12 +463,40 @@ case class HailContext private(sc: SparkContext, sqlContext: SQLContext, tmpDir:
     fst: Option[Array[Double]] = None,
     afDist: Distribution = UniformDist(0.1, 0.9),
     seed: Int = 0): VariantDataset =
-    BaldingNicholsModel(sc, populations, samples, variants, popDist, fst, seed, nPartitions, afDist)
+    BaldingNicholsModel(this, populations, samples, variants, popDist, fst, seed, nPartitions, afDist)
 
   def dataframeToKeytable(df: DataFrame, keys: Array[String] = Array.empty[String]): KeyTable =
-    KeyTable.fromDF(df, keys)
+    KeyTable.fromDF(this, df, keys)
 
-  def genDataset(): VariantDataset = VSMSubgen.realistic.gen(sc).sample()
+  def genDataset(): VariantDataset = VSMSubgen.realistic.gen(this).sample()
+
+  /**
+    *
+    * @param collection SolrCloud collection
+    * @param url Solr instance (URL) to connect to
+    * @param zkHost Zookeeper host string to connect to
+    * @param jsonFields Comma-separated list of JSON-encoded fields
+    * @param solrOnly Return results directly queried from Solr
+    * @param address Cassandra contact point to connect to
+    * @param keyspace Cassandra keyspace
+    * @param table Cassandra table
+    */
+  def seqrServer(collection: String = null,
+    url: String = null,
+    zkHost: String = null,
+    jsonFields: String = null,
+    solrOnly: Boolean = false,
+    address: String = null,
+    keyspace: String = null,
+    table: String = null) {
+    SeqrServer.start(collection, url, zkHost, jsonFields, solrOnly, address, keyspace, table)
+  }
+
+  def report() {
+    VCFReport.report()
+    GenReport.report()
+    DuplicateReport.report()
+  }
 
   def stop() {
     sc.stop()

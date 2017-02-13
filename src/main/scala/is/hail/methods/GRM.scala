@@ -74,7 +74,7 @@ object GRM {
             }
             sb.toString()
           }
-          .writeTable(path)
+          .writeTable(path, vds.hc.tmpDir)
 
       case "gcta-grm" =>
         indexSortedRowMatrix
@@ -92,7 +92,7 @@ object GRM {
             }
             sb.toString()
           }
-          .writeTable(path)
+          .writeTable(path, vds.hc.tmpDir)
 
       case "gcta-grm-bin" =>
         indexSortedRowMatrix
@@ -111,7 +111,7 @@ object GRM {
             }
             result
           }
-          .saveFromByteArrays(path)
+          .saveFromByteArrays(path, vds.hc.tmpDir)
 
         nFile.foreach { f =>
           vds.sparkContext.hadoopConfiguration.writeDataFile(f) { s =>

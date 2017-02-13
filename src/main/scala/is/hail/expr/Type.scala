@@ -3,7 +3,6 @@ package is.hail.expr
 import is.hail.annotations.{Annotation, AnnotationPathException, _}
 import is.hail.check.Arbitrary._
 import is.hail.check.{Gen, _}
-import is.hail.driver.ExportVCF
 import is.hail.utils
 import is.hail.utils.{Interval, StringEscapeUtils, _}
 import is.hail.variant.{AltAllele, Genotype, Locus, Variant}

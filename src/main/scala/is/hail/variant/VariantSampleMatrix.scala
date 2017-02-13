@@ -1,41 +1,34 @@
 package is.hail.variant
 
-import java.io.{FileNotFoundException, InvalidClassException}
 import java.nio.ByteBuffer
 
-import org.apache.hadoop
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, SQLContext}
-import org.apache.spark.{SparkContext, SparkEnv}
-import is.hail.utils._
-import is.hail.driver.{HailConfiguration, Main}
 import is.hail.annotations._
 import is.hail.check.Gen
+import is.hail.driver.HailContext
 import is.hail.expr.{EvalContext, _}
-import is.hail.io.vcf.BufferedLineIterator
-import is.hail.sparkextras._
-import org.json4s._
-import org.json4s.jackson.{JsonMethods, Serialization}
-import org.apache.kudu.spark.kudu.{KuduContext, _}
-import Variant.orderedKey
 import is.hail.io.annotators.IntervalListAnnotator
 import is.hail.keytable.KeyTable
-import is.hail.methods.{Aggregators, Filter}
+import is.hail.methods.Aggregators
+import is.hail.sparkextras._
 import is.hail.utils
+import is.hail.utils._
+import is.hail.variant.Variant.orderedKey
+import org.apache.hadoop
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{Row, SQLContext}
+import org.apache.spark.{SparkContext, SparkEnv}
+import org.json4s.jackson.Serialization
 
-import scala.collection.mutable
-import scala.io.Source
+import scala.collection.JavaConverters._
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
-import scala.collection.JavaConverters._
 
 object VariantSampleMatrix {
   final val fileVersion: Int = 4
 
-  def apply[T](metadata: VariantMetadata,
+  def apply[T](hc: HailContext, metadata: VariantMetadata,
     rdd: OrderedRDD[Locus, Variant, (Annotation, Iterable[T])])(implicit tct: ClassTag[T]): VariantSampleMatrix[T] = {
-    new VariantSampleMatrix(metadata, rdd)
+    new VariantSampleMatrix(hc, metadata, rdd)
   }
 
 
@@ -61,9 +54,9 @@ object VariantSampleMatrix {
     }
   }
 
-  def gen[T](sc: SparkContext,
+  def gen[T](hc: HailContext,
     gen: VSMSubgen[T])(implicit tct: ClassTag[T]): Gen[VariantSampleMatrix[T]] =
-    gen.gen(sc)
+    gen.gen(hc)
 }
 
 case class VSMSubgen[T](
@@ -79,7 +72,7 @@ case class VSMSubgen[T](
   isDosage: Boolean = false,
   wasSplit: Boolean = false) {
 
-  def gen(sc: SparkContext)(implicit tct: ClassTag[T]): Gen[VariantSampleMatrix[T]] =
+  def gen(hc: HailContext)(implicit tct: ClassTag[T]): Gen[VariantSampleMatrix[T]] =
     for (size <- Gen.size;
       subsizes <- Gen.partitionSize(5).resize(size / 10);
       vaSig <- vaSigGen.resize(subsizes(0));
@@ -100,8 +93,8 @@ case class VSMSubgen[T](
           ts <- Gen.buildableOfN[Iterable, T](nSamples, tGen(v.nAlleles)).resize(subsubsizes(2)))
           yield (v, (va, ts))).resize(l))
       yield {
-        VariantSampleMatrix[T](VariantMetadata(sampleIds, saValues, global, saSig, vaSig, globalSig, wasSplit = wasSplit, isDosage = isDosage),
-          sc.parallelize(rows, nPartitions).toOrderedRDD)
+        VariantSampleMatrix[T](hc, VariantMetadata(sampleIds, saValues, global, saSig, vaSig, globalSig, wasSplit = wasSplit, isDosage = isDosage),
+          hc.sc.parallelize(rows, nPartitions).toOrderedRDD)
       }
 }
 
@@ -129,7 +122,7 @@ object VSMSubgen {
     tGen = Genotype.genDosage, isDosage = true)
 }
 
-class VariantSampleMatrix[T](val metadata: VariantMetadata,
+class VariantSampleMatrix[T](val hc: HailContext, val metadata: VariantMetadata,
   val rdd: OrderedRDD[Locus, Variant, (Annotation, Iterable[T])])(implicit tct: ClassTag[T]) extends JoinAnnotator {
 
   def sampleIds: IndexedSeq[String] = metadata.sampleIds
@@ -168,11 +161,13 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     wasSplit: Boolean = wasSplit,
     isDosage: Boolean = isDosage)
     (implicit tct: ClassTag[U]): VariantSampleMatrix[U] =
-    new VariantSampleMatrix[U](
+    new VariantSampleMatrix[U](hc,
       VariantMetadata(sampleIds, sampleAnnotations, globalAnnotation,
         saSignature, vaSignature, globalSignature, wasSplit, isDosage), rdd)
 
-  def sparkContext: SparkContext = rdd.sparkContext
+  def sparkContext: SparkContext = hc.sc
+
+  def hadoopConf: hadoop.conf.Configuration = hc.hadoopConf
 
   def nPartitions: Int = rdd.partitions.length
 
@@ -293,7 +288,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     )
   }
 
-  def filterIntervals(iList: IntervalTree[Locus], keep: Boolean = true): VariantSampleMatrix[T] = {
+  def filterIntervals(iList: IntervalTree[Locus], keep: Boolean): VariantSampleMatrix[T] = {
     if (keep)
       copy(rdd = rdd.filterIntervals(iList))
     else {
@@ -303,7 +298,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     }
   }
 
-  def filterIntervals(path: String, keep: Boolean = true): VariantSampleMatrix[T] = {
+  def filterIntervals(path: String, keep: Boolean): VariantSampleMatrix[T] = {
     filterIntervals(IntervalListAnnotator.read(path, sparkContext.hadoopConfiguration, prune = true), keep)
   }
 
@@ -463,7 +458,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
         (k, Annotation.fromSeq(aggF().map(_.orNull)))
       }
 
-    KeyTable(ktRDD, keySignature, valueSignature)
+    KeyTable(hc, ktRDD, keySignature, valueSignature)
   }
 
   def foldBySample(zeroValue: T)(combOp: (T, T) => T): RDD[(String, T)] = {
@@ -780,7 +775,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
 
   def variantsKT(): KeyTable = {
     val localVASignature = vaSignature
-    KeyTable(rdd.map { case (v, (va, gs)) =>
+    KeyTable(hc, rdd.map { case (v, (va, gs)) =>
       Annotation(v, va)
     },
       TStruct(
@@ -790,7 +785,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
   }
 
   def samplesKT(): KeyTable = {
-    KeyTable(sparkContext.parallelize(sampleIdsAndAnnotations)
+    KeyTable(hc, sparkContext.parallelize(sampleIdsAndAnnotations)
       .map { case (s, sa) =>
         Annotation(s, sa)
       },
@@ -854,7 +849,7 @@ class VariantSampleMatrix[T](val metadata: VariantMetadata,
     })
 
     val result = variantsAndAnnotations
-      .treeAggregate(zVal)(seqOp, combOp, depth = HailConfiguration.treeAggDepth(nPartitions))
+      .treeAggregate(zVal)(seqOp, combOp, depth = treeAggDepth(hc, nPartitions))
     resOp(result)
 
     ec.setAll(localGlobalAnnotation)

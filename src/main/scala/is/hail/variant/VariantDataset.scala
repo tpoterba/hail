@@ -3,6 +3,7 @@ package is.hail.variant
 import java.io.FileNotFoundException
 
 import is.hail.annotations.{Annotation, _}
+import is.hail.driver.HailContext
 import is.hail.expr.{EvalContext, JSONAnnotationImpex, Parser, SparkAnnotationImpex, TString, TStruct, Type, _}
 import is.hail.io._
 import is.hail.io.annotators.{BedAnnotator, IntervalListAnnotator}
@@ -131,10 +132,11 @@ object VariantDataset {
   }
 
 
-  def read(sqlContext: SQLContext, dirname: String,
+  def read(hc: HailContext, dirname: String,
     skipGenotypes: Boolean = false, skipVariants: Boolean = false): VariantDataset = {
 
-    val sc = sqlContext.sparkContext
+    val sqlContext = hc.sqlContext
+    val sc = hc.sc
     val hConf = sc.hadoopConfiguration
 
     val metadata = readMetadata(hConf, dirname, skipGenotypes)
@@ -174,7 +176,7 @@ object VariantDataset {
       OrderedRDD(rdd, partitioner)
     }
 
-    new VariantSampleMatrix[Genotype](
+    new VariantSampleMatrix[Genotype](hc,
       if (skipGenotypes) metadata.copy(sampleIds = IndexedSeq.empty[String],
         sampleAnnotations = IndexedSeq.empty[Annotation])
       else metadata,
@@ -186,14 +188,14 @@ object VariantDataset {
     "gs" -> GenotypeStream.t,
     "sample_group" -> TString)
 
-  def readKudu(sqlContext: SQLContext, dirname: String, tableName: String,
+  def readKudu(hc: HailContext, dirname: String, tableName: String,
     master: String): VariantDataset = {
 
-    val metadata = readMetadata(sqlContext.sparkContext.hadoopConfiguration, dirname, requireParquetSuccess = false)
+    val metadata = readMetadata(hc.hadoopConf, dirname, requireParquetSuccess = false)
     val vaSignature = metadata.vaSignature
     val isDosage = metadata.isDosage
 
-    val df = sqlContext.read.options(
+    val df = hc.sqlContext.read.options(
       Map("kudu.table" -> tableName, "kudu.master" -> master)).kudu
 
     val rowType = kuduRowType(vaSignature)
@@ -220,7 +222,7 @@ object VariantDataset {
       val genotypes = kv._2.flatMap(_._2) // combine genotype streams
       (variant, (annotations, genotypes))
     })
-    new VariantSampleMatrix[Genotype](metadata, rdd.toOrderedRDD)
+    new VariantSampleMatrix[Genotype](hc, metadata, rdd.toOrderedRDD)
   }
 
   private def makeSchemaForKudu(vaSignature: Type): StructType =
@@ -258,7 +260,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     if (!dirname.endsWith(".vds") && !dirname.endsWith(".vds/"))
       fatal(s"output path ending in `.vds' required, found `$dirname'")
 
-    val hConf = vds.sparkContext.hadoopConfiguration
+    val hConf = vds.hc.hadoopConf
     hConf.mkDir(dirname)
 
     val sb = new StringBuilder
@@ -425,7 +427,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       ec.setAll(localGlobalAnnotation, i, v, va)
     })
 
-    val iList = IntervalListAnnotator.read(intervalList, vds.sparkContext.hadoopConfiguration)
+    val iList = IntervalListAnnotator.read(intervalList, vds.hc.hadoopConf)
     val iListBc = vds.sparkContext.broadcast(iList)
 
     val results = vds.variantsAndAnnotations.flatMap { case (v, va) =>
@@ -434,7 +436,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       .aggregateByKey(zVals)(seqOp, combOp)
       .collectAsMap()
 
-    vds.sparkContext.hadoopConfiguration.writeTextFile(out) { out =>
+    vds.hc.hadoopConf.writeTextFile(out) { out =>
       val sb = new StringBuilder
       sb.append("Contig")
       sb += '\t'
@@ -467,7 +469,6 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
       out.write(sb.result())
     }
-
   }
 
   def annotateAllelesExpr(expr: String, propagateGQ: Boolean = false): VariantDataset = {
@@ -555,7 +556,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
   }
 
   def annotateGlobalList(path: String, root: String, asSet: Boolean = false): VariantDataset = {
-    val textList = vds.sparkContext.hadoopConfiguration.readFile(path) { in =>
+    val textList = vds.hc.hadoopConf.readFile(path) { in =>
       Source.fromInputStream(in)
         .getLines()
         .toArray
@@ -630,7 +631,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     if (!path.endsWith(".fam"))
       fatal("input file must end in .fam")
 
-    val (info, signature) = PlinkLoader.parseFam(path, config, vds.sparkContext.hadoopConfiguration)
+    val (info, signature) = PlinkLoader.parseFam(path, config, vds.hc.hadoopConf)
 
     val duplicateIds = info.map(_._1).duplicates().toArray
     if (duplicateIds.nonEmpty) {
@@ -645,7 +646,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
   def annotateSamplesList(path: String, root: String): VariantDataset = {
 
-    val samplesInList = vds.sparkContext.hadoopConfiguration.readLines(path) { lines =>
+    val samplesInList = vds.hc.hadoopConf.readLines(path) { lines =>
       if (lines.isEmpty)
         warn(s"Empty annotation file given: $path")
 
@@ -717,7 +718,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
   def annotateVariantsBED(path: String, root: String, all: Boolean = false): VariantDataset = {
     val annotationPath = Parser.parseAnnotationRoot(root, Annotation.VARIANT_HEAD)
-    BedAnnotator(path, vds.sparkContext.hadoopConfiguration) match {
+    BedAnnotator(path, vds.hc.hadoopConf) match {
       case (is, None) =>
         vds.annotateIntervals(is, annotationPath)
 
@@ -756,7 +757,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
   def annotateVariantsIntervals(path: String, root: String, all: Boolean = false): VariantDataset = {
     val annotationPath = Parser.parseAnnotationRoot(root, Annotation.VARIANT_HEAD)
 
-    IntervalListAnnotator(path, vds.sparkContext.hadoopConfiguration) match {
+    IntervalListAnnotator(path, vds.hc.hadoopConf) match {
       case (is, Some((m, t))) =>
         vds.annotateIntervals(is, m, t, all = all, annotationPath)
 
@@ -765,16 +766,10 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     }
   }
 
-  def annotateVariantsLoci(path: String, locusExpr: String,
-    root: Option[String] = None, code: Option[String] = None,
-    config: TextTableConfiguration = TextTableConfiguration()): VariantDataset =
-    annotateVariantsLoci(List(path), locusExpr, root, code, config)
-
-
   def annotateVariantsLoci(paths: Seq[String], locusExpr: String,
     root: Option[String] = None, code: Option[String] = None,
     config: TextTableConfiguration = TextTableConfiguration()): VariantDataset = {
-    val files = vds.sparkContext.hadoopConfiguration.globAll(paths)
+    val files = vds.hc.hadoopConf.globAll(paths)
     if (files.isEmpty)
       fatal("Arguments referred to no files")
 
@@ -807,15 +802,10 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     vds.annotateLoci(lociRDD, finalType, inserter)
   }
 
-  def annotateVariantsTable(path: String, variantExpr: String,
-    root: Option[String] = None, code: Option[String] = None,
-    config: TextTableConfiguration = TextTableConfiguration()): VariantDataset =
-    annotateVariantsTable(List(path), variantExpr, root, code, config)
-
   def annotateVariantsTable(paths: Seq[String], variantExpr: String,
     root: Option[String] = None, code: Option[String] = None,
     config: TextTableConfiguration = TextTableConfiguration()): VariantDataset = {
-    val files = vds.sparkContext.hadoopConfiguration.globAll(paths)
+    val files = vds.hc.hadoopConf.globAll(paths)
     if (files.isEmpty)
       fatal("Arguments referred to no files")
 
@@ -905,7 +895,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
     def writeSampleFile() {
       //FIXME: should output all relevant sample annotations such as phenotype, gender, ...
-      vds.sparkContext.hadoopConfiguration.writeTable(path + ".sample",
+      vds.hc.hadoopConf.writeTable(path + ".sample",
         "ID_1 ID_2 missing" :: "0 0 0" :: vds.sampleIds.map(s => s"$s $s 0").toList)
     }
 
@@ -968,7 +958,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
           appendRow(sb, v, va, gs, rsidQuery, varidQuery)
           sb.result()
         }
-      }.writeTable(path + ".gen", None)
+      }.writeTable(path + ".gen", vds.hc.tmpDir, None)
     }
 
     writeSampleFile()
@@ -989,7 +979,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     ec.set(5, vds.globalAnnotation)
     val (names, ts, f) = Parser.parseExportExprs(expr, ec)
 
-    val hadoopConf = vds.sparkContext.hadoopConfiguration
+    val hadoopConf = vds.hc.hadoopConf
     if (typeFile) {
       hadoopConf.delete(path + ".types", recursive = false)
       val typeInfo = names
@@ -1020,7 +1010,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
           f().foreachBetween(x => sb.append(x))(sb += '\t')
           sb.result()
         }
-    }.writeTable(path, names.map(_.mkString("\t")))
+    }.writeTable(path, vds.hc.tmpDir, names.map(_.mkString("\t")))
   }
 
   def exportPlink(path: String, famExpr: String = "id = s.id") {
@@ -1092,10 +1082,10 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       .persist(StorageLevel.MEMORY_AND_DISK)
 
     plinkRDD.map { case (v, bed) => bed }
-      .saveFromByteArrays(path + ".bed", header = Some(bedHeader))
+      .saveFromByteArrays(path + ".bed", vds.hc.tmpDir, header = Some(bedHeader))
 
     plinkRDD.map { case (v, bed) => ExportBedBimFam.makeBimRow(v) }
-      .writeTable(path + ".bim")
+      .writeTable(path + ".bim", vds.hc.tmpDir)
 
     plinkRDD.unpersist()
 
@@ -1107,7 +1097,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
         famFns.map(_ (a)).mkString("\t")
       }
 
-    vds.sparkContext.hadoopConfiguration.writeTextFile(path + ".fam")(out =>
+    vds.hc.hadoopConf.writeTextFile(path + ".fam")(out =>
       famRows.foreach(line => {
         out.write(line)
         out.write("\n")
@@ -1120,7 +1110,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     val ec = Aggregators.sampleEC(vds)
 
     val (names, types, f) = Parser.parseExportExprs(expr, ec)
-    val hadoopConf = vds.sparkContext.hadoopConfiguration
+    val hadoopConf = vds.hc.hadoopConf
     if (typeFile) {
       hadoopConf.delete(path + ".types", recursive = false)
       val typeInfo = names
@@ -1147,14 +1137,14 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
   def exportVariants(path: String, expr: String, typeFile: Boolean) {
     val vas = vds.vaSignature
-    val hConf = vds.sparkContext.hadoopConfiguration
+    val hConf = vds.hc.hadoopConf
 
     val localGlobalAnnotations = vds.globalAnnotation
     val ec = Aggregators.variantEC(vds)
 
     val (names, types, f) = Parser.parseExportExprs(expr, ec)
 
-    val hadoopConf = vds.sparkContext.hadoopConfiguration
+    val hadoopConf = vds.hc.hadoopConf
     if (typeFile) {
       hadoopConf.delete(path + ".types", recursive = false)
       val typeInfo = names
@@ -1177,7 +1167,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
           f().foreachBetween(x => sb.append(x))(sb += '\t')
           sb.result()
         }
-      }.writeTable(path, names.map(_.mkString("\t")))
+      }.writeTable(path, vds.hc.tmpDir, names.map(_.mkString("\t")))
   }
 
   /**
@@ -1345,7 +1335,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     * @param remove remove listed samples rather than keeping them
     */
   def filterSamplesList(path: String, remove: Boolean = false): VariantDataset = {
-    val samples = vds.sparkContext.hadoopConfiguration.readFile(path) { reader =>
+    val samples = vds.hc.hadoopConf.readFile(path) { reader =>
       Source.fromInputStream(reader)
         .getLines()
         .filter(line => !line.isEmpty)
@@ -1425,7 +1415,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
       .map { case ((i, j), ibd) =>
         s"$i\t$j\t${ ibd.ibd.Z0 }\t${ ibd.ibd.Z1 }\t${ ibd.ibd.Z2 }\t${ ibd.ibd.PI_HAT }"
       }
-      .writeTable(path, Some("SAMPLE_ID_1\tSAMPLE_ID_2\tZ0\tZ1\tZ2\tPI_HAT"), parallelWrite)
+      .writeTable(path, vds.hc.tmpDir, Some("SAMPLE_ID_1\tSAMPLE_ID_2\tZ0\tZ1\tZ2\tPI_HAT"), parallelWrite)
   }
 
   /**
@@ -1495,11 +1485,11 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     */
   def mendelErrors(pathBase: String, famFile: String) {
 
-    val ped = Pedigree.read(famFile, vds.sparkContext.hadoopConfiguration, vds.sampleIds)
+    val ped = Pedigree.read(famFile, vds.hc.hadoopConf, vds.sampleIds)
     val men = MendelErrors(vds, ped.completeTrios)
 
-    men.writeMendel(pathBase + ".mendel")
-    men.writeMendelL(pathBase + ".lmendel")
+    men.writeMendel(pathBase + ".mendel", vds.hc.tmpDir)
+    men.writeMendelL(pathBase + ".lmendel", vds.hc.tmpDir)
     men.writeMendelF(pathBase + ".fmendel")
     men.writeMendelI(pathBase + ".imendel")
   }
@@ -1543,7 +1533,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     * @param path ID mapping file
     */
   def renameSamples(path: String): VariantDataset = {
-    val m = vds.sparkContext.hadoopConfiguration.readFile(path) { s =>
+    val m = vds.hc.hadoopConf.readFile(path) { s =>
       Source.fromInputStream(s)
         .getLines()
         .map {
@@ -1625,7 +1615,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     * @param tdtRoot Annotation root, starting in 'va'
     */
   def tdt(famFile: String, tdtRoot: String = "va.tdt"): VariantDataset = {
-    val ped = Pedigree.read(famFile, vds.sparkContext.hadoopConfiguration, vds.sampleIds)
+    val ped = Pedigree.read(famFile, vds.hc.hadoopConf, vds.sampleIds)
     TDT(vds, ped.completeTrios,
       Parser.parseAnnotationRoot(tdtRoot, Annotation.VARIANT_HEAD))
   }

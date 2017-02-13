@@ -7,6 +7,7 @@ import org.apache.spark.storage.StorageLevel
 import org.apache.spark.{Accumulable, SparkContext}
 import is.hail.utils._
 import is.hail.annotations._
+import is.hail.driver.HailContext
 import is.hail.expr._
 import is.hail.sparkextras.{OrderedRDD, ReorderedPartitionsRDD, ReorderedPartitionsRDDPartition}
 import is.hail.variant._
@@ -177,7 +178,7 @@ object LoadVCF {
       Field(line.getID, TArray(baseType), i, attrs)
   }
 
-  def apply(sc: SparkContext,
+  def apply(hc: HailContext,
     file1: String,
     files: Array[String] = null, // FIXME hack
     storeGQ: Boolean = false,
@@ -189,7 +190,8 @@ object LoadVCF {
 
     val settings = VCFSettings(storeGQ, skipGenotypes, compress, ppAsPL, skipBadAD)
 
-    val hConf = sc.hadoopConfiguration
+    val hConf = hc.hadoopConf
+    val sc = hc.sc
     val headerLines = hConf.readFile(file1) { s =>
       Source.fromInputStream(s)
         .getLines()
@@ -307,7 +309,7 @@ object LoadVCF {
 
     justVariants.unpersist()
 
-    VariantSampleMatrix(VariantMetadata(sampleIds,
+    VariantSampleMatrix(hc, VariantMetadata(sampleIds,
       Annotation.emptyIndexedSeq(sampleIds.length),
       Annotation.empty,
       TStruct.empty,

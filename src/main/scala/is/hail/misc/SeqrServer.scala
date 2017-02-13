@@ -1,28 +1,26 @@
-package is.hail.driver
+package is.hail.misc
 
 import com.datastax.driver.core.{DataType, Session}
-import com.datastax.driver.core.querybuilder.QueryBuilder
 import is.hail.io.CassandraConnector
-import org.apache.solr.client.solrj.{SolrClient, SolrQuery}
-import org.apache.solr.client.solrj.impl.{CloudSolrClient, HttpSolrClient}
-import is.hail.utils._
 import is.hail.utils.StringEscapeUtils._
-import org.http4s.headers.`Content-Type`
-import org.http4s._
+import is.hail.utils._
+import org.apache.solr.client.solrj.impl.{CloudSolrClient, HttpSolrClient}
+import org.apache.solr.client.solrj.{SolrClient, SolrQuery}
 import org.http4s.MediaType._
+import org.http4s._
 import org.http4s.dsl._
+import org.http4s.headers.`Content-Type`
 import org.http4s.server._
 import org.http4s.server.blaze.BlazeBuilder
-
-import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
 import org.json4s._
-import org.json4s.jackson.{JsonMethods, Serialization}
 import org.json4s.jackson.JsonMethods._
-import org.json4s.jackson.Serialization.{read, write}
+import org.json4s.jackson.Serialization.write
+import org.json4s.jackson.{JsonMethods, Serialization}
 import org.kohsuke.args4j.{Option => Args4jOption}
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 
 case class SeqrRequest(page: Int,
   limit: Int,
@@ -323,60 +321,15 @@ class SeqrService(solrOnly: Boolean, jsonFields: Set[String], solr: SolrClient, 
   }
 }
 
-object SeqrServerCommand extends Command {
-
-  class Options extends BaseOptions {
-    @Args4jOption(name = "-c",
-      usage = "SolrCloud collection")
-    var collection: String = _
-
-    @Args4jOption(name = "-u", aliases = Array("--url"),
-      usage = "Solr instance (URL) to connect to")
-    var url: String = _
-
-    @Args4jOption(name = "-z", aliases = Array("--zk-host"),
-      usage = "Zookeeper host string to connect to")
-    var zkHost: String = _
-
-    @Args4jOption(name = "-j", aliases = Array("--json-fields"),
-      usage = "Comma-separated list of JSON-encoded fields")
-    var jsonFields: String = ""
-
-    @Args4jOption(name = "--solr-only", usage = "Return results directly queried from Solr")
-    var solrOnly = false
-
-    @Args4jOption(name = "-a", aliases = Array("--address"),
-      usage = "Cassandra contact point to connect to")
-    var address: String = _
-
-    @Args4jOption(name = "-k", usage = "Cassandra keyspace")
-    var keyspace: String = _
-
-    @Args4jOption(name = "-t", aliases = Array("--table"),
-      usage = "Cassandra table")
-    var table: String = _
-
-  }
-
-  def newOptions = new Options
-
-  def name = "seqrserver"
-
-  def description = "Seqr backend server"
-
-  def supportsMultiallelic = true
-
-  def requiresVDS = false
-
-  def run(state: State, options: Options): State = {
-    val vds = state.vds
-
-    // FIXME unify with ExportVariantsSolr
-    val url = options.url
-    val zkHost = options.zkHost
-    val collection = options.collection
-
-    val solrOnly = options.solrOnly
+object SeqrServer {
+  def start(collection: String = null,
+    url: String = null,
+    zkHost: String = null,
+    jsonFields: String = null,
+    solrOnly: Boolean = false,
+    address: String = null,
+    keyspace: String = null,
+    table: String = null) {
 
     if ((url == null) == (zkHost == null))
       fatal("exactly one of -u or -z required")
@@ -384,14 +337,15 @@ object SeqrServerCommand extends Command {
     if (zkHost != null && collection == null)
       fatal("-c required with -z")
 
-    if ((options.address == null) != (options.keyspace == null)
-      || (options.address == null) != (options.table == null))
+    if ((address == null) != (keyspace == null)
+      || (address == null) != (table == null))
       fatal("none or all of -a, -k, -t required")
 
-    if (solrOnly != (options.address == null))
+    if (solrOnly != (address == null))
       fatal("either --solr-only or all of -a, -k and -t required, but not both")
 
-    val jsonFields = options.jsonFields.split(",").map(_.trim).filter(_.nonEmpty).toSet
+    val jsonFieldSet = jsonFields.split(",").map(_.trim).filter(_.nonEmpty).toSet
+
 
     val solr =
       if (url != null)
@@ -409,15 +363,13 @@ object SeqrServerCommand extends Command {
       if (solrOnly)
         null
       else
-        CassandraConnector.getSession(options.address)
+        CassandraConnector.getSession(address)
 
-    val solrService = new SeqrService(solrOnly, jsonFields, solr, cassSession, options.keyspace, options.table)
+    val solrService = new SeqrService(solrOnly, jsonFieldSet, solr, cassSession, keyspace, table)
 
     val task = BlazeBuilder.bindHttp(6060, "0.0.0.0")
       .mountService(solrService.service, "/")
       .run
     task.awaitShutdown()
-
-    state
   }
 }

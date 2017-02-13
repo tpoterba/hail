@@ -1,7 +1,6 @@
 package is.hail.methods
 
 import is.hail.annotations.Annotation
-import is.hail.driver.HailConfiguration
 import is.hail.expr.TStruct
 import is.hail.utils._
 import is.hail.variant.{Genotype, Variant, VariantDataset}
@@ -229,7 +228,7 @@ class SampleQCCombiner extends Serializable {
 
 object SampleQC {
   def results(vds: VariantDataset): Map[String, SampleQCCombiner] = {
-    val depth = HailConfiguration.treeAggDepth(vds.nPartitions)
+    val depth = treeAggDepth(vds.hc, vds.nPartitions)
     vds.sampleIds.iterator
       .zip(
         vds

@@ -188,7 +188,7 @@ object CalculateConcordance {
 
     val rightSampleAnnotations = rightFiltered.sampleIdsAndAnnotations.toMap
 
-    val samples = VariantSampleMatrix(VariantMetadata(leftIds,
+    val samples = VariantSampleMatrix(left.hc, VariantMetadata(leftIds,
       sampleAnnotations = leftFiltered.sampleIdsAndAnnotations.zip(sampleResults).map { case ((s, leftSA), comb) =>
         val anno = Annotation(comb.toAnnotation, leftSA, rightSampleAnnotations(s))
         assert(sampleSchema.typeCheck(anno))
@@ -201,7 +201,7 @@ object CalculateConcordance {
       wasSplit = true),
       OrderedRDD.empty[Locus, Variant, (Annotation, Iterable[Genotype])](left.sparkContext))
 
-    val variants = VariantSampleMatrix(VariantMetadata(IndexedSeq.empty[String],
+    val variants = VariantSampleMatrix(left.hc, VariantMetadata(IndexedSeq.empty[String],
       sampleAnnotations = IndexedSeq.empty[Annotation],
       globalAnnotation = globalAnnotation,
       saSignature = TStruct.empty,

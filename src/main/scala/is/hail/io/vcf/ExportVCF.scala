@@ -296,6 +296,6 @@ object ExportVCF {
         appendRow(sb, v, va, gs)
         sb.result()
       }
-    }.writeTable(path, Some(header), parallelWrite = parallel)
+    }.writeTable(path, vds.hc.tmpDir, Some(header), parallelWrite = parallel)
   }
 }

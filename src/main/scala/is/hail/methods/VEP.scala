@@ -172,17 +172,17 @@ object VEP {
   def annotate(vds: VariantDataset, config: String, root: String = "va.vep", csq: Boolean,
     force: Boolean, blockSize: Int): VariantDataset = {
 
-    val root = Parser.parseAnnotationRoot(root, Annotation.VARIANT_HEAD)
+    val parsedRoot = Parser.parseAnnotationRoot(root, Annotation.VARIANT_HEAD)
 
     val rootType =
-      vds.vaSignature.getOption(root)
+      vds.vaSignature.getOption(parsedRoot)
         .filter { t =>
           val r = t == (if(csq) TString else vepSignature)
           if (!r) {
             if (force)
-              warn(s"type for $root does not match vep signature, overwriting.")
+              warn(s"type for $parsedRoot does not match vep signature, overwriting.")
             else
-              warn(s"type for $root does not match vep signature.")
+              warn(s"type for $parsedRoot does not match vep signature.")
           }
           r
         }
@@ -191,7 +191,7 @@ object VEP {
       fatal("for performance, you should annotate variants with pre-computed VEP annotations.  Cowardly refusing to VEP annotate from scratch.  Use --force to override.")
 
     val rootQuery = rootType
-      .map(_ => vds.vaSignature.query(root))
+      .map(_ => vds.vaSignature.query(parsedRoot))
 
     val properties = try {
       val p = new Properties()
@@ -284,7 +284,7 @@ object VEP {
 
     info(s"vep: annotated ${ annotations.count() } variants")
 
-    val (newVASignature, insertVEP) = vds.vaSignature.insert( if(csq) TString else vepSignature, root)
+    val (newVASignature, insertVEP) = vds.vaSignature.insert( if(csq) TString else vepSignature, parsedRoot)
 
     val newRDD = vds.rdd
       .zipPartitions(annotations, preservesPartitioning = true) { case (left, right) =>
