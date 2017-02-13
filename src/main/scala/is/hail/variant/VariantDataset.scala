@@ -803,7 +803,13 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
     vds.annotateLoci(lociRDD, finalType, inserter)
   }
 
-  def annotateVariantsTable(paths: Seq[String], variantExpr: String,
+  def annotateVariantsTable(path: String, variantExpr: String,
+    root: Option[String] = None, code: Option[String] = None,
+    config: TextTableConfiguration = TextTableConfiguration()): VariantDataset = {
+    annotateVariantsTables(List(path), variantExpr, root, code, config)
+  }
+
+  def annotateVariantsTables(paths: Seq[String], variantExpr: String,
     root: Option[String] = None, code: Option[String] = None,
     config: TextTableConfiguration = TextTableConfiguration()): VariantDataset = {
     val files = vds.hc.hadoopConf.globAll(paths)
