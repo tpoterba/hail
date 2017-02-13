@@ -378,7 +378,7 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
     println("Written to Kudu")
   }
 
-  def eraseSplit: VariantDataset = {
+  def eraseSplit(): VariantDataset = {
     if (vds.wasSplit) {
       val (newSignatures1, f1) = vds.deleteVA("wasSplit")
       val vds1 = vds.copy(vaSignature = newSignatures1)
