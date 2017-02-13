@@ -142,8 +142,12 @@ object HailContext {
     master: Option[String] = None,
     local: String = "local[*]",
     logFile: String = "hail.log",
-    quiet: Boolean = false, append: Boolean = false, parquetCompression: String = "uncompressed",
-    blockSize: Long = 1L, branchingFactor: Int = 50, tmpDir: String = "/tmp") {
+    quiet: Boolean = false,
+    append: Boolean = false,
+    parquetCompression: String = "uncompressed",
+    blockSize: Long = 1L,
+    branchingFactor: Int = 50,
+    tmpDir: String = "/tmp") {
 
     configureLogging(logFile, quiet, append)
 
@@ -164,11 +168,11 @@ object HailContext {
     }")
 
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-    HailContext(sparkContext, sqlContext)
+    HailContext(sparkContext, sqlContext, tmpDir, branchingFactor)
   }
 }
 
-case class HailContext(sc: SparkContext, sqlContext: SQLContext) {
+case class HailContext private(sc: SparkContext, sqlContext: SQLContext, tmpDir: String, branchingFactor: Int) {
   val hadoopConf: hadoop.conf.Configuration = sc.hadoopConfiguration
 
   def grep(regex: String, files: Seq[String], maxLines: Int = 100) {
