@@ -9,11 +9,9 @@ import org.testng.annotations.Test
 
 class FilterVariantsSuite extends SparkSuite {
   @Test def test() {
-    var s = State(sc, sqlContext)
+    val vds = hc.importVCF("src/test/resources/sample2.vcf")
 
-    s = ImportVCF.run(s, Array("src/test/resources/sample2.vcf"))
-
-    val variants = s.vds.variants.collect().toSet
+    val variants = vds.variants.collect().toSet
 
     val f = tmpDir.createTempFile("test", extension = ".variant_list")
     Prop.check(forAll(Gen.subset(variants), arbitrary[Boolean]) { case (subset, keep) =>
@@ -24,28 +22,21 @@ class FilterVariantsSuite extends SparkSuite {
         }
       }
 
-      val t = FilterVariantsList.run(s, Array(
-        if (keep)
-          "--keep"
-        else
-          "--remove",
-        "-i", f))
+      val filtered = vds.filterVariantsList(f, keep)
 
-      val tVariants = t.vds.variants.collect().toSet
+      val filteredVariants = filtered.variants.collect().toSet
       if (keep)
-        tVariants == subset
+        filteredVariants == subset
       else
-        (tVariants.union(subset) == variants
-          && tVariants.intersect(subset).isEmpty)
+        (filteredVariants.union(subset) == variants
+          && filteredVariants.intersect(subset).isEmpty)
     })
   }
 
   @Test def testFilterAll() {
-    var s = State(sc, sqlContext)
+    val vds = hc.importVCF("src/test/resources/sample2.vcf")
+      .dropVariants()
 
-    s = ImportVCF.run(s, Array("src/test/resources/sample2.vcf"))
-    s = FilterVariantsAll.run(s)
-
-    assert(s.vds.countVariants == 0)
+    assert(vds.countVariants == 0)
   }
 }
