@@ -12,11 +12,11 @@ class PipelineSuite extends SparkSuite {
     val mendelBase = tmpDir.createTempFile("mendel")
     val pcaFile = tmpDir.createTempFile("pca", extension = ".tsv")
 
-    val vds = hc.importVCF(List("src/test/resources/sample.vcf"))
+    val vds = hc.importVCF("src/test/resources/sample.vcf")
     vds.splitMulti()
       .write(vdsFile)
 
-    val qc = hc.read(List(vdsFile))
+    val qc = hc.read(vdsFile)
       .sampleQC()
       .variantQC()
 

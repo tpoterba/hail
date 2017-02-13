@@ -234,7 +234,7 @@ object VariantDataset {
     ))
 }
 
-class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends AnyVal {
+class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) extends AnyVal {
 
   private def rdd = vds.rdd
 

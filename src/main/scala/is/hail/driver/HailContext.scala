@@ -336,7 +336,11 @@ case class HailContext private(sc: SparkContext,
       ffConfig, nPartitions)
   }
 
-  def read(files: Seq[String], sitesOnly: Boolean = false, samplesOnly: Boolean = false): VariantDataset = {
+  def read(file: String, sitesOnly: Boolean = false, samplesOnly: Boolean = false): VariantDataset = {
+    readAll(List(file), sitesOnly, samplesOnly)
+  }
+
+  def readAll(files: Seq[String], sitesOnly: Boolean = false, samplesOnly: Boolean = false): VariantDataset = {
     val inputs = hadoopConf.globAll(files)
     if (inputs.isEmpty)
       fatal("arguments refer to no files")
