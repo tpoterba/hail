@@ -1,15 +1,15 @@
 package is.hail.vds
 
 import is.hail.SparkSuite
+import is.hail.methods.DuplicateReport
 import org.testng.annotations.Test
 
 class DistinctSuite extends SparkSuite {
 
   @Test def test() {
-    val s = ImportVCF.run(State(sc, sqlContext, null),
-      Array("src/test/resources/sample.vcf", "src/test/resources/sample.vcf"))
-    Deduplicate.run(s).vds.rdd.count()
+    hc.importVCFs(List("src/test/resources/sample.vcf", "src/test/resources/sample.vcf"))
+      .deduplicate().count()
 
-    assert(Deduplicate.DuplicateReport.accumulator.value._1 == 346L)
+    assert(DuplicateReport.accumulator.value._1 == 346L)
   }
 }
