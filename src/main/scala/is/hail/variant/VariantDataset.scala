@@ -1106,7 +1106,7 @@ class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends AnyVal
       }))
   }
 
-  def exportSamples(path: String, expr: String, typeFile: Boolean) {
+  def exportSamples(path: String, expr: String, typeFile: Boolean = false) {
     val localGlobalAnnotation = vds.globalAnnotation
 
     val ec = Aggregators.sampleEC(vds)
@@ -1137,7 +1137,7 @@ class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends AnyVal
     hadoopConf.writeTable(path, lines, names.map(_.mkString("\t")))
   }
 
-  def exportVariants(path: String, expr: String, typeFile: Boolean) {
+  def exportVariants(path: String, expr: String, typeFile: Boolean = false) {
     val vas = vds.vaSignature
     val hConf = vds.hc.hadoopConf
 
