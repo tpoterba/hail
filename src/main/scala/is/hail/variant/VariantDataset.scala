@@ -1621,4 +1621,15 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
         }
         .orderedRepartitionBy(vds.rdd.orderedPartitioner))
   }
+
+  /**
+    *
+    * @param famFile path to .fam file
+    * @param tdtRoot Annotation root, starting in 'va'
+    */
+  def tdt(famFile: String, tdtRoot: String = "va.tdt"): VariantDataset = {
+    val ped = Pedigree.read(famFile, vds.sparkContext.hadoopConfiguration, vds.sampleIds)
+    TDT(vds, ped.completeTrios,
+      Parser.parseAnnotationRoot(tdtRoot, Annotation.VARIANT_HEAD))
+  }
 }
