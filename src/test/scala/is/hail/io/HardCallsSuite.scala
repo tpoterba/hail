@@ -16,19 +16,16 @@ class HardCallsSuite extends SparkSuite {
       .toSet
 
   @Test def test() {
-    val p = forAll(VariantSampleMatrix.gen(sc, VSMSubgen.random)) { vds =>
-      var s = State(sc, sqlContext, vds)
-      s = HardCalls.run(s)
-
-      s.vds.rdd.forall { case (v, (va, gs)) =>
-          gs.forall { g =>
-            g.ad.isEmpty &&
+    val p = forAll(VariantSampleMatrix.gen(hc, VSMSubgen.random).map(_.hardCalls())) { vds =>
+      vds.rdd.forall { case (v, (va, gs)) =>
+        gs.forall { g =>
+          g.ad.isEmpty &&
             g.dp.isEmpty &&
             g.gq.isEmpty &&
             g.pl.isEmpty &&
             !g.isDosage
-          }
-      } && gtTriples(vds) == gtTriples(s.vds)
+        }
+      } && gtTriples(vds) == gtTriples(vds)
     }
     p.check()
   }
