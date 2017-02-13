@@ -299,15 +299,15 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     hConf.writeTextFile(dirname + "/metadata.json.gz")(Serialization.writePretty(json, _))
   }
 
-  def write(sqlContext: SQLContext, dirname: String, compress: Boolean = true) {
-    writeMetadata(sqlContext, dirname, compress)
+  def write(dirname: String, compress: Boolean = true) {
+    writeMetadata(vds.hc.sqlContext, dirname, compress)
 
     val vaSignature = vds.vaSignature
     val vaRequiresConversion = SparkAnnotationImpex.requiresConversion(vaSignature)
 
     val ordered = vds.rdd.asOrderedRDD
 
-    sqlContext.sparkContext.hadoopConfiguration.writeTextFile(dirname + "/partitioner.json.gz") { out =>
+    vds.hadoopConf.writeTextFile(dirname + "/partitioner.json.gz") { out =>
       Serialization.write(ordered.orderedPartitioner.toJSON, out)
     }
 
@@ -317,7 +317,7 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
         if (vaRequiresConversion) SparkAnnotationImpex.exportAnnotation(va, vaSignature) else va,
         gs.toGenotypeStream(v, isDosage, compress).toRow))
     }
-    sqlContext.createDataFrame(rowRDD, makeSchema())
+    vds.hc.sqlContext.createDataFrame(rowRDD, makeSchema())
       .write.parquet(dirname + "/rdd.parquet")
     // .saveAsParquetFile(dirname + "/rdd.parquet")
   }
@@ -1379,6 +1379,32 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     */
   def grm(path: String, format: String, idFile: Option[String] = None, nFile: Option[String] = None) {
     GRM(vds, path, format, idFile, nFile)
+  }
+
+  def gqByDP(path: String) {
+    val nBins = GQByDPBins.nBins
+    val binStep = GQByDPBins.binStep
+    val firstBinLow = GQByDPBins.firstBinLow
+    val gqbydp = GQByDPBins(vds)
+
+    vds.hadoopConf.writeTextFile(path) { s =>
+      s.write("sample")
+      for (b <- 0 until nBins)
+        s.write("\t" + GQByDPBins.binLow(b) + "-" + GQByDPBins.binHigh(b))
+
+      s.write("\n")
+
+      for (sample <- vds.sampleIds) {
+        s.write(sample)
+        for (b <- 0 until GQByDPBins.nBins) {
+          gqbydp.get((sample, b)) match {
+            case Some(percentGQ) => s.write("\t" + percentGQ)
+            case None => s.write("\tNA")
+          }
+        }
+        s.write("\n")
+      }
+    }
   }
 
   def hardCalls(): VariantDataset = {
