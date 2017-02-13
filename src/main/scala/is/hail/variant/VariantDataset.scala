@@ -234,7 +234,7 @@ object VariantDataset {
     ))
 }
 
-case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends AnyVal {
+class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends AnyVal {
 
   private def rdd = vds.rdd
 
@@ -855,6 +855,8 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
 
     vds.annotateVariants(other.variantsAndAnnotations, finalType, inserter)
   }
+
+  def cache(): VariantDataset = persist("MEMORY_ONLY")
 
   def concordance(other: VariantDataset): (IndexedSeq[IndexedSeq[Long]], VariantDataset, VariantDataset) = {
     require(vds.wasSplit && other.wasSplit, "method `concordance' requires both left and right datasets to be split.")
@@ -1518,6 +1520,18 @@ case class VariantDatasetFunctions(vds: VariantSampleMatrix[Genotype]) extends A
     men.writeMendelL(pathBase + ".lmendel", vds.hc.tmpDir)
     men.writeMendelF(pathBase + ".fmendel")
     men.writeMendelI(pathBase + ".imendel")
+  }
+
+  def persist(storageLevel: String = "MEMORY_AND_DISK"): VariantDataset = {
+    vds.rdd.persist()
+    val level = try {
+      StorageLevel.fromString(storageLevel)
+    } catch {
+      case e: IllegalArgumentException =>
+        fatal(s"unknown StorageLevel `$storageLevel'")
+    }
+
+    vds.withGenotypeStream().copy(rdd = vds.rdd.persist(level))
   }
 
   /**
