@@ -869,7 +869,8 @@ class VariantSampleMatrix[T](val hc: HailContext, val metadata: VariantMetadata,
     val (finalType, inserter) =
       buildInserter(code, vaSignature, inserterEc, Annotation.VARIANT_HEAD)
 
-    val keyedRDD = kt.rdd.map { case (k: Row, v) => (k(0).asInstanceOf[Variant], kt.mergeKeyAndValue(k, v)) }
+    val localMerger = kt.mergeKeyAndValue(_, _)
+    val keyedRDD = kt.rdd.map { case (k: Row, v) => (k(0).asInstanceOf[Variant], localMerger(k, v)) }
 
     val ordRdd = OrderedRDD(keyedRDD, None, None)
 

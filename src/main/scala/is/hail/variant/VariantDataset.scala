@@ -299,7 +299,14 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
     hConf.writeTextFile(dirname + "/metadata.json.gz")(Serialization.writePretty(json, _))
   }
 
-  def write(dirname: String, compress: Boolean = true) {
+  def write(dirname: String, overwrite: Boolean = false, compress: Boolean = true) {
+    require(dirname.endsWith(".vds"), "variant dataset write paths must end in '.vds'")
+
+    if (overwrite)
+      vds.hadoopConf.delete(dirname, recursive = true)
+    else if (vds.hadoopConf.exists(dirname))
+      fatal(s"File already exists at `$dirname'")
+
     writeMetadata(vds.hc.sqlContext, dirname, compress)
 
     val vaSignature = vds.vaSignature

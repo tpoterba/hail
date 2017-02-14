@@ -81,10 +81,12 @@ object KeyTable {
   }
 }
 
-case class KeyTable(hc: HailContext, rdd: RDD[(Annotation, Annotation)], keySignature: TStruct, valueSignature: TStruct) {
+case class KeyTable(@transient hc: HailContext, @transient rdd: RDD[(Annotation, Annotation)],
+  keySignature: TStruct, valueSignature: TStruct) extends Serializable {
   require(fieldNames.areDistinct())
 
-  val (signature, mergeKeyAndValue) = keySignature.merge(valueSignature)
+  private val localValueSignature = valueSignature
+  val (signature, mergeKeyAndValue) = keySignature.merge(localValueSignature)
 
   def fields = signature.fields
 
@@ -116,16 +118,16 @@ case class KeyTable(hc: HailContext, rdd: RDD[(Annotation, Annotation)], keySign
     if (signature != other.signature) {
       info(
         s"""different signatures:
-            | left: ${ signature.toPrettyString() }
-            | right: ${ other.signature.toPrettyString() }
-            |""".stripMargin)
+           | left: ${ signature.toPrettyString() }
+           | right: ${ other.signature.toPrettyString() }
+           |""".stripMargin)
       false
     } else if (keyNames.toSeq != other.keyNames.toSeq) {
       info(
         s"""different key names:
-            | left: ${ keyNames.mkString(", ") }
-            | right: ${ other.keyNames.mkString(", ") }
-            |""".stripMargin)
+           | left: ${ keyNames.mkString(", ") }
+           | right: ${ other.keyNames.mkString(", ") }
+           |""".stripMargin)
       false
     } else {
       val thisFieldNames = valueNames
@@ -248,7 +250,7 @@ case class KeyTable(hc: HailContext, rdd: RDD[(Annotation, Annotation)], keySign
 
     val selectF: Annotation => Annotation = { a =>
       val row = KeyTable.annotationToSeq(a, nFieldsLocal)
-      Annotation.fromSeq(fieldTransform.map{ i => row(i)})
+      Annotation.fromSeq(fieldTransform.map { i => row(i) })
     }
 
     KeyTable(hc, mapAnnotations(selectF), newSignature, newKeys)
@@ -287,14 +289,14 @@ case class KeyTable(hc: HailContext, rdd: RDD[(Annotation, Annotation)], keySign
     if (keySignature != other.keySignature)
       fatal(
         s"""Key signatures must be identical.
-            |Left signature: ${ keySignature.toPrettyString(compact = true) }
-            |Right signature: ${ other.keySignature.toPrettyString(compact = true) }""".stripMargin)
+           |Left signature: ${ keySignature.toPrettyString(compact = true) }
+           |Right signature: ${ other.keySignature.toPrettyString(compact = true) }""".stripMargin)
 
     val overlappingFields = valueNames.toSet.intersect(other.valueNames.toSet)
     if (overlappingFields.nonEmpty)
       fatal(
         s"""Fields that are not keys cannot be present in both key-tables.
-            |Overlapping fields: ${ overlappingFields.mkString(", ") }""".stripMargin)
+           |Overlapping fields: ${ overlappingFields.mkString(", ") }""".stripMargin)
 
     joinType match {
       case "left" => leftJoin(other)
@@ -455,7 +457,7 @@ case class KeyTable(hc: HailContext, rdd: RDD[(Annotation, Annotation)], keySign
 
     KeyTable(hc, newRDD, keySignature, valueSignature)
   }
-  
+
   def expandTypes(): KeyTable = {
     val localKeySignature = keySignature
     val localValueSignature = valueSignature
@@ -500,7 +502,7 @@ case class KeyTable(hc: HailContext, rdd: RDD[(Annotation, Annotation)], keySign
       case None =>
         fatal(
           s"""Input field name `${ columnName }' not found in KeyTable.
-              |KeyTable field names are `${ fieldNames.mkString(", ") }'.""".stripMargin)
+             |KeyTable field names are `${ fieldNames.mkString(", ") }'.""".stripMargin)
     }
 
     val index = explodeField.index

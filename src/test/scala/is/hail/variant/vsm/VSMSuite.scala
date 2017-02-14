@@ -48,8 +48,8 @@ object VSMSuite {
 class VSMSuite extends SparkSuite {
 
   @Test def testSame() {
-    val vds1 = hc.importVCF("src/test/resources/sample.vcf.gz")
-    val vds2 = hc.importVCF("src/test/resources/sample.vcf.gz")
+    val vds1 = hc.importVCF("src/test/resources/sample.vcf.gz", force = true)
+    val vds2 = hc.importVCF("src/test/resources/sample.vcf.gz", force = true)
     assert(vds1.same(vds2))
 
     val mdata1 = VariantMetadata(Array("S1", "S2", "S3"))
@@ -198,7 +198,7 @@ class VSMSuite extends SparkSuite {
   }
 
   @Test def testFilterSamples() {
-    val vds = hc.importVCF("src/test/resources/sample.vcf.gz")
+    val vds = hc.importVCF("src/test/resources/sample.vcf.gz", force = true)
     val vdsAsMap = vds.mapWithKeys((v, s, g) => ((v, s), g)).collectAsMap()
     val nSamples = vds.nSamples
 
@@ -341,6 +341,8 @@ class VSMSuite extends SparkSuite {
     TestUtils.interceptFatal("""File already exists""") {
       vds.write(out)
     }
+
+    vds.write(out, overwrite = true)
   }
 
   @Test def testWritePartitioning() {
