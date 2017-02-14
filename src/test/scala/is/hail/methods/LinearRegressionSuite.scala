@@ -22,16 +22,23 @@ class LinearRegressionSuite extends SparkSuite {
       .annotateSamplesTable("src/test/resources/regressionLinear.pheno",
         "Sample",
         root = Some("sa.pheno"),
-        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing= "0"))
+        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing = "0"))
       .linreg("sa.pheno.Pheno", Array("sa.cov.Cov1", "sa.cov.Cov2 + 1 - 1"), "va.linreg", 1, 0.0)
 
-    val v1 = Variant("1", 1, "C", "T") // x = (0, 1, 0, 0, 0, 1)
-    val v2 = Variant("1", 2, "C", "T") // x = (., 2, ., 2, 0, 0)
-    val v3 = Variant("1", 3, "C", "T") // x = (0, ., 1, 1, 1, .)
-    val v6 = Variant("1", 6, "C", "T") // x = (0, 0, 0, 0, 0, 0)
-    val v7 = Variant("1", 7, "C", "T") // x = (1, 1, 1, 1, 1, 1)
-    val v8 = Variant("1", 8, "C", "T") // x = (2, 2, 2, 2, 2, 2)
-    val v9 = Variant("1", 9, "C", "T") // x = (., 1, 1, 1, 1, 1)
+    val v1 = Variant("1", 1, "C", "T")
+    // x = (0, 1, 0, 0, 0, 1)
+    val v2 = Variant("1", 2, "C", "T")
+    // x = (., 2, ., 2, 0, 0)
+    val v3 = Variant("1", 3, "C", "T")
+    // x = (0, ., 1, 1, 1, .)
+    val v6 = Variant("1", 6, "C", "T")
+    // x = (0, 0, 0, 0, 0, 0)
+    val v7 = Variant("1", 7, "C", "T")
+    // x = (1, 1, 1, 1, 1, 1)
+    val v8 = Variant("1", 8, "C", "T")
+    // x = (2, 2, 2, 2, 2, 2)
+    val v9 = Variant("1", 9, "C", "T")
+    // x = (., 1, 1, 1, 1, 1)
     val v10 = Variant("1", 10, "C", "T") // x = (., 2, 2, 2, 2, 2)
 
     val qBeta = vds.queryVA("va.linreg.beta")._2
@@ -102,15 +109,21 @@ class LinearRegressionSuite extends SparkSuite {
       .annotateSamplesTable("src/test/resources/regressionLinear.pheno",
         "Sample",
         root = Some("sa.pheno"),
-        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing= "0"))
+        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing = "0"))
       .linreg("sa.pheno.Pheno", Array.empty[String], "va.linreg", 1, 0.0)
 
-    val v1 = Variant("1", 1, "C", "T") // x = (0, 1, 0, 0, 0, 1)
-    val v2 = Variant("1", 2, "C", "T") // x = (., 2, ., 2, 0, 0)
-    val v6 = Variant("1", 6, "C", "T") // x = (0, 0, 0, 0, 0, 0)
-    val v7 = Variant("1", 7, "C", "T") // x = (1, 1, 1, 1, 1, 1)
-    val v8 = Variant("1", 8, "C", "T") // x = (2, 2, 2, 2, 2, 2)
-    val v9 = Variant("1", 9, "C", "T") // x = (., 1, 1, 1, 1, 1)
+    val v1 = Variant("1", 1, "C", "T")
+    // x = (0, 1, 0, 0, 0, 1)
+    val v2 = Variant("1", 2, "C", "T")
+    // x = (., 2, ., 2, 0, 0)
+    val v6 = Variant("1", 6, "C", "T")
+    // x = (0, 0, 0, 0, 0, 0)
+    val v7 = Variant("1", 7, "C", "T")
+    // x = (1, 1, 1, 1, 1, 1)
+    val v8 = Variant("1", 8, "C", "T")
+    // x = (2, 2, 2, 2, 2, 2)
+    val v9 = Variant("1", 9, "C", "T")
+    // x = (., 1, 1, 1, 1, 1)
     val v10 = Variant("1", 10, "C", "T") // x = (., 2, 2, 2, 2, 2)
 
     val qBeta = vds.queryVA("va.linreg.beta")._2
@@ -169,12 +182,18 @@ class LinearRegressionSuite extends SparkSuite {
       .annotateSamplesFam("src/test/resources/regressionLinear.fam")
       .linreg("sa.fam.isCase", Array("sa.cov.Cov1", "sa.cov.Cov2"), "va.linreg", 1, 0.0)
 
-    val v1 = Variant("1", 1, "C", "T") // x = (0, 1, 0, 0, 0, 1)
-    val v2 = Variant("1", 2, "C", "T") // x = (., 2, ., 2, 0, 0)
-    val v6 = Variant("1", 6, "C", "T") // x = (0, 0, 0, 0, 0, 0)
-    val v7 = Variant("1", 7, "C", "T") // x = (1, 1, 1, 1, 1, 1)
-    val v8 = Variant("1", 8, "C", "T") // x = (2, 2, 2, 2, 2, 2)
-    val v9 = Variant("1", 9, "C", "T") // x = (., 1, 1, 1, 1, 1)
+    val v1 = Variant("1", 1, "C", "T")
+    // x = (0, 1, 0, 0, 0, 1)
+    val v2 = Variant("1", 2, "C", "T")
+    // x = (., 2, ., 2, 0, 0)
+    val v6 = Variant("1", 6, "C", "T")
+    // x = (0, 0, 0, 0, 0, 0)
+    val v7 = Variant("1", 7, "C", "T")
+    // x = (1, 1, 1, 1, 1, 1)
+    val v8 = Variant("1", 8, "C", "T")
+    // x = (2, 2, 2, 2, 2, 2)
+    val v9 = Variant("1", 9, "C", "T")
+    // x = (., 1, 1, 1, 1, 1)
     val v10 = Variant("1", 10, "C", "T") // x = (., 2, 2, 2, 2, 2)
 
     val (_, qBeta) = vds.queryVA("va.linreg.beta")
@@ -240,12 +259,18 @@ class LinearRegressionSuite extends SparkSuite {
         config = FamFileConfig(isQuantitative = true, missingValue = "0"))
       .linreg("sa.fam.qPheno", Array("sa.cov.Cov1", "sa.cov.Cov2"), "va.linreg", 1, 0.0)
 
-    val v1 = Variant("1", 1, "C", "T") // x = (0, 1, 0, 0, 0, 1)
-    val v2 = Variant("1", 2, "C", "T") // x = (., 2, ., 2, 0, 0)
-    val v6 = Variant("1", 6, "C", "T") // x = (0, 0, 0, 0, 0, 0)
-    val v7 = Variant("1", 7, "C", "T") // x = (1, 1, 1, 1, 1, 1)
-    val v8 = Variant("1", 8, "C", "T") // x = (2, 2, 2, 2, 2, 2)
-    val v9 = Variant("1", 9, "C", "T") // x = (., 1, 1, 1, 1, 1)
+    val v1 = Variant("1", 1, "C", "T")
+    // x = (0, 1, 0, 0, 0, 1)
+    val v2 = Variant("1", 2, "C", "T")
+    // x = (., 2, ., 2, 0, 0)
+    val v6 = Variant("1", 6, "C", "T")
+    // x = (0, 0, 0, 0, 0, 0)
+    val v7 = Variant("1", 7, "C", "T")
+    // x = (1, 1, 1, 1, 1, 1)
+    val v8 = Variant("1", 8, "C", "T")
+    // x = (2, 2, 2, 2, 2, 2)
+    val v9 = Variant("1", 9, "C", "T")
+    // x = (., 1, 1, 1, 1, 1)
     val v10 = Variant("1", 10, "C", "T") // x = (., 2, 2, 2, 2, 2)
 
     val qBeta = vds.queryVA("va.linreg.beta")._2
@@ -310,7 +335,7 @@ class LinearRegressionSuite extends SparkSuite {
       .annotateSamplesTable("src/test/resources/regressionLinear.pheno",
         "Sample",
         root = Some("sa.pheno"),
-        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing= "0"))
+        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing = "0"))
 
     interceptFatal("Sample annotation `sa.pheno.Pheno' must be numeric or Boolean, got String") {
       vds.linreg("sa.pheno.Pheno", Array("sa.cov.Cov1", "sa.cov.Cov2"), "va.linreg", 1, 0.0)
@@ -327,7 +352,7 @@ class LinearRegressionSuite extends SparkSuite {
       .annotateSamplesTable("src/test/resources/regressionLinear.pheno",
         "Sample",
         root = Some("sa.pheno"),
-        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing= "0"))
+        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing = "0"))
 
     interceptFatal("Sample annotation `sa.cov.Cov2' must be numeric or Boolean, got String") {
       vds.linreg("sa.pheno.Pheno", Array("sa.cov.Cov1", "sa.cov.Cov2"), "va.linreg", 1, 0.0)
@@ -340,10 +365,11 @@ class LinearRegressionSuite extends SparkSuite {
       .annotateSamplesTable("src/test/resources/regressionLinear.pheno",
         "Sample",
         root = Some("sa.pheno"),
-        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing= "0"))
+        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing = "0"))
 
 
-    val v1 = Variant("1", 1, "C", "T") // x = (0, 1, 0, 0, 0, 1)
+    val v1 = Variant("1", 1, "C", "T")
+    // x = (0, 1, 0, 0, 0, 1)
     val v2 = Variant("1", 2, "C", "T") // x = (., 2, ., 2, 0, 0)
 
     def annotationMap = vds.variantsAndAnnotations
@@ -351,6 +377,7 @@ class LinearRegressionSuite extends SparkSuite {
       .toMap
 
     vds = vds.linreg("sa.pheno.Pheno", Array.empty[String], "va.linreg", 4, 0.0)
+
     def qBeta = vds.queryVA("va.linreg.beta")._2
 
     assert(qBeta(annotationMap(v1)).isEmpty)
@@ -384,7 +411,7 @@ class LinearRegressionSuite extends SparkSuite {
       .annotateSamplesTable("src/test/resources/regressionLinear.pheno",
         "Sample",
         root = Some("sa.pheno"),
-        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing= "0"))
+        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing = "0"))
 
     interceptFatal("Minumum alternate allele count must be a positive integer, got 0") {
       vds.linreg("sa.pheno.Pheno", Array.empty[String], "va.linreg", 0, 0.0)

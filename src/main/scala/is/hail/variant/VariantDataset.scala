@@ -1523,6 +1523,10 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
     LinearRegression(vds, ySA, covSA, root, minAC, minAF)
   }
 
+  def logreg(test: String, ySA: String, covSA: Array[String], root: String): VariantDataset = {
+    LogisticRegression(vds, test, ySA, covSA, root)
+  }
+
   /**
     *
     * @param pathBase output root filename
