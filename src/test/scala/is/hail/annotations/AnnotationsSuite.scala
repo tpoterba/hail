@@ -357,6 +357,6 @@ class AnnotationsSuite extends SparkSuite {
       .copy(vaSignature = newS)
     vds.write(f)
 
-    assert(hc.importVCF(f).same(vds))
+    assert(hc.read(f).same(vds))
   }
 }

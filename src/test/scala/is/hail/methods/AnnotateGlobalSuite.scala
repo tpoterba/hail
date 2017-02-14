@@ -20,7 +20,6 @@ class AnnotateGlobalSuite extends SparkSuite {
 
     val (afDist, _) = vds.queryVariants("variants.map(v => va.qc.AF).stats()")
     val (singStats, _) = vds.querySamples("samples.filter(s => sa.qc.nSingleton > 2).count()")
-    val (sumOver2, _) = vds.queryVariants("global.afDist.sum / 2")
     val (acDist, _) = vds.queryVariants("variants.map(v => va.qc.AC).stats()")
     val (crStats, _) = vds.querySamples("samples.map(s => sa.qc.callRate).stats()")
 
@@ -40,8 +39,6 @@ class AnnotateGlobalSuite extends SparkSuite {
       }, { case (sc1, sc2) => sc1.merge(sc2) })
 
     assert(afDist == Annotation(afSC.mean, afSC.stdev, afSC.min, afSC.max, afSC.count, afSC.sum))
-
-    assert(sumOver2 == afSC.sum / 2)
 
     val qAC = vds.queryVA("va.qc.AC")._2
     val acSC = vds.variantsAndAnnotations.map(_._2)

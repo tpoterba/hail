@@ -218,7 +218,7 @@ class AggregatorSuite extends SparkSuite {
 
   @Test def testCounter() {
     Prop.forAll(VariantSampleMatrix.gen(hc, VSMSubgen.plinkSafeBiallelic)) { vds =>
-      val (r, t) = vds.queryVariants("global = variants.map(v => v.contig).counter()")
+      val (r, t) = vds.queryVariants("variants.map(v => v.contig).counter()")
       val counterMap = r.asInstanceOf[Map[String, Long]]
       val aggMap = vds.variants.map(_.contig).countByValue()
       aggMap == counterMap
@@ -243,11 +243,11 @@ class AggregatorSuite extends SparkSuite {
       assert(vds.querySamples("samples.map(id => if (id == \"b\") (NA : Sample) else id).map(x => 1).sum()")._1 == 2)
       assert(vds.querySamples("samples.filter(id => true).map(id => 1).sum()")._1 == 2)
       assert(vds.querySamples("samples.filter(id => false).map(id => 1).sum()")._1 == 0)
-      assert(vds.querySamples("global.result = samples.flatMap(g => [1]).sum()")._1 == 2)
-      assert(vds.querySamples("global.result = samples.flatMap(g => [0][:0]).sum()")._1 == 0)
-      assert(vds.querySamples("global.result = samples.flatMap(g => [1,2]).sum()")._1 == 6)
-      assert(vds.querySamples("global.result = samples.flatMap(g => [1,2]).filter(x => x % 2 == 0).sum()")._1 == 4)
-      assert(vds.querySamples("global.result = samples.flatMap(g => [1,2,2].toSet).filter(x => x % 2 == 0).sum()")._1 == 4)
+      assert(vds.querySamples("samples.flatMap(g => [1]).sum()")._1 == 2)
+      assert(vds.querySamples("samples.flatMap(g => [0][:0]).sum()")._1 == 0)
+      assert(vds.querySamples("samples.flatMap(g => [1,2]).sum()")._1 == 6)
+      assert(vds.querySamples("samples.flatMap(g => [1,2]).filter(x => x % 2 == 0).sum()")._1 == 4)
+      assert(vds.querySamples("samples.flatMap(g => [1,2,2].toSet).filter(x => x % 2 == 0).sum()")._1 == 4)
 
       vds.annotateVariantsExpr("""va = gs.filter(g => s.id == "a").map(g => 1).sum()""")
         .rdd

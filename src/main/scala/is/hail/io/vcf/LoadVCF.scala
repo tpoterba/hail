@@ -112,7 +112,7 @@ object LoadVCF {
           if (!forcegz)
             fatal(".gz cannot be loaded in parallel, use .bgz or -f override")
         } else
-          fatal("unknown input file type")
+          fatal(s"unknown input file type `$input', expect .vcf[.bgz]")
       }
     }
     inputs

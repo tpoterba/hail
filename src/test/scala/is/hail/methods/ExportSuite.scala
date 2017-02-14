@@ -58,7 +58,7 @@ class ExportSuite extends SparkSuite {
     val vds = hc.importVCF("src/test/resources/sample.vcf")
       .splitMulti()
     vds.exportSamples(f, "S.A.M.P.L.E.ID = s.id")
-    vds.exportSamples(f2, "$$$I_HEARD_YOU_LIKE_WEIRD~^_CHARS**** = s.id, ANOTHERTHING=s.id")
+    vds.exportSamples(f2, "$$$I_HEARD_YOU_LIKE!_WEIRD~^_CHARS**** = s.id, ANOTHERTHING=s.id")
     vds.exportSamples(f3, "`I have some spaces and tabs\\there` = s.id,`more weird stuff here`=s.id")
     hadoopConf.readFile(f) { reader =>
       val lines = Source.fromInputStream(reader)
@@ -68,7 +68,7 @@ class ExportSuite extends SparkSuite {
     hadoopConf.readFile(f2) { reader =>
       val lines = Source.fromInputStream(reader)
         .getLines()
-      assert(lines.next == "$$$I_HEARD_YOU_LIKE_%%%_#@!_WEIRD_CHARS****\tANOTHERTHING")
+      assert(lines.next == "$$$I_HEARD_YOU_LIKE!_WEIRD~^_CHARS****\tANOTHERTHING")
     }
     hadoopConf.readFile(f3) { reader =>
       val lines = Source.fromInputStream(reader)
@@ -94,7 +94,7 @@ class ExportSuite extends SparkSuite {
 
     vds.exportVariants(out, "v = v, va = va", typeFile = true)
 
-    val types = Parser.parseAnnotationTypes(hadoopConf.readFile(out)(Source.fromInputStream(_).mkString))
+    val types = Parser.parseAnnotationTypes(hadoopConf.readFile(out + ".types")(Source.fromInputStream(_).mkString))
     val readBack = vds.annotateVariantsTable(out, "v", code = Some("va = table.va"),
       config = TextTableConfiguration(types = types))
 
