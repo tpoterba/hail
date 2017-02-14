@@ -47,6 +47,8 @@ object Type {
   def genArb: Gen[Type] = Gen.sized(genSized)
 
   implicit def arbType = Arbitrary(genArb)
+
+  def parseMap(s: String): Map[String, Type] = Parser.parseAnnotationTypes(s)
 }
 
 sealed abstract class Type {
