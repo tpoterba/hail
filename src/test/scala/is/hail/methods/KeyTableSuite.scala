@@ -2,7 +2,6 @@ package is.hail.methods
 
 import is.hail.SparkSuite
 import is.hail.annotations._
-import is.hail.driver.{ImportVCF, State}
 import is.hail.expr._
 import is.hail.keytable.KeyTable
 import is.hail.utils._

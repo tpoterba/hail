@@ -2,7 +2,6 @@ package is.hail.variant.vsm
 
 import is.hail.SparkSuite
 import is.hail.check.{Gen, Prop}
-import is.hail.driver.{Coalesce, Read, State, Write}
 import is.hail.variant.{VSMSubgen, VariantSampleMatrix}
 import org.testng.annotations.Test
 

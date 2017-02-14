@@ -2,13 +2,11 @@ package is.hail.methods
 
 import is.hail.SparkSuite
 import is.hail.TestUtils._
-import is.hail.utils._
 import is.hail.annotations._
 import is.hail.check.Prop
-import is.hail.driver._
-import is.hail.expr.{TDouble, TInt, TString, TStruct}
+import is.hail.expr.{TDouble, TInt, TString, TStruct, Type}
 import is.hail.io.plink.{FamFileConfig, PlinkLoader}
-import is.hail.io.vcf.LoadVCF
+import is.hail.utils._
 import is.hail.variant._
 import org.testng.annotations.Test
 
@@ -246,11 +244,15 @@ class ImportAnnotationsSuite extends SparkSuite {
     assert(int2r.same(bed2r))
   }
 
+  //FIXME this test is impossible to follow
   @Test def testImportAnnotations() {
-    val vds = hc.importVCF("src/test/resources/sample.vcf")
+    var vds = hc.importVCF("src/test/resources/sample.vcf")
 
+    val sSample = vds.splitMulti()
+
+    // tsv
     val importTSVFile = tmpDir.createTempFile("variantAnnotationsTSV", ".vds")
-    val vds2 = hc.importAnnotationsTable("src/test/resources/variantAnnotations.tsv",
+    vds = hc.importAnnotationsTable("src/test/resources/variantAnnotations.tsv",
       "Variant(Chromosome, Position, Ref, Alt)",
       config = TextTableConfiguration(impute = true, types = Map("Chromosome" -> TString)))
       .splitMulti()
@@ -262,65 +264,42 @@ class ImportAnnotationsSuite extends SparkSuite {
           |Rand1: va.Rand1,
           |Rand2: va.Rand2,
           |Gene: va.Gene}""".stripMargin)
+    vds.write(importTSVFile)
 
-    val vds3 = vds
-      .splitMulti()
+    vds = sSample
       .annotateVariantsTable("src/test/resources/variantAnnotations.tsv",
         "Variant(Chromosome, Position, Ref, Alt)",
         root = Some("va.stuff"),
         config = TextTableConfiguration(impute = true, types = Map("Chromosome" -> TString)))
-    val vds4 = vds
-      .splitMulti()
-      .annotateVariantsVDS(vds2, root = Some("va.stuff"))
 
-    assert(vds3.same(vds4))
+    var t = sSample.annotateVariantsVDS(hc.importVCF(importTSVFile), root = Some("va.stuff"))
+
+    assert(vds.same(t))
 
     // json
     val importJSONFile = tmpDir.createTempFile("variantAnnotationsJSON", ".vds")
-
-    val jsonSchema = "_0: Struct { Rand1: Double, Rand2: Double, Gene: String, contig: String, start: Int, ref: String, alt: String }"
     // FIXME better way to array-ify
     val vFields =
       """Variant(_0.contig, _0.start, _0.ref, _0.alt.split("/"))"""
 
-    val vds5 = hc.importAnnotationsTable("src/test/resources/importAnnot.json", vFields,
+    vds = hc.importAnnotationsTable("src/test/resources/importAnnot.json", vFields,
       config = TextTableConfiguration(types = Map("_0" -> TStruct("Rand1" -> TDouble, "Rand2" -> TDouble,
         "Gene" -> TString, "contig" -> TString, "start" -> TInt, "ref" -> TString, "alt" -> TString)),
         noHeader = true))
       .annotateVariantsExpr("va = va._0")
       .filterMulti()
+    vds.write(importJSONFile)
 
-    assert(vds5.same())
+    vds = sSample.annotateVariantsTable("src/test/resources/importAnnot.json",
+      vFields, root = Some("va.third"),
+      config = TextTableConfiguration(types = Map("_0" -> TStruct("Rand1" -> TDouble, "Rand2" -> TDouble,
+        "Gene" -> TString, "contig" -> TString, "start" -> TInt, "ref" -> TString, "alt" -> TString)),
+        noHeader = true))
+      .annotateVariantsExpr("va.third = va.third._0")
 
-    s = AnnotateVariants.run(sSample,
-      Array("table", "src/test/resources/importAnnot.json",
-        "-t", jsonSchema,
-        "--variant-expr", vFields,
-        "--root", "va.third",
-        "--no-header"))
-    s = AnnotateVariants.run(s, Array("expr", "-c", "va.third = va.third._0"))
-    t = AnnotateVariants.run(sSample,
-      Array("vds", "-i", importJSONFile, "-r", "va.third"))
+    t = sSample.annotateVariantsVDS(hc.read(importJSONFile), root = Some("va.third"))
 
-    assert(s.vds.same(t.vds))
-
-    val importTableFile = tmpDir.createTempFile("variantAnnotationsTable", ".tsv")
-
-    s = ImportVCF.run(s0, Array("src/test/resources/sampleInfoOnly.vcf"))
-    ExportVariants.run(s, Array(
-      "-o", importTableFile,
-      "-c", "v, va.info.AC, va.info.AN"
-    ))
-    s = AnnotateVariantsExpr.run(s, Array("-c", "va = {AC: va.info.AC, AN: va.info.AN}"))
-    val checkpoint = s.vds
-    s = ImportAnnotationsTable.run(s, Array(importTableFile,
-      "--no-header",
-      "-t", "_0: Variant, _1: Array[Int], _2: Int",
-      "-c", "va.AC = table._1, va.AN = table._2",
-      "-e", "_0"))
-
-    assert(s.vds.same(checkpoint))
-
+    assert(vds.same(t))
   }
 
   @Test def testAnnotateSamples() {
@@ -470,8 +449,8 @@ class ImportAnnotationsSuite extends SparkSuite {
 
     val byVariant = vds.annotateVariantsTable(
       "src/test/resources/sample2_va_nomulti.tsv",
-       "Variant(Chromosome, Position.toInt, Ref, Alt)",
-        code = Some("va.stuff = select(table, Rand1, Rand2)"),
+      "Variant(Chromosome, Position.toInt, Ref, Alt)",
+      code = Some("va.stuff = select(table, Rand1, Rand2)"),
       config = TextTableConfiguration(types = Map("Rand1" -> TDouble, "Rand2" -> TDouble)))
 
     assert(byPosition.same(byVariant))

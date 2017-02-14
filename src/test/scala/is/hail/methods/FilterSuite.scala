@@ -101,7 +101,7 @@ class FilterSuite extends SparkSuite {
 
   @Test def filterFromFileTest() {
 
-    val vds = TestRDDBuilder.buildRDD(8, 8, sc)
+    val vds = TestRDDBuilder.buildRDD(8, 8, hc)
       .splitMulti()
 
     assert(vds.filterSamplesList("src/test/resources/filter.sample_list").nSamples == 3)

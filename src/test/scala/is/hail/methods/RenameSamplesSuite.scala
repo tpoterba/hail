@@ -1,10 +1,8 @@
 package is.hail.methods
 
 import is.hail.SparkSuite
-import is.hail.utils._
 import is.hail.check.Gen
-import is.hail.driver.{ImportVCF, RenameSamples, State}
-import is.hail.utils.FatalException
+import is.hail.utils.{FatalException, _}
 import org.testng.annotations.Test
 
 import scala.collection.mutable
