@@ -80,7 +80,7 @@ class FilterSuite extends SparkSuite {
 
     assert(!highGQ2.expand().collect().exists { case (v, s, g) => g.gq.exists(_ < 20) })
 
-    val chr1 = vds.filterVariantsExpr("v.contig == \"1\"")
+    val chr1 = vds2.filterVariantsExpr("v.contig == \"1\"")
 
     assert(chr1.rdd.count == 9)
 

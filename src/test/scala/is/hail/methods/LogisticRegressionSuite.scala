@@ -274,8 +274,8 @@ class LogisticRegressionSuite extends SparkSuite {
   @Test def waldEpactsTest() {
     val vds = hc.importVCF("src/test/resources/regressionLogisticEpacts.vcf")
       .splitMulti()
-      .annotateSamplesFam("src/test/resources/regressionLogisticEpacts.cov")
-      .annotateSamplesTable("src/test/resources/regressionLogisticBoolean.pheno",
+      .annotateSamplesFam("src/test/resources/regressionLogisticEpacts.fam")
+      .annotateSamplesTable("src/test/resources/regressionLogisticEpacts.cov",
         "IND_ID",
         root = Some("sa.pc"),
         config = TextTableConfiguration(types = Map("PC1" -> TDouble, "PC2" -> TDouble), missing = "0"))

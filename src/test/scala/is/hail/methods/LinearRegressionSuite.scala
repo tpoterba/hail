@@ -335,7 +335,7 @@ class LinearRegressionSuite extends SparkSuite {
       .annotateSamplesTable("src/test/resources/regressionLinear.pheno",
         "Sample",
         root = Some("sa.pheno"),
-        config = TextTableConfiguration(types = Map("Pheno" -> TDouble), missing = "0"))
+        config = TextTableConfiguration(missing = "0"))
 
     interceptFatal("Sample annotation `sa.pheno.Pheno' must be numeric or Boolean, got String") {
       vds.linreg("sa.pheno.Pheno", Array("sa.cov.Cov1", "sa.cov.Cov2"), "va.linreg", 1, 0.0)
@@ -348,7 +348,7 @@ class LinearRegressionSuite extends SparkSuite {
       .annotateSamplesTable("src/test/resources/regressionLinear.cov",
         "Sample",
         root = Some("sa.cov"),
-        config = TextTableConfiguration(types = Map("Cov1" -> TDouble, "Cov2" -> TDouble)))
+        config = TextTableConfiguration(types = Map("Cov1" -> TDouble)))
       .annotateSamplesTable("src/test/resources/regressionLinear.pheno",
         "Sample",
         root = Some("sa.pheno"),

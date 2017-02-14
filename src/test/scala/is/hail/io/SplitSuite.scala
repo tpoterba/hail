@@ -30,7 +30,13 @@ class SplitSuite extends SparkSuite {
     val vds2 = hc.importVCF("src/test/resources/split_test_b.vcf")
 
     // test splitting and downcoding
-    assert(vds1.eraseSplit().same(vds2))
+    vds1.mapWithKeys((v, s, g) => ((v, s), g.copy(fakeRef = false)))
+      .join(vds2.mapWithKeys((v, s, g) => ((v, s), g)))
+      .foreach { case (k, (g1, g2)) =>
+        if (g1 != g2)
+          println(s"$g1, $g2")
+        simpleAssert(g1 == g2)
+      }
 
     val wasSplitQuerier = vds1.vaSignature.query("wasSplit")
 

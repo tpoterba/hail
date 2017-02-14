@@ -28,8 +28,13 @@ class ImportPlinkSuite extends SparkSuite {
 
         vds.exportPlink(truthRoot)
 
-        if (vds.nSamples == 0 || vds.countVariants() == 0) {
-          TestUtils.interceptFatal("does not contain any") {
+        if (vds.nSamples == 0) {
+          TestUtils.interceptFatal("Empty .fam file") {
+            hc.importPlinkBFile(truthRoot, nPartitions = Some(nPartitions))
+          }
+          true
+        } else if (vds.countVariants() == 0) {
+          TestUtils.interceptFatal(".bim file does not contain any variants") {
             hc.importPlinkBFile(truthRoot, nPartitions = Some(nPartitions))
           }
           true

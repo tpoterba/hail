@@ -305,7 +305,7 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
     if (overwrite)
       vds.hadoopConf.delete(dirname, recursive = true)
     else if (vds.hadoopConf.exists(dirname))
-      fatal(s"File already exists at `$dirname'")
+      fatal(s"file already exists at `$dirname'")
 
     writeMetadata(vds.hc.sqlContext, dirname, compress)
 

@@ -14,7 +14,7 @@ class TDTSuite extends SparkSuite {
     hc.importVCF("src/test/resources/tdt.vcf", nPartitions = Some(4))
       .splitMulti()
       .tdt("src/test/resources/tdt.fam")
-      .annotateVariantsExpr("v.contig != \"Y\" && v.contig != \"MT\"")
+      .filterVariantsExpr("v.contig != \"Y\" && v.contig != \"MT\"")
       .exportVariants(out, "CHROM=v.contig, POSITION=v.start, REF=v.ref, ALT=v.alt, " +
         "T = va.tdt.nTransmitted, U = va.tdt.nUntransmitted, Chi2 = va.tdt.chi2, Pval = va.tdt.pval")
 

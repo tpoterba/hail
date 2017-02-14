@@ -34,7 +34,7 @@ class LoadBgenSuite extends SparkSuite {
     val nVariants = getNumberOfLinesInFile(gen)
 
     hc.indexBgen(bgen)
-    val bgenVDS = hc.importBgen(bgen, nPartitions = Some(10))
+    val bgenVDS = hc.importBgen(bgen, sampleFile = Some(sampleFile), nPartitions = Some(10))
     assert(bgenVDS.nSamples == nSamples && bgenVDS.countVariants() == nVariants)
 
     val genVDS = hc.importGen(gen, sampleFile)

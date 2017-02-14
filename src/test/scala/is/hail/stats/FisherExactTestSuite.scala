@@ -113,16 +113,16 @@ class FisherExactTestSuite extends SparkSuite {
             """va.fet = fet(va.macCase.toInt, va.majCase.toInt, va.macControl.toInt, va.majControl.toInt)""")
 
 
-        val (_, q1) = vds.queryVA("va.macCase")
-        val (_, q2) = vds.queryVA("va.majCase")
-        val (_, q3) = vds.queryVA("va.macControl")
-        val (_, q4) = vds.queryVA("va.majControl")
-        val (_, q5) = vds.queryVA("va.fet.pValue")
-        val (_, q6) = vds.queryVA("va.fet.oddsRatio")
-        val (_, q7) = vds.queryVA("va.fet.ci95Lower")
-        val (_, q8) = vds.queryVA("va.fet.ci95Upper")
+        val (_, q1) = vds2.queryVA("va.macCase")
+        val (_, q2) = vds2.queryVA("va.majCase")
+        val (_, q3) = vds2.queryVA("va.macControl")
+        val (_, q4) = vds2.queryVA("va.majControl")
+        val (_, q5) = vds2.queryVA("va.fet.pValue")
+        val (_, q6) = vds2.queryVA("va.fet.oddsRatio")
+        val (_, q7) = vds2.queryVA("va.fet.ci95Lower")
+        val (_, q8) = vds2.queryVA("va.fet.ci95Upper")
 
-        vds.variantsAndAnnotations.forall { case (v, va) =>
+        vds2.variantsAndAnnotations.forall { case (v, va) =>
           val result = FisherExactTest(q1(va).get.asInstanceOf[Long].toInt, q2(va).get.asInstanceOf[Long].toInt,
             q3(va).get.asInstanceOf[Long].toInt, q4(va).get.asInstanceOf[Long].toInt)
           val annotationResult = Array(q5(va).asInstanceOf[Option[Double]], q6(va).asInstanceOf[Option[Double]],
