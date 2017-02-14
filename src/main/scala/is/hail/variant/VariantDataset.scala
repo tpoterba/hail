@@ -322,11 +322,11 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
     // .saveAsParquetFile(dirname + "/rdd.parquet")
   }
 
-  def writeKudu(sqlContext: SQLContext, dirname: String, tableName: String,
+  def writeKudu(dirname: String, tableName: String,
     master: String, vcfSeqDict: String, rowsPerPartition: Int,
     sampleGroup: String, compress: Boolean = true, drop: Boolean = false) {
 
-    writeMetadata(sqlContext, dirname, compress)
+    writeMetadata(vds.hc.sqlContext, dirname, compress)
 
     val vaSignature = vds.vaSignature
     val isDosage = vds.isDosage
@@ -343,7 +343,7 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
 
     val schema: StructType = KuduAnnotationImpex.exportType(rowType).asInstanceOf[StructType]
     println(s"schema = $schema")
-    val df = sqlContext.createDataFrame(rowRDD, schema)
+    val df = vds.hc.sqlContext.createDataFrame(rowRDD, schema)
 
     val kuduContext = new KuduContext(master)
     if (drop) {
@@ -351,7 +351,7 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
       Thread.sleep(10 * 1000) // wait to avoid overwhelming Kudu service queue
     }
     if (!KuduUtils.tableExists(master, tableName)) {
-      val hConf = sqlContext.sparkContext.hadoopConfiguration
+      val hConf = vds.hc.sqlContext.sparkContext.hadoopConfiguration
       val headerLines = hConf.readFile(vcfSeqDict) { s =>
         Source.fromInputStream(s)
           .getLines()
