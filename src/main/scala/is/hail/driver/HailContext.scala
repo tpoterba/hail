@@ -204,8 +204,15 @@ case class HailContext private(sc: SparkContext,
       }
   }
 
-  @deprecated("use KeyTable instead")
-  def importAnnotationsTable(paths: Seq[String],
+  def importAnnotationsTable(path: String,
+    variantExpr: String,
+    code: Option[String] = None,
+    nPartitions: Option[Int] = None,
+    config: TextTableConfiguration = TextTableConfiguration()): VariantDataset = {
+    importAnnotationsTables(List(path), variantExpr, code, nPartitions, config)
+  }
+
+  def importAnnotationsTables(paths: Seq[String],
     variantExpr: String,
     code: Option[String] = None,
     nPartitions: Option[Int] = None,

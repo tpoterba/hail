@@ -20,7 +20,7 @@ class PipelineSuite extends SparkSuite {
       .sampleQC()
       .variantQC()
 
-      qc.gqByDP(gqByDPFile)
+    qc.gqByDP(gqByDPFile)
     qc.mendelErrors(mendelBase, "src/test/resources/sample.fam")
     qc.count()
     qc.filterVariantsExpr("va.qc.AF > 0.01 && va.qc.AF < 0.99")
