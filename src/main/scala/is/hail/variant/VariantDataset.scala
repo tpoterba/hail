@@ -1519,6 +1519,10 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
       rdd = joined)
   }
 
+  def linreg(ySA: String, covSA: Array[String], root: String, minAC: Int, minAF: Double): VariantDataset = {
+    LinearRegression(vds, ySA, covSA, root, minAC, minAF)
+  }
+
   /**
     *
     * @param pathBase output root filename
