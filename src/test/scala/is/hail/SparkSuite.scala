@@ -16,7 +16,7 @@ object SparkSuite {
 
 class SparkSuite extends TestNGSuite {
 
-  def hc: HailContext = SparkSuite.hc
+  lazy val hc: HailContext = SparkSuite.hc
 
   lazy val sc: SparkContext = hc.sc
 

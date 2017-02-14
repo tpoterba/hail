@@ -169,15 +169,15 @@ object HailContext {
       sc
     }
 
-    ProgressBarBuilder.build(sc)
+    ProgressBarBuilder.build(sparkContext)
 
     log.info(s"Spark properties: ${
-      sc.getConf.getAll.map { case (k, v) =>
+      sparkContext.getConf.getAll.map { case (k, v) =>
         s"$k=$v"
       }.mkString(", ")
     }")
 
-    val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+    val sqlContext = new org.apache.spark.sql.SQLContext(sparkContext)
     HailContext(sparkContext, sqlContext, tmpDir, branchingFactor)
   }
 }

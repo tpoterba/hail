@@ -34,7 +34,7 @@ class ImportAnnotationsSuite extends SparkSuite {
     }
 
     val anno1 = vds.annotateSamplesTable("src/test/resources/sampleAnnotations.tsv", "Sample",
-      root = Some("sa.`my phenotype"), config = TextTableConfiguration(types = Map("qPhen" -> TInt)))
+      root = Some("sa.`my phenotype`"), config = TextTableConfiguration(types = Map("qPhen" -> TInt)))
 
     val q1 = anno1.querySA("sa.`my phenotype`.Status")._2
     val q2 = anno1.querySA("sa.`my phenotype`.qPhen")._2
@@ -272,7 +272,7 @@ class ImportAnnotationsSuite extends SparkSuite {
         root = Some("va.stuff"),
         config = TextTableConfiguration(impute = true, types = Map("Chromosome" -> TString)))
 
-    var t = sSample.annotateVariantsVDS(hc.importVCF(importTSVFile), root = Some("va.stuff"))
+    var t = sSample.annotateVariantsVDS(hc.read(importTSVFile), root = Some("va.stuff"))
 
     assert(vds.same(t))
 
@@ -390,17 +390,17 @@ class ImportAnnotationsSuite extends SparkSuite {
     val fmt1 = vds.annotateVariantsTable(tmpf1,
       "Variant(str(Chr), Pos, Ref, Alt)",
       code = Some("va = merge(va, select(table, Anno1, Anno2))"),
-      config = TextTableConfiguration(separator = "\\\\s+", impute = true))
+      config = TextTableConfiguration(separator = "\\s+", impute = true))
 
     val fmt2 = vds.annotateVariantsTable(tmpf2,
       "Variant(str(Chr), Pos, Ref, Alt)",
       code = Some("va = merge(va, select(table, Anno1, Anno2))"),
-      config = TextTableConfiguration(commentChar = Some("#"), separator = "\\\\s+", impute = true))
+      config = TextTableConfiguration(commentChar = Some("#"), separator = "\\s+", impute = true))
 
     val fmt3 = vds.annotateVariantsTable(tmpf3,
       "Variant(str(_0), _1, _2, _3)",
       code = Some("va.Anno1 = table._4, va.Anno2 = table._5"),
-      config = TextTableConfiguration(commentChar = Some("#"), separator = "\\\\s+", noHeader = true, impute = true))
+      config = TextTableConfiguration(commentChar = Some("#"), separator = "\\s+", noHeader = true, impute = true))
 
     val fmt4 = vds.annotateVariantsTable(tmpf4,
       "Variant(str(_0), _1, _2, _3)",
@@ -410,7 +410,7 @@ class ImportAnnotationsSuite extends SparkSuite {
     val fmt5 = vds.annotateVariantsTable(tmpf5,
       "Variant(str(Chr), Pos, Ref, Alt)",
       code = Some("va.Anno1 = table.Anno1, va.Anno2 = table.Anno2"),
-      config = TextTableConfiguration(separator = "\\\\s+", impute = true, missing = "."))
+      config = TextTableConfiguration(separator = "\\s+", impute = true, missing = "."))
 
     val fmt6 = vds.annotateVariantsTable(tmpf6,
       "Variant(str(_0), _1, _2, _3)",
