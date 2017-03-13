@@ -284,4 +284,12 @@ class AggregatorSuite extends SparkSuite {
       p1 && p2
     }.check()
   }
+
+  @Test def REMOVE_ME_AFTER() {
+    val r = hc.read("/Users/tpoterba/boulder/practical-clean/hail-practical-home/hail-practical/1kg.vds/")
+      .queryGenotypes(Array("gs.fraction(g => g.gq > 20)",
+        "gs.filter(g => !g.isHet).fraction(g => g.gq > 20)",
+        "gs.filter(g => g.isHet).fraction(g => g.gq > 20)"))
+    println(r.toSeq)
+  }
 }

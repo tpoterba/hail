@@ -97,7 +97,7 @@ object HailContext {
     sqlFileKeys.foreach { k =>
       val param = conf.getLong(k, 0)
       if (param < enoughGigs)
-        problems += s"Invalid config parameter '$k=': too small. Found $param, require at least 50G"
+        problems += s"Invalid config parameter '$k': too small. Found $param, require at least 50G"
     }
 
     if (problems.nonEmpty)

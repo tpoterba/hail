@@ -1281,6 +1281,7 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
       "gs" -> (1, TAggregable(TGenotype, aggregationST))))
 
     val ts = exprs.map(e => Parser.parseExpr(e, ec))
+    println("HERE 1")
 
     val localGlobalAnnotation = vds.globalAnnotation
     val (zVal, seqOp, combOp, resOp) = Aggregators.makeFunctions[Genotype](ec, { case (ec, g) =>
@@ -1289,11 +1290,19 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
 
     val sampleIdsBc = vds.sampleIdsBc
     val sampleAnnotationsBc = vds.sampleAnnotationsBc
-    val globalBc = vds.sparkContext.broadcast(vds.globalAnnotation)
+    val global = vds.globalAnnotation
 
+    val a = ec.a
     val result = vds.rdd.mapPartitions { it =>
       val zv = zVal.map(_.copy())
-      ec.set(0, globalBc.value)
+      ec.set(0, global)
+      try {
+        println(s"it has next is ${it.hasNext}")
+      } catch {
+        case e: Throwable => println(s"failed: $e")
+          println(e.getStackTrace.mkString("\n"))
+      }
+      println("GOT HERE")
       it.foreach { case (v, (va, gs)) =>
         var i = 0
         ec.set(2, v)
@@ -1305,12 +1314,20 @@ class VariantDatasetFunctions(private val vds: VariantSampleMatrix[Genotype]) ex
           i += 1
         }
       }
+      println(s"HERE 5, about to return ${ zv.toSeq }")
       Iterator(zv)
-    }.fold(zVal.map(_.copy()))(combOp)
-    resOp(result)
+      //    }.fold(zVal.map(_.copy()))(combOp)
+    }.collect()
 
-    ec.set(0, localGlobalAnnotation)
-    ts.map { case (t, f) => (f(), t) }
+    println(result.toSeq.map(_.toSeq))
+
+
+//    }.fold(zVal.map(_.copy())) { case (aggA, aggB) => println(aggA.toSeq); println(aggB.toSeq); combOp(aggA, aggB)}
+//    resOp(result)
+//
+//    ec.set(0, localGlobalAnnotation)
+//    ts.map { case (t, f) => (f(), t) }
+    ???
   }
 
   def sampleQC(): VariantDataset = SampleQC(vds)
