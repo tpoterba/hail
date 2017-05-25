@@ -10,7 +10,6 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.DataType
 import org.json4s._
 import org.json4s.jackson.JsonMethods
-import sun.misc.Unsafe
 
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
@@ -155,21 +154,7 @@ sealed abstract class Type {
 
   def ordering(missingGreatest: Boolean): Ordering[Annotation]
 
-  def writeUnsafe(u: Unsafe, start: Long, a: Annotation): Int = {
-    if (a == null) {
-      u.putByte(start, 1)
-      1
-    } else writeUnsafeNonNull(u, start, a)
-  }
-
-  def readUnsafe(u: Unsafe, start: Long): Annotation = {
-    if (u.getByte(start) == 1)
-      null
-    else readUnsafeNonNull(u, start)
-  }
-
-  def writeUnsafeNonNull(u: Unsafe, start: Long, a: Annotation): Int = ???
-  def readUnsafeNonNull(u: Unsafe, start: Long): Annotation = ???
+  def byteSize: Int = ???
 }
 
 case object TBinary extends Type {
@@ -189,6 +174,8 @@ case object TBinary extends Type {
         def compare(a: Array[Byte], b: Array[Byte]): Int = ord.compare(a, b)
       })
   }
+
+  override def byteSize: Int = 4
 }
 
 case object TBoolean extends Type {
@@ -204,6 +191,8 @@ case object TBoolean extends Type {
 
   def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Boolean]])
+
+  override def byteSize: Int = 1
 }
 
 object TNumeric {
@@ -243,12 +232,7 @@ case object TInt extends TIntegral {
   def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Int]])
 
-  override def readUnsafeNonNull(u: Unsafe, start: Long): Annotation = u.getInt(start)
-
-  override def writeUnsafeNonNull(u: Unsafe, start: Long, a: Annotation): Int = {
-    u.putInt(start, a.asInstanceOf[Int])
-    4
-  }
+  override def byteSize: Int = 4
 }
 
 case object TLong extends TIntegral {
@@ -265,12 +249,7 @@ case object TLong extends TIntegral {
   def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Long]])
 
-  override def readUnsafeNonNull(u: Unsafe, start: Long): Annotation = u.getLong(start)
-
-  override def writeUnsafeNonNull(u: Unsafe, start: Long, a: Annotation): Int = {
-    u.putLong(start, a.asInstanceOf[Long])
-    8
-  }
+  override def byteSize: Int = 8
 }
 
 case object TFloat extends TNumeric {
@@ -292,13 +271,7 @@ case object TFloat extends TNumeric {
   def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Float]])
 
-  override def readUnsafeNonNull(u: Unsafe, start: Long): Annotation = u.getFloat(start)
-
-  override def writeUnsafeNonNull(u: Unsafe, start: Long, a: Annotation): Int = {
-    u.putFloat(start, a.asInstanceOf[Float])
-    4
-  }
-
+  override def byteSize: Int = 4
 }
 
 case object TDouble extends TNumeric {
@@ -320,13 +293,7 @@ case object TDouble extends TNumeric {
   def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Double]])
 
-  override def readUnsafeNonNull(u: Unsafe, start: Long): Annotation = u.getDouble(start)
-
-  override def writeUnsafeNonNull(u: Unsafe, start: Long, a: Annotation): Int = {
-    u.putDouble(start, a.asInstanceOf[Double])
-    8
-  }
-
+  override def byteSize: Int = 8
 }
 
 case object TString extends Type {
@@ -341,30 +308,7 @@ case object TString extends Type {
   def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[String]])
 
-  override def readUnsafeNonNull(u: Unsafe, start: Long): Annotation = {
-    val len = u.getInt(start)
-    val bytes = new Array[Byte](len)
-    var i = 0
-    while (i < len) {
-      bytes(i) = u.getByte(start + 4 + i)
-      i += 1
-    }
-    new String(bytes)
-  }
-
-  override def writeUnsafeNonNull(u: Unsafe, start: Long, a: Annotation): Int = {
-    val s = a.asInstanceOf[String]
-    val bytes = s.getBytes
-    val len = bytes.length
-
-    u.putInt(start, len)
-    var i = 0
-    while (i < len) {
-      u.putByte(start + 4 + i, bytes(i))
-      i += 1
-    }
-    4 + len
-  }
+  override def byteSize: Int = 4
 }
 
 case class TFunction(paramTypes: Seq[Type], returnType: Type) extends Type {
@@ -1255,4 +1199,24 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
       }
     })
   }
+
+  lazy val byteOffsets: Array[Int] = {
+    val a = new Array[Int](size)
+    val missingBits = (31 + size) / 32
+
+    var offset = missingBits
+    fields.foreach { f =>
+      val fSize = f.typ.byteSize
+      val mod = offset % fSize
+      if (mod != 0)
+        offset += (fSize - mod)
+      a(f.index) = offset
+    }
+    println(
+      s"""Fields:  ${fields}
+         |Offsets: ${a.toSeq}""".stripMargin)
+    a
+  }
+
+  override def byteSize: Int = byteOffsets.last
 }
