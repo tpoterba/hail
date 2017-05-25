@@ -589,6 +589,8 @@ case class TSet(elementType: Type) extends TIterable {
     """
 
   override def scalaClassTag: ClassTag[Set[AnyRef]] = classTag[Set[AnyRef]]
+
+  override def byteSize: Int = 4
 }
 
 case class TDict(keyType: Type, valueType: Type) extends TContainer {
@@ -653,6 +655,8 @@ case class TDict(keyType: Type, valueType: Type) extends TContainer {
           elementType.ordering(missingGreatest),
           elementType.ordering(missingGreatest))))
   }
+
+  override def byteSize: Int = 8
 }
 
 case object TGenotype extends Type {
