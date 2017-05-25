@@ -7,13 +7,12 @@ import sun.misc.Unsafe
 
 class UnsafeSuite extends SparkSuite {
   @Test def test() {
-    val u = Unsafe.getUnsafe
 
-    val l = u.allocateMemory(100)
-
-    TInt.writeUnsafe(u, l, 5)
-    println(TInt.readUnsafe(u, l))
-
-    u.freeMemory(l)
+    val urb = new UnsafeRowBuilder(TStruct("foo" -> TInt, "bar" -> TInt))
+    urb.putInt(4)
+    urb.putInt(4)
+    val r = urb.result()
+    println(r.getInt(0))
+    println(r.getInt(1))
   }
 }
