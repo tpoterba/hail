@@ -542,6 +542,8 @@ case class TArray(elementType: Type) extends TIterable {
     """
 
   override def scalaClassTag: ClassTag[IndexedSeq[AnyRef]] = classTag[IndexedSeq[AnyRef]]
+
+  override def byteSize: Int = 4
 }
 
 case class TSet(elementType: Type) extends TIterable {
@@ -1203,10 +1205,10 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
 
   lazy val byteOffsets: Array[Int] = {
     val a = new Array[Int](size)
-    val missingBits = (31 + size) / 32 * 4
-    println(s"missing bits = $missingBits")
-    println(fields.map(_.typ).mkString(","))
-    var offset = missingBits
+    val missingBytes = UnsafeAnnotations.missingBytes(size)
+//    println(s"missing bits = $missingBytes")
+//    println(fields.map(_.typ).mkString(","))
+    var offset = missingBytes
     fields.foreach { f =>
       val fSize = f.typ.byteSize
       val mod = offset % fSize
@@ -1215,11 +1217,11 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
       a(f.index) = offset
       offset += fSize
     }
-    println(
-      s"""Fields:  $fields
-         |Offsets: ${a.toSeq}""".stripMargin)
+//    println(
+//      s"""Fields:  $fields
+//         |Offsets: ${a.toSeq}""".stripMargin)
     a
   }
 
-  override def byteSize: Int = byteOffsets.last
+  override lazy val byteSize: Int = if (size == 0) 0 else byteOffsets.last + fields.last.typ.byteSize
 }
