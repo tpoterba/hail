@@ -147,11 +147,30 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
     offset + 1
   }
 
-  private def putArray(value: IndexedSeq[_], offset: Int, elementType: Type): Int = {
+  private def putBinary(value: Array[Byte], offset: Int): Int = {
+    var cursor = appendPointer
 
-    val missingBytes = UnsafeAnnotations.missingBytes(value.length)
+    // write the offset
+    putInt(appendPointer - offset, offset)
+
+    val totalSize = 4 + value.length
+    //    println(s"putting array ${ value } at offset $offset with shift ${ appendPointer - offset }, totSize=$totalSize")
+
+    appendPointer = UnsafeAnnotations.roundUpAlignment(totalSize + appendPointer)
+    reallocate(appendPointer)
+    putInt(value.length, cursor)
+
+    cursor += 4
+
+    Platform.copyMemory(value, Platform.BYTE_ARRAY_OFFSET, mem, UnsafeAnnotations.memOffset(cursor), value.length)
+
+    offset + 4
+  }
+
+  private def putArray(value: Iterable[_], offset: Int, elementType: Type): Int = {
+
+    val missingBytes = UnsafeAnnotations.missingBytes(value.size)
     val eltSize = elementType.byteSize
-
 
     var cursor = appendPointer
 
@@ -159,12 +178,12 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
     putInt(appendPointer - offset, offset)
 
     val totalSize = UnsafeAnnotations.roundUpAlignment(
-      UnsafeAnnotations.roundUpAlignment(4 + missingBytes) + value.length * eltSize)
+      UnsafeAnnotations.roundUpAlignment(4 + missingBytes) + value.size * eltSize)
 //    println(s"putting array ${ value } at offset $offset with shift ${ appendPointer - offset }, totSize=$totalSize")
 
     appendPointer = totalSize + appendPointer
     reallocate(appendPointer)
-    putInt(value.length, cursor)
+    putInt(value.size, cursor)
 //    println(s"wrote length ${ value.length } at cursor $cursor")
 
     cursor += 4
@@ -177,8 +196,9 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
     val alignment = cursor % eltSize
 
     var i = 0
-    while (i < value.length) {
-      val elt = value(i)
+    val iter = value.iterator
+    while (i < value.size) {
+      val elt = iter.next()
       if (elt == null) {
         val intIndex = missingBitStart + ((i >> 5) << 2)
         val bitShift = i % 32
@@ -205,11 +225,14 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
       case TFloat => putFloat(value.asInstanceOf[Float], offset)
       case TDouble => putDouble(value.asInstanceOf[Double], offset)
       case TBoolean => putByte(value.asInstanceOf[Boolean].toByte, offset)
-      case TArray(t) =>
+      case TArray(et) => putArray(value.asInstanceOf[IndexedSeq[_]], offset, et)
+      case TSet(et) => putArray(value.asInstanceOf[Set[_]], offset, et)
+      case TString => putBinary(value.asInstanceOf[String].getBytes(), offset)
 
-        putArray(value.asInstanceOf[IndexedSeq[_]], offset, t)
 
-      case t => ???
+//      case s: TStruct =>
+
+      case _ => ???
     }
   }
 
@@ -237,17 +260,18 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
       } else {
         val off = t.byteOffsets(i)
         //        println(s"inserting value ${r.get(i)} at position $i")
-        t.fields(i).typ match {
-          case TBoolean => putByte(r.getBoolean(i).toByte, off)
-          case TInt => putInt(r.getInt(i), off)
-          case TLong => putLong(r.getLong(i), off)
-          case TFloat => putFloat(r.getFloat(i), off)
-          case TDouble => putDouble(r.getDouble(i), off)
-          case TArray(t) => putArray(r.getAs[IndexedSeq[_]](i), off, t)
-          case err =>
-            println(s"Not supported: $err")
-            ???
-        }
+        put(r.get(i), off, t.fields(i).typ)
+//        t.fields(i).typ match {
+//          case TBoolean => putByte(r.getBoolean(i).toByte, off)
+//          case TInt => putInt(r.getInt(i), off)
+//          case TLong => putLong(r.getLong(i), off)
+//          case TFloat => putFloat(r.getFloat(i), off)
+//          case TDouble => putDouble(r.getDouble(i), off)
+//          case TArray(t) => putArray(r.getAs[IndexedSeq[_]](i), off, t)
+//          case err =>
+//            println(s"Not supported: $err")
+//            ???
+//        }
       }
       i += 1
     }
@@ -275,6 +299,18 @@ class UnsafeRow(mem: Array[Long], t: TStruct) extends Row {
   private def readDouble(offset: Int) = Platform.getDouble(mem, UnsafeAnnotations.memOffset(offset))
 
   private def readByte(offset: Int) = Platform.getByte(mem, UnsafeAnnotations.memOffset(offset))
+
+  def readBinary(offset: Int): Array[Byte] = {
+    val shift = readInt(offset)
+    assert(shift > 0, s"invalid shift: $shift")
+
+    val binStart = offset + shift
+    val binLength = readInt(binStart)
+    val arr = new Array[Byte](binLength)
+    Platform.copyMemory(mem, UnsafeAnnotations.memOffset(binStart + 4), arr, Platform.BYTE_ARRAY_OFFSET, binLength)
+
+    arr
+  }
 
   private def readArray(offset: Int, elementType: Type): IndexedSeq[Any] = {
     val shift = readInt(offset)
@@ -320,6 +356,9 @@ class UnsafeRow(mem: Array[Long], t: TStruct) extends Row {
       case TFloat => readFloat(offset)
       case TDouble => readDouble(offset)
       case TArray(elt) => readArray(offset, elt)
+      case TSet(elt) => readArray(offset, elt).toSet
+      case TString => new String(readBinary(offset))
+
       case _ => ???
     }
   }
