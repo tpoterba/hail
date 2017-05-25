@@ -8,6 +8,7 @@ import is.hail.utils.{Interval, StringEscapeUtils, _}
 import is.hail.variant.{AltAllele, Call, Genotype, Locus, Variant}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.DataType
+import org.apache.spark.unsafe.Platform
 import org.json4s._
 import org.json4s.jackson.JsonMethods
 
@@ -1151,7 +1152,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
       Gen.const(Annotation.empty)
     else
       Gen.size.flatMap(fuel =>
-        if (size < fuel) Gen.const(Annotation.empty)
+        if (size > fuel) Gen.const(Annotation.empty)
         else Gen.uniformSequence(fields.map(f => f.typ.genValue)).map(a => Annotation(a: _*)))
   }
 
@@ -1202,15 +1203,17 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
 
   lazy val byteOffsets: Array[Int] = {
     val a = new Array[Int](size)
-    val missingBits = (31 + size) / 32
-
-    var offset = missingBits
+    val missingBits = (31 + size) / 32 * 4
+    println(s"missing bits = $missingBits")
+    println(fields.map(_.typ).mkString(","))
+    var offset = missingBits + Platform.LONG_ARRAY_OFFSET
     fields.foreach { f =>
       val fSize = f.typ.byteSize
       val mod = offset % fSize
       if (mod != 0)
         offset += (fSize - mod)
       a(f.index) = offset
+      offset += fSize
     }
     println(
       s"""Fields:  ${fields}
