@@ -29,45 +29,51 @@ object UnsafeAnnotations {
   val missingBitIndices: Array[Int] = (0 until 32).map(i => 0x1 << i).toArray
 
   def isAligned(l: Long): Boolean = (l & 0x7) == 0
+
+  def memOffset(offset: Long): Long = Platform.LONG_ARRAY_OFFSET + offset
 }
 
-class UnsafeRowBuilder(t: TStruct) {
-  private var mem = new Array[Long](128)
+class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
+  private var mem: Array[Long] = _
+  if (m != null)
+    mem = m
+  else
+    mem = new Array[Long](128)
   //  private var memloc = Platform.allocateMemory(t.size)
-//  assert(isAligned)
+  //  assert(isAligned)
   println(s"memLoc is $mem")
-  println(s"L_A_O = ${Platform.LONG_ARRAY_OFFSET}")
   setMissingBitsZero()
+
 
   def setMissingBitsZero() {
     var i = 0
     while (i < ((t.size >> 5) << 2)) {
-      Platform.putInt(mem, Platform.LONG_ARRAY_OFFSET + 4 * i, 0)
+      Platform.putInt(mem, UnsafeAnnotations.memOffset(4 * i), 0)
       i += 1
     }
   }
 
-//  private var cursor = UnsafeAnnotations.LONG_ARRAY_OFFSET
+  //  private var cursor = UnsafeAnnotations.LONG_ARRAY_OFFSET
 
-//  private var i = 0
+  //  private var i = 0
 
-//  val missingBits = new Array[Int]((t.size + 31) / 32)
+  //  val missingBits = new Array[Int]((t.size + 31) / 32)
 
-//  cursor += 4 * missingBits.length
+  //  cursor += 4 * missingBits.length
 
-//  private def isAligned: Boolean = (cursor & 0x7) == 0
-//
-//  private def pad4() {
-//    val mod = cursor & 0x3
-//    if (mod != 0)
-//      cursor += 4 - mod
-//  }
-//
-//  private def pad8() {
-//    val mod = cursor & 0x7
-//    if (mod != 0)
-//      cursor += 8 - mod
-//  }
+  //  private def isAligned: Boolean = (cursor & 0x7) == 0
+  //
+  //  private def pad4() {
+  //    val mod = cursor & 0x3
+  //    if (mod != 0)
+  //      cursor += 4 - mod
+  //  }
+  //
+  //  private def pad8() {
+  //    val mod = cursor & 0x7
+  //    if (mod != 0)
+  //      cursor += 8 - mod
+  //  }
 
   def putRow(r: Row) {
     assert(t.typeCheck(r))
@@ -76,21 +82,21 @@ class UnsafeRowBuilder(t: TStruct) {
     var i = 0
     while (i < t.size) {
       if (r.isNullAt(i)) {
-//        println(s"inserting a null at position $i")
-        val intIndex = Platform.LONG_ARRAY_OFFSET + ((i >> 5) << 2)
+        //        println(s"inserting a null at position $i")
+        val intIndex = UnsafeAnnotations.memOffset((i >> 5) << 2)
         val bitShift = i % 32
         val oldBits = Platform.getInt(mem, intIndex)
         val newBits = oldBits | (0x1 << bitShift)
-//        if (i == 33) {
-//          println(s"intIndex = $intIndex")
-//          println(s"bitShift = $bitShift")
-//          println(s"oldBits = $oldBits")
-//          println(s"newBits = $newBits")
-//        }
+        //        if (i == 33) {
+        //          println(s"intIndex = $intIndex")
+        //          println(s"bitShift = $bitShift")
+        //          println(s"oldBits = $oldBits")
+        //          println(s"newBits = $newBits")
+        //        }
         Platform.putInt(mem, intIndex, newBits)
       } else {
-        val off = t.byteOffsets(i)
-//        println(s"inserting value ${r.get(i)} at position $i")
+        val off = UnsafeAnnotations.memOffset(t.byteOffsets(i))
+        //        println(s"inserting value ${r.get(i)} at position $i")
         t.fields(i).typ match {
           case TBoolean => Platform.putByte(mem, off, r.getBoolean(i).toByte)
           case TInt => Platform.putInt(mem, off, r.getInt(i))
@@ -108,8 +114,8 @@ class UnsafeRowBuilder(t: TStruct) {
 
 
   def result(): UnsafeRow = {
-//    if (i < t.size)
-//      fatal(s"only wrote $i of ${ t.size } fields in UnsafeRowBuilder")
+    //    if (i < t.size)
+    //      fatal(s"only wrote $i of ${ t.size } fields in UnsafeRowBuilder")
     new UnsafeRow(mem, t)
   }
 }
@@ -119,7 +125,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct) extends Row {
   override def length: Int = t.size
 
   override def get(i: Int): Any = {
-    val off = t.byteOffsets(i)
+    val off = UnsafeAnnotations.memOffset(t.byteOffsets(i))
     if (isNullAt(i))
       null
     else t.fields(i).typ match {
@@ -149,7 +155,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct) extends Row {
   //  }
 
   override def isNullAt(i: Int): Boolean = {
-    val intIndex = Platform.LONG_ARRAY_OFFSET + ((i >> 5) << 2)
+    val intIndex = UnsafeAnnotations.memOffset((i >> 5) << 2)
     val bitShift = i % 32
     (Platform.getInt(mem, intIndex) & (0x1 << bitShift)) != 0
   }

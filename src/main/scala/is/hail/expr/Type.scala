@@ -1206,7 +1206,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
     val missingBits = (31 + size) / 32 * 4
     println(s"missing bits = $missingBits")
     println(fields.map(_.typ).mkString(","))
-    var offset = missingBits + Platform.LONG_ARRAY_OFFSET
+    var offset = missingBits
     fields.foreach { f =>
       val fSize = f.typ.byteSize
       val mod = offset % fSize
@@ -1216,7 +1216,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
       offset += fSize
     }
     println(
-      s"""Fields:  ${fields}
+      s"""Fields:  $fields
          |Offsets: ${a.toSeq}""".stripMargin)
     a
   }
