@@ -225,10 +225,13 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
       case TFloat => putFloat(value.asInstanceOf[Float], offset)
       case TDouble => putDouble(value.asInstanceOf[Double], offset)
       case TBoolean => putByte(value.asInstanceOf[Boolean].toByte, offset)
+      case TString => putBinary(value.asInstanceOf[String].getBytes(), offset)
       case TArray(et) => putArray(value.asInstanceOf[IndexedSeq[_]], offset, et)
       case TSet(et) => putArray(value.asInstanceOf[Set[_]], offset, et)
-      case TString => putBinary(value.asInstanceOf[String].getBytes(), offset)
-
+      case TDict(kt, vt) =>
+        val values = value.asInstanceOf[Map[_, _]].toArray
+        val newOff = putArray(values.map(_._1), offset, kt)
+        putArray(values.map(_._2), newOff, vt)
 
 //      case s: TStruct =>
 
@@ -358,6 +361,10 @@ class UnsafeRow(mem: Array[Long], t: TStruct) extends Row {
       case TArray(elt) => readArray(offset, elt)
       case TSet(elt) => readArray(offset, elt).toSet
       case TString => new String(readBinary(offset))
+      case TDict(kt, vt) =>
+        val keys = readArray(offset, kt)
+        val values = readArray(offset + 4, vt)
+        keys.zip(values).toMap
 
       case _ => ???
     }

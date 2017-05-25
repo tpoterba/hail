@@ -19,7 +19,7 @@ class UnsafeSuite extends SparkSuite {
 //
 //  }
 
-  val supp: Array[Type] = Array(TInt, TString, TDouble, TLong, TFloat, TBoolean, TArray(TInt), TArray(TBoolean), TArray(TArray(TInt)))
+  val supp: Array[Type] = Array(TInt, TString, TDict(TString, TInt),TDouble, TLong, TFloat, TBoolean, TArray(TInt), TArray(TBoolean), TArray(TArray(TInt)))
 
   def fieldGen = Gen.zip(arbitrary[String], Gen.choose(0, supp.length - 1).map(supp))
 
@@ -45,6 +45,8 @@ class UnsafeSuite extends SparkSuite {
       val newRow = res
 //      println(a)
 //      println(newRow)
+
+      }
       newRow == a
     }.check()
   }
