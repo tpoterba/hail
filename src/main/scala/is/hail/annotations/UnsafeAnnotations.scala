@@ -412,7 +412,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
       i += 1
     }
 
-    a: IndexedSeq[Any]
+    a
   }
 
   private def readStruct(offset: Int, struct: TStruct): UnsafeRow = {
@@ -499,6 +499,13 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
     if (isNullAt(i))
       throw new NullPointerException(s"null value at index $i")
     readDouble(offset)
+  }
+
+  override def getBoolean(i: Int): Boolean = {
+    val offset = t.byteOffsets(i)
+    if (isNullAt(i))
+      throw new NullPointerException(s"null value at index $i")
+    readByte(offset) == 1
   }
 
   override def getByte(i: Int): Byte = {
