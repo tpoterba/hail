@@ -50,10 +50,7 @@ object Annotation {
         "key" -> expandType(keyType),
         "value" -> expandType(valueType)))
     case TAltAllele => AltAllele.expandedType
-    case TInterval =>
-      TStruct(
-        "start" -> Locus.expandedType,
-        "end" -> Locus.expandedType)
+    case TInterval => Locus.intervalExpandedType
     case _ => t
   }
 

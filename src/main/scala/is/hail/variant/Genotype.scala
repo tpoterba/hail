@@ -444,7 +444,7 @@ object Genotype {
     StructField("fakeRef", BooleanType, nullable = false),
     StructField("isLinearScale", BooleanType, nullable = false)))
 
-  def expandedType: TStruct = TStruct(
+  val expandedType: TStruct = TStruct(
     "gt" -> TInt,
     "ad" -> TArray(TInt),
     "dp" -> TInt,

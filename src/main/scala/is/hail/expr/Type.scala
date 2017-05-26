@@ -156,6 +156,8 @@ sealed abstract class Type {
   def ordering(missingGreatest: Boolean): Ordering[Annotation]
 
   def byteSize: Int = ???
+
+  def alignment: Int = byteSize
 }
 
 case object TBinary extends Type {
@@ -657,6 +659,8 @@ case class TDict(keyType: Type, valueType: Type) extends TContainer {
   }
 
   override def byteSize: Int = 8
+
+  override def alignment: Int = 4
 }
 
 case object TGenotype extends Type {
@@ -672,6 +676,10 @@ case object TGenotype extends Type {
 
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Genotype]])
+
+  override def byteSize: Int = Genotype.expandedType.byteSize
+
+  override def alignment: Int = 4
 }
 
 case object TCall extends Type {
@@ -687,6 +695,8 @@ case object TCall extends Type {
 
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Int]])
+
+  override def byteSize: Int = 4
 }
 
 case object TAltAllele extends Type {
@@ -702,6 +712,10 @@ case object TAltAllele extends Type {
 
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[AltAllele]])
+
+  override def byteSize: Int = AltAllele.expandedType.byteSize
+
+  override def alignment: Int = 4
 }
 
 case object TVariant extends Type {
@@ -727,6 +741,10 @@ case object TVariant extends Type {
 
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Variant]])
+
+  override def byteSize: Int = Variant.expandedType.byteSize
+
+  override def alignment: Int = 4
 }
 
 case object TLocus extends Type {
@@ -742,6 +760,10 @@ case object TLocus extends Type {
 
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Locus]])
+
+  override def byteSize: Int = Locus.expandedType.byteSize
+
+  override def alignment: Int = 4
 }
 
 case object TInterval extends Type {
@@ -757,6 +779,10 @@ case object TInterval extends Type {
 
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Interval[Locus]]])
+
+  override val byteSize: Int = Locus.intervalExpandedType.byteSize
+
+  override def alignment: Int = 4
 }
 
 case class Field(name: String, typ: Type,
@@ -1210,22 +1236,25 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
   lazy val byteOffsets: Array[Int] = {
     val a = new Array[Int](size)
     val missingBytes = UnsafeAnnotations.missingBytes(size)
-//    println(s"missing bits = $missingBytes")
-//    println(fields.map(_.typ).mkString(","))
+    //    println(s"missing bits = $missingBytes")
+    //    println(fields.map(_.typ).mkString(","))
     var offset = missingBytes
     fields.foreach { f =>
       val fSize = f.typ.byteSize
-      val mod = offset % fSize
+      val fAlignment = f.typ.alignment
+      val mod = offset % fAlignment
       if (mod != 0)
-        offset += (fSize - mod)
+        offset += (fAlignment - mod)
       a(f.index) = offset
       offset += fSize
     }
-//    println(
-//      s"""Fields:  $fields
-//         |Offsets: ${a.toSeq}""".stripMargin)
+    //    println(
+    //      s"""Fields:  $fields
+    //         |Offsets: ${a.toSeq}""".stripMargin)
     a
   }
 
   override lazy val byteSize: Int = if (size == 0) 0 else byteOffsets.last + fields.last.typ.byteSize
+
+  override def alignment: Int = 8
 }
