@@ -34,9 +34,13 @@ object Locus {
       StructField("contig", StringType, nullable = false),
       StructField("position", IntegerType, nullable = false)))
 
-  def expandedType: TStruct = TStruct(
+  val expandedType: TStruct = TStruct(
     "contig" -> TString,
     "position" -> TInt)
+
+  val intervalExpandedType: TStruct = TStruct(
+    "start" -> Locus.expandedType,
+    "end" -> Locus.expandedType)
 
   def gen(contigs: Seq[String]): Gen[Locus] =
     Gen.zip(Gen.oneOfSeq(contigs), Gen.posInt)

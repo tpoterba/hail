@@ -181,7 +181,7 @@ object Variant {
       StructField("altAlleles", ArrayType(AltAllele.sparkSchema, containsNull = false),
         nullable = false)))
 
-  def expandedType: TStruct =
+  val expandedType: TStruct =
     TStruct("contig" -> TString,
       "start" -> TInt,
       "ref" -> TString,

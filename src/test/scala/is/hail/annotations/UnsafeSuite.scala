@@ -20,7 +20,7 @@ class UnsafeSuite extends SparkSuite {
 //  }
 
 //  val supp: Array[Type] = Array(TInt, TString, TDict(TString, TInt),TDouble, TLong, TFloat, TBoolean, TArray(TInt), TArray(TBoolean), TArray(TArray(TInt)))
-  val supp: Array[Type] = Array(TInt, TStruct("foo" -> TInt, "bar" -> TString), TString, TDict(TString, TInt),TDouble, TLong, TFloat, TBoolean, TArray(TInt), TArray(TBoolean), TArray(TArray(TInt)))
+  val supp: Array[Type] = Array(TInt, TVariant, TGenotype, TStruct("foo" -> TInt, "bar" -> TString), TArray( TStruct("foo" -> TInt, "bar" -> TString)), TString, TDict(TString, TInt),TDouble, TLong, TFloat, TBoolean, TArray(TInt), TArray(TBoolean), TArray(TArray(TInt)))
 
   def fieldGen = Gen.zip(arbitrary[String], Gen.choose(0, supp.length - 1).map(supp))
 
@@ -37,15 +37,20 @@ class UnsafeSuite extends SparkSuite {
 
 //      println(s"t = ${t.toPrettyString(compact=true)}")
 //      println(s"a = $a")
-      val urb = new UnsafeRowBuilder(t)
+      val urb = new UnsafeRowBuilder(t, debug = false)
 
       urb.ingest(a)
       val res = urb.result()
 //      println((0 until a.length).map(i => i -> a.isNullAt(i)))
 //      println((0 until a.length).map(i => i -> res.isNullAt(i)))
       val newRow = res
-      println(a)
-      println(newRow)
+      val p = newRow == a
+      if (!p) {
+        println(
+          s"""Error! mismatch:
+             |  old: $a
+             |  new: $newRow""".stripMargin)
+      }
       newRow == a
     }.check()
   }
