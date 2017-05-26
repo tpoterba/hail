@@ -45,8 +45,6 @@ class UnsafeSuite extends SparkSuite {
       val newRow = res
 //      println(a)
 //      println(newRow)
-
-      }
       newRow == a
     }.check()
   }
