@@ -473,6 +473,48 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
   //    Platform.freeMemory(m)
   //  }
 
+  override def getInt(i: Int): Int = {
+    val offset = t.byteOffsets(i)
+    if (isNullAt(i))
+      throw new NullPointerException(s"null value at index $i")
+    readInt(offset)
+  }
+
+  override def getLong(i: Int): Long = {
+    val offset = t.byteOffsets(i)
+    if (isNullAt(i))
+      throw new NullPointerException(s"null value at index $i")
+    readLong(offset)
+  }
+
+  override def getFloat(i: Int): Float = {
+    val offset = t.byteOffsets(i)
+    if (isNullAt(i))
+      throw new NullPointerException(s"null value at index $i")
+    readFloat(offset)
+  }
+
+  override def getDouble(i: Int): Double = {
+    val offset = t.byteOffsets(i)
+    if (isNullAt(i))
+      throw new NullPointerException(s"null value at index $i")
+    readDouble(offset)
+  }
+
+  override def getByte(i: Int): Byte = {
+    val offset = t.byteOffsets(i)
+    if (isNullAt(i))
+      throw new NullPointerException(s"null value at index $i")
+    readByte(offset)
+  }
+
+  def getBinary(i: Int): Array[Byte] = {
+    val offset = t.byteOffsets(i)
+    if (isNullAt(i))
+      throw new NullPointerException(s"null value at index $i")
+    readBinary(offset)
+  }
+
   override def isNullAt(i: Int): Boolean = {
     val intIndex = (i >> 5) << 2
     val bitShift = i % 32
