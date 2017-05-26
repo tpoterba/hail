@@ -37,6 +37,14 @@ object UnsafeAnnotations {
 
   def missingBytes(elems: Int): Int = (elems + 31) / 32 * 4
 
+  def arrayElementSize(t: Type): Int = {
+    var eltSize = t.byteSize
+    val mod = eltSize % t.alignment
+    if (mod != 0)
+      eltSize += (t.alignment - mod)
+    eltSize
+  }
+
   def roundUpAlignment(offset: Int): Int = {
     val mod = offset % 8
     if (mod != 0)
@@ -166,7 +174,7 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false
   private def putArray(value: Iterable[_], offset: Int, elementType: Type) {
 
     val missingBytes = UnsafeAnnotations.missingBytes(value.size)
-    val eltSize = elementType.byteSize
+    val eltSize = UnsafeAnnotations.arrayElementSize(elementType)
 
     var cursor = appendPointer
 
@@ -189,12 +197,13 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false
 
     // align the element
     cursor = UnsafeAnnotations.roundUpAlignment(cursor)
-    val alignment = cursor % eltSize
 
     var i = 0
     val iter = value.iterator
     while (i < value.size) {
       val elt = iter.next()
+      if (debug)
+        println(s"array index $i: writing value $elt (${elementType.toPrettyString(compact = true)}) to offset $cursor")
       if (elt == null) {
         val intIndex = missingBitStart + ((i >> 5) << 2)
         val bitShift = i % 32
@@ -235,7 +244,7 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false
       } else {
         val off = struct.byteOffsets(i) + offset
         if (debug)
-          println(s"element [$i] inserting value ${ value.get(i) } at incremented offset $off")
+          println(s"element [$i] inserting value ${ value.get(i) } at offset $off")
         put(value.get(i), off, struct.fields(i).typ)
         //        println(s"inserting value ${r.get(i)} at position $i")
         //        t.fields(i).typ match {
@@ -256,7 +265,7 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false
 
   private def put(value: Annotation, offset: Int, elementType: Type) {
     elementType match {
-      case TInt => putInt(value.asInstanceOf[Int], offset)
+      case TInt | TCall => putInt(value.asInstanceOf[Int], offset)
       case TLong => putLong(value.asInstanceOf[Long], offset)
       case TFloat => putFloat(value.asInstanceOf[Float], offset)
       case TDouble => putDouble(value.asInstanceOf[Double], offset)
@@ -273,7 +282,9 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false
       //        val v = value.asInstanceOf[Variant]
       //        val schema =
       //      case s: TStruct =>
-      case struct: TStruct => putStruct(value.asInstanceOf[Row], offset, struct)
+      case struct: TStruct =>
+        if (struct.size > 0)
+          putStruct(value.asInstanceOf[Row], offset, struct)
 
       case TAltAllele | TVariant | TGenotype | TLocus | TInterval =>
         val expandedType = Annotation.expandType(elementType).asInstanceOf[TStruct]
@@ -377,7 +388,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
     val arrLength = readInt(arrStart)
     val missingBytes = UnsafeAnnotations.missingBytes(arrLength)
     val elemsStart = UnsafeAnnotations.roundUpAlignment(arrStart + 4 + missingBytes + shiftOffset) - shiftOffset
-    val elemSize = elementType.byteSize
+    val eltSize = UnsafeAnnotations.arrayElementSize(elementType)
     if (debug)
       println(s"reading Array[${ elementType.toPrettyString(compact = true) }] of length $arrLength from $offset(+${ shiftOffset }+$shift=${offset+shiftOffset+shift})")
     //    println(s"reading array at offset $offset with shift ${ shift }, has length $arrLength")
@@ -396,7 +407,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
       val isMissing = (missingInt & (0x1 << bitShift)) != 0
 
       if (!isMissing)
-        a(i) = read(elemsStart + i * elemSize, elementType)
+        a(i) = read(elemsStart + i * eltSize, elementType)
 
       i += 1
     }
@@ -418,7 +429,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
         val b = readByte(offset)
         assert(b == 0 || b == 1, s"invalid bool byte: $b from offset $offset")
         b == 1
-      case TInt => readInt(offset)
+      case TInt | TCall => readInt(offset)
       case TLong => readLong(offset)
       case TFloat => readFloat(offset)
       case TDouble => readDouble(offset)
@@ -426,7 +437,11 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
       case TSet(elt) => readArray(offset, elt).toSet
       case TString => new String(readBinary(offset))
       case TDict(kt, vt) => readArray(offset, kt).zip(readArray(offset + 4, vt)).toMap
-      case struct: TStruct => readStruct(offset, struct)
+      case struct: TStruct =>
+        if (struct.size == 0)
+          Row()
+        else
+          readStruct(offset, struct)
 
       case TVariant | TLocus | TAltAllele | TGenotype | TInterval =>
         val r = readStruct(offset, Annotation.expandType(t).asInstanceOf[TStruct])
@@ -438,6 +453,8 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
 
   override def get(i: Int): Any = {
     val offset = t.byteOffsets(i)
+    if (debug)
+      println(s"The offset for element $i (type ${t.fields(i).typ}) is $offset(+${shiftOffset}=${offset+shiftOffset})")
     if (isNullAt(i))
       null
     else
