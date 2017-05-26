@@ -1180,9 +1180,10 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
   override def str(a: Annotation): String = JsonMethods.compact(toJSON(a))
 
   override def genNonmissingValue: Gen[Annotation] = {
-    if (size == 0)
-      Gen.const(Annotation.empty)
-    else
+    if (size == 0) {
+      val r = Row()
+      Gen.const(r)
+    } else
       Gen.size.flatMap(fuel =>
         if (size > fuel) Gen.const(Annotation.empty)
         else Gen.uniformSequence(fields.map(f => f.typ.genValue)).map(a => Annotation(a: _*)))

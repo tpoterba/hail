@@ -33,25 +33,35 @@ class UnsafeSuite extends SparkSuite {
 
   @Test def testRandom() {
 
-    Prop.forAll(structGen.resize(100000)) { case (t, a) =>
+//    Prop.forAll(structGen.resize(100000)) { case (t, a) =>
+//
+////      println(s"t = ${t.toPrettyString(compact=true)}")
+////      println(s"a = $a")
+//      val urb = new UnsafeRowBuilder(t, debug = false)
+//
+//      urb.ingest(a)
+//      val res = urb.result()
+////      println((0 until a.length).map(i => i -> a.isNullAt(i)))
+////      println((0 until a.length).map(i => i -> res.isNullAt(i)))
+//      val newRow = res
+//      val p = newRow == a
+//      if (!p) {
+//        println(
+//          s"""Error! mismatch:
+//             |  old: $a
+//             |  new: $newRow""".stripMargin)
+//      }
+//      newRow == a
+//    }.check()
 
-//      println(s"t = ${t.toPrettyString(compact=true)}")
-//      println(s"a = $a")
-      val urb = new UnsafeRowBuilder(t, debug = false)
 
-      urb.ingest(a)
-      val res = urb.result()
-//      println((0 until a.length).map(i => i -> a.isNullAt(i)))
-//      println((0 until a.length).map(i => i -> res.isNullAt(i)))
-      val newRow = res
-      val p = newRow == a
-      if (!p) {
-        println(
-          s"""Error! mismatch:
-             |  old: $a
-             |  new: $newRow""".stripMargin)
-      }
-      newRow == a
+
+    val g = for {t <- Type.genArb.filter(_.isInstanceOf[TStruct]).map(_.asInstanceOf[TStruct])
+      a <- t.genNonmissingValue} yield (t, a)
+    Prop.forAll(g) { case (t, a) =>
+        val urb = new UnsafeRowBuilder(t, debug = false)
+        urb.ingest(a.asInstanceOf[Row])
+        urb.result() == a
     }.check()
   }
 }
