@@ -208,15 +208,20 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
     }
   }
 
-  private def putStruct(value: Row, offset: Int, elementType: TStruct) {
+  private def putStruct(value: Row, offset: Int, struct: TStruct) {
     var i = 0
-    while (i < t.size) {
+    println(s"struct: ${struct.toPrettyString(compact = true)}")
+    println(s"size: ${struct.byteSize}")
+    while (i < struct.size) {
       if (value.isNullAt(i)) {
         //        println(s"inserting a null at position $i")
-        val intIndex = (i >> 5) << 2 + offset
+        val intIndex = ((i >> 5) << 2) + offset
         val bitShift = i % 32
         val oldBits = readInt(intIndex)
         val newBits = oldBits | (0x1 << bitShift)
+        if (struct.size == 2) {
+         println(s"index $i: offset=$offset, mbindex=$intIndex")
+        }
         //        println(s"updating missing for $i($bitShift): $oldBits => $newBits")
         //        if (i == 33) {
         //          println(s"intIndex = $intIndex")
@@ -227,9 +232,9 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
         putInt(newBits, intIndex)
         assert(readInt(intIndex) == newBits)
       } else {
-        val off = t.byteOffsets(i) + offset
+        val off = struct.byteOffsets(i) + offset
+        put(value.get(i), off, struct.fields(i).typ)
         //        println(s"inserting value ${r.get(i)} at position $i")
-        put(value.get(i), off, t.fields(i).typ)
         //        t.fields(i).typ match {
         //          case TBoolean => putByte(r.getBoolean(i).toByte, off)
         //          case TInt => putInt(r.getInt(i), off)
@@ -275,42 +280,42 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
   def ingest(r: Row) {
     assert(t.typeCheck(r))
     assert(r != null)
-
-    var i = 0
-    while (i < t.size) {
-      if (r.isNullAt(i)) {
-        //        println(s"inserting a null at position $i")
-        val intIndex = (i >> 5) << 2
-        val bitShift = i % 32
-        val oldBits = readInt(intIndex)
-        val newBits = oldBits | (0x1 << bitShift)
-        //        println(s"updating missing for $i($bitShift): $oldBits => $newBits")
-        //        if (i == 33) {
-        //          println(s"intIndex = $intIndex")
-        //          println(s"bitShift = $bitShift")
-        //          println(s"oldBits = $oldBits")
-        //          println(s"newBits = $newBits")
-        //        }
-        putInt(newBits, intIndex)
-        assert(readInt(intIndex) == newBits)
-      } else {
-        val off = t.byteOffsets(i)
-        //        println(s"inserting value ${r.get(i)} at position $i")
-        put(r.get(i), off, t.fields(i).typ)
-        //        t.fields(i).typ match {
-        //          case TBoolean => putByte(r.getBoolean(i).toByte, off)
-        //          case TInt => putInt(r.getInt(i), off)
-        //          case TLong => putLong(r.getLong(i), off)
-        //          case TFloat => putFloat(r.getFloat(i), off)
-        //          case TDouble => putDouble(r.getDouble(i), off)
-        //          case TArray(t) => putArray(r.getAs[IndexedSeq[_]](i), off, t)
-        //          case err =>
-        //            println(s"Not supported: $err")
-        //            ???
-        //        }
-      }
-      i += 1
-    }
+    putStruct(r, 0, t)
+//    var i = 0
+//    while (i < t.size) {
+//      if (r.isNullAt(i)) {
+//        //        println(s"inserting a null at position $i")
+//        val intIndex = (i >> 5) << 2
+//        val bitShift = i % 32
+//        val oldBits = readInt(intIndex)
+//        val newBits = oldBits | (0x1 << bitShift)
+//        //        println(s"updating missing for $i($bitShift): $oldBits => $newBits")
+//        //        if (i == 33) {
+//        //          println(s"intIndex = $intIndex")
+//        //          println(s"bitShift = $bitShift")
+//        //          println(s"oldBits = $oldBits")
+//        //          println(s"newBits = $newBits")
+//        //        }
+//        putInt(newBits, intIndex)
+//        assert(readInt(intIndex) == newBits)
+//      } else {
+//        val off = t.byteOffsets(i)
+//        //        println(s"inserting value ${r.get(i)} at position $i")
+//        put(r.get(i), off, t.fields(i).typ)
+//        //        t.fields(i).typ match {
+//        //          case TBoolean => putByte(r.getBoolean(i).toByte, off)
+//        //          case TInt => putInt(r.getInt(i), off)
+//        //          case TLong => putLong(r.getLong(i), off)
+//        //          case TFloat => putFloat(r.getFloat(i), off)
+//        //          case TDouble => putDouble(r.getDouble(i), off)
+//        //          case TArray(t) => putArray(r.getAs[IndexedSeq[_]](i), off, t)
+//        //          case err =>
+//        //            println(s"Not supported: $err")
+//        //            ???
+//        //        }
+//      }
+//      i += 1
+//    }
   }
 
 
@@ -321,20 +326,21 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null) {
   }
 }
 
-class UnsafeRow(mem: Array[Long], t: TStruct) extends Row {
+class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0) extends Row {
 
   override def length: Int = t.size
 
+  private def absolute(offset: Int): Int = Platform.LONG_ARRAY_OFFSET + shiftOffset + offset
 
-  private def readInt(offset: Int) = Platform.getInt(mem, UnsafeAnnotations.memOffset(offset))
+  private def readInt(offset: Int) = Platform.getInt(mem, absolute(offset))
 
-  private def readLong(offset: Int) = Platform.getLong(mem, UnsafeAnnotations.memOffset(offset))
+  private def readLong(offset: Int) = Platform.getLong(mem, absolute(offset))
 
-  private def readFloat(offset: Int) = Platform.getFloat(mem, UnsafeAnnotations.memOffset(offset))
+  private def readFloat(offset: Int) = Platform.getFloat(mem, absolute(offset))
 
-  private def readDouble(offset: Int) = Platform.getDouble(mem, UnsafeAnnotations.memOffset(offset))
+  private def readDouble(offset: Int) = Platform.getDouble(mem, absolute(offset))
 
-  private def readByte(offset: Int) = Platform.getByte(mem, UnsafeAnnotations.memOffset(offset))
+  private def readByte(offset: Int) = Platform.getByte(mem, absolute(offset))
 
   def readBinary(offset: Int): Array[Byte] = {
     val shift = readInt(offset)
@@ -343,7 +349,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct) extends Row {
     val binStart = offset + shift
     val binLength = readInt(binStart)
     val arr = new Array[Byte](binLength)
-    Platform.copyMemory(mem, UnsafeAnnotations.memOffset(binStart + 4), arr, Platform.BYTE_ARRAY_OFFSET, binLength)
+    Platform.copyMemory(mem, absolute(binStart + 4), arr, Platform.BYTE_ARRAY_OFFSET, binLength)
 
     arr
   }
@@ -381,6 +387,8 @@ class UnsafeRow(mem: Array[Long], t: TStruct) extends Row {
     a: IndexedSeq[Any]
   }
 
+  private def readStruct(offset: Int, struct: TStruct): UnsafeRow = new UnsafeRow(mem, struct, offset)
+
   private def read(offset: Int, t: Type): Any = {
     t match {
       case TBoolean =>
@@ -395,6 +403,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct) extends Row {
       case TSet(elt) => readArray(offset, elt).toSet
       case TString => new String(readBinary(offset))
       case TDict(kt, vt) => readArray(offset, kt).zip(readArray(offset + 4, vt)).toMap
+      case struct: TStruct => readStruct(offset, struct)
 
       case _ => ???
     }
