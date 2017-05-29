@@ -9,6 +9,7 @@ import is.hail.io.plink.{FamFileConfig, PlinkLoader}
 import is.hail.io.{CassandraConnector, SolrConnector, exportTypes}
 import is.hail.methods.{Aggregators, Filter}
 import is.hail.utils._
+import net.jpountz.lz4.{LZ4BlockOutputStream, LZ4Compressor, LZ4Factory}
 import org.apache.spark.Partition
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.StructType
@@ -696,7 +697,8 @@ case class KeyTable(hc: HailContext, rdd: RDD[Row],
     val rowCount = rdd.mapPartitionsWithIndex { case (i, it) =>
       val urb = new UnsafeRowBuilder(localSignature)
       var rowCount = 0
-      sConf.value.writeDataFile(localPathBase + s"/rowstore/part-$i") { out =>
+      sConf.value.writeLZ4DataFile(localPathBase + s"/rowstore/part-$i", 1024 * 1024,
+        LZ4Factory.fastestInstance().highCompressor()) { out =>
 
         it.foreach {
           case ur: UnsafeRow =>
@@ -710,6 +712,7 @@ case class KeyTable(hc: HailContext, rdd: RDD[Row],
         }
 
         out.writeInt(-1)
+        out.flush()
       }
 
       Iterator(rowCount)

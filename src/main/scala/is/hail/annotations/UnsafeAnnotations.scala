@@ -7,6 +7,7 @@ import is.hail.HailContext
 import is.hail.expr._
 import is.hail.utils._
 import is.hail.variant.{AltAllele, Variant}
+import net.jpountz.lz4.{LZ4BlockInputStream, LZ4Factory, LZ4FastDecompressor}
 import org.apache.spark.{Partition, TaskContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
@@ -37,9 +38,9 @@ object UnsafeAnnotations {
 
   def isAligned(l: Long): Boolean = (l & 0x7) == 0
 
-  def memOffset(offset: Int): Int = Platform.LONG_ARRAY_OFFSET + offset
+  def memOffset(offset: Int): Int = Platform.BYTE_ARRAY_OFFSET + offset
 
-  def nLongs(bytes: Int) = (bytes + 7) / 8
+  //  def nLongs(bytes: Int) = (bytes + 7) / 8
 
   def missingBytes(elems: Int): Int = (elems + 31) / 32 * 4
 
@@ -60,15 +61,15 @@ object UnsafeAnnotations {
   }
 }
 
-class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false) {
-  private var mem: Array[Long] = _
+class UnsafeRowBuilder(t: TStruct, m: Array[Byte] = null, debug: Boolean = false) {
+  private var mem: Array[Byte] = _
   private var appendPointer = UnsafeAnnotations.roundUpAlignment(t.byteSize)
   if (m != null) {
     mem = m
-    reallocate(UnsafeAnnotations.nLongs(appendPointer))
+    reallocate(appendPointer)
   }
   else
-    mem = new Array[Long](UnsafeAnnotations.nLongs(appendPointer))
+    mem = new Array[Byte](appendPointer)
 
   //  private var memloc = Platform.allocateMemory(t.size)
   //  assert(isAligned)
@@ -78,13 +79,11 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false
 
 
   def reallocate(target: Int) {
-    val nLongs = (target + 7) / 8
-
-    if (nLongs > mem.length) {
-      val newMem = if (nLongs < 2 * mem.length)
-        new Array[Long](mem.length * 2)
+    if (target > mem.length) {
+      val newMem = if (target < 2 * mem.length)
+        new Array[Byte](mem.length * 2)
       else
-        new Array[Long](nLongs)
+        new Array[Byte](target)
       if (debug)
         println(s"reallocated from ${ mem.length } to ${ newMem.length }")
       System.arraycopy(mem, 0, newMem, 0, mem.length)
@@ -101,7 +100,7 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false
   }
 
 
-  //  private var cursor = UnsafeAnnotations.LONG_ARRAY_OFFSET
+  //  private var cursor = UnsafeAnnotations.BYTE_ARRAY_OFFSET
 
   //  private var i = 0
 
@@ -352,20 +351,22 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false
   def result(): UnsafeRow = {
     //    if (i < t.size)
     //      fatal(s"only wrote $i of ${ t.size } fields in UnsafeRowBuilder")
-    new UnsafeRow(mem, t, debug = debug)
+    val newMem = new Array[Byte](appendPointer)
+    Platform.copyMemory(mem, Platform.BYTE_ARRAY_OFFSET, newMem, Platform.BYTE_ARRAY_OFFSET, appendPointer)
+    new UnsafeRow(newMem, t, debug = debug)
   }
 
   def clear() {
     appendPointer = UnsafeAnnotations.roundUpAlignment(t.byteSize)
-    mem = new Array[Long](mem.length)
+    java.util.Arrays.fill(mem, 0.toByte)
   }
 }
 
-class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boolean = false) extends Row {
+class UnsafeRow(mem: Array[Byte], t: TStruct, shiftOffset: Int = 0, debug: Boolean = false) extends Row {
 
   override def length: Int = t.size
 
-  private def absolute(offset: Int): Int = Platform.LONG_ARRAY_OFFSET + shiftOffset + offset
+  private def absolute(offset: Int): Int = Platform.BYTE_ARRAY_OFFSET + shiftOffset + offset
 
   private def readInt(offset: Int) = Platform.getInt(mem, absolute(offset))
 
@@ -475,7 +476,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
   //  override def getInt(i: Int): Int = {
   //    if (!isDefined(i))
   //      throw new NullPointerException
-  //    Platform.getInt(mem, offsets(i) + UnsafeAnnotations.LONG_ARRAY_OFFSET)
+  //    Platform.getInt(mem, offsets(i) + UnsafeAnnotations.BYTE_ARRAY_OFFSET)
   //  }
 
   override def copy(): Row = ???
@@ -540,12 +541,8 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
   }
 
   def writeToRowStore(out: DataOutputStream) {
-    out.writeInt(mem.length * 8)
-    var i = 0
-    while (i < mem.length) {
-      out.writeLong(mem(i))
-      i += 1
-    }
+    out.writeInt(mem.length)
+    out.write(mem)
   }
 }
 
@@ -558,7 +555,9 @@ class UnsafeRowStoreRDD(@transient hc: HailContext, pathBase: String, schema: TS
   private val sConf = new SerializableHadoopConfiguration(hc.hadoopConf)
 
   override def compute(split: Partition, context: TaskContext): Iterator[Row] = {
-    val inputStream = new DataInputStream(sConf.value.unsafeReader(pathBase + s"/part-${ split.index }"))
+    val rawIn = sConf.value.unsafeReader(pathBase + s"/part-${ split.index }")
+    val decompReader = new LZ4BlockInputStream(rawIn, LZ4Factory.fastestInstance().fastDecompressor())
+    val in = new DataInputStream(decompReader)
 
     new Iterator[Row] {
 
@@ -568,7 +567,7 @@ class UnsafeRowStoreRDD(@transient hc: HailContext, pathBase: String, schema: TS
 
       private def check() {
         if (!checked) {
-          nextRowLength = inputStream.readInt()
+          nextRowLength = in.readInt()
           checked = true
 
           if (nextRowLength > buff.length)
@@ -582,7 +581,7 @@ class UnsafeRowStoreRDD(@transient hc: HailContext, pathBase: String, schema: TS
         if (nextRowLength >= 0)
           true
         else {
-          inputStream.close()
+          in.close()
           false
         }
       }
@@ -591,15 +590,17 @@ class UnsafeRowStoreRDD(@transient hc: HailContext, pathBase: String, schema: TS
         assert(hasNext, "iterator has no next element")
         checked = false
         var nRead = 0
-        while (nRead < nextRowLength)
-          nRead += inputStream.read(buff, nRead, nextRowLength)
+        while (nRead < nextRowLength) {
+          val bytesRead = in.read(buff, nRead, nextRowLength - nRead)
+          assert(bytesRead >= 0)
+          nRead += bytesRead
+        }
 
-        val nLongs = (nextRowLength + 7) / 8
-        val rowArray = new Array[Long](nLongs)
-        Platform.copyMemory(buff, Platform.BYTE_ARRAY_OFFSET, rowArray, Platform.LONG_ARRAY_OFFSET, nextRowLength)
+        val rowArray = new Array[Byte](nextRowLength)
+        Platform.copyMemory(buff, Platform.BYTE_ARRAY_OFFSET, rowArray, Platform.BYTE_ARRAY_OFFSET, nextRowLength)
 
-        println(s"produced a row with an array of size ${nLongs} ($nextRowLength bytes)")
-        new UnsafeRow(rowArray, schema, debug=true)
+//        println(s"produced a row with an array of size $nextRowLength bytes")
+        new UnsafeRow(rowArray, schema, debug = false)
       }
     }
   }
