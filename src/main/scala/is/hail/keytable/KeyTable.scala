@@ -2,12 +2,14 @@ package is.hail.keytable
 
 import is.hail.HailContext
 import is.hail.annotations._
+import is.hail.annotations.UnsafeRow
 import is.hail.expr.{TStruct, _}
 import is.hail.io.annotators.{BedAnnotator, IntervalList}
 import is.hail.io.plink.{FamFileConfig, PlinkLoader}
 import is.hail.io.{CassandraConnector, SolrConnector, exportTypes}
 import is.hail.methods.{Aggregators, Filter}
 import is.hail.utils._
+import org.apache.spark.Partition
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
@@ -46,6 +48,51 @@ object KeyTable {
       SparkAnnotationImpex.importAnnotation(r, signature).asInstanceOf[Row]
     },
       signature, key)
+  }
+
+  def readRS(hc: HailContext, path: String): KeyTable = {
+    val metadataFile = path + "/metadata.json.gz"
+    val (signature, key, partitions) = try {
+      val json = hc.hadoopConf.readFile(metadataFile)(in =>
+        JsonMethods.parse(in))
+
+      val fields = json.asInstanceOf[JObject].obj.toMap
+
+      (fields.get("version"): @unchecked) match {
+        case Some(JInt(v)) =>
+          if (v != KeyTable.fileVersion)
+            fatal(
+              s"""Invalid KeyTable: old version
+                 |  got version $v, expected version ${ KeyTable.fileVersion }""".stripMargin)
+      }
+
+      val signature = (fields.get("schema"): @unchecked) match {
+        case Some(JString(s)) =>
+          Parser.parseType(s).asInstanceOf[TStruct]
+      }
+
+      val key = (fields.get("key_names"): @unchecked) match {
+        case Some(JArray(a)) =>
+          a.map { case JString(s) => s }.toArray[String]
+      }
+
+      val parts = (fields.get("partitions"): @unchecked) match {
+        case Some(JInt(a)) => a.toInt
+      }
+
+      (signature, key, parts)
+    } catch {
+      case e: Throwable =>
+        fatal(
+          s"""
+             |corrupt KeyTable: invalid metadata file.
+             |  caught exception: ${ expandException(e, logMessage = true) }
+          """.stripMargin)
+    }
+
+    val rdd = new UnsafeRowStoreRDD(hc, path + "/rowstore/", signature, partitions)
+
+    KeyTable(hc, rdd, signature, key)
   }
 
   def read(hc: HailContext, path: String): KeyTable = {
@@ -142,7 +189,7 @@ object KeyTable {
 
     val (data, typ) = PlinkLoader.parseFam(path, ffConfig, hc.hadoopConf)
 
-    val rows = data.map { case (id, values) => Row.fromSeq(Array(id) ++ values.asInstanceOf[Row].toSeq)}.toArray
+    val rows = data.map { case (id, values) => Row.fromSeq(Array(id) ++ values.asInstanceOf[Row].toSeq) }.toArray
     val rdd = hc.sc.parallelize(rows)
 
     val newFields = List("ID" -> TString) ++ typ.asInstanceOf[TStruct].fields.map(f => (f.name, f.typ))
@@ -623,6 +670,53 @@ case class KeyTable(hc: HailContext, rdd: RDD[Row],
   def explode(columnNames: java.util.ArrayList[String]): KeyTable = explode(columnNames.asScala.toArray)
 
   def collect(): IndexedSeq[Annotation] = rdd.collect()
+
+  def writeRS(path: String, overwrite: Boolean = false) {
+    if (overwrite)
+      hc.hadoopConf.delete(path, recursive = true)
+    else if (hc.hadoopConf.exists(path))
+      fatal(s"$path already exists")
+    hc.hadoopConf.mkDir(path)
+
+    val json = JObject(
+      ("version", JInt(KeyTable.fileVersion)),
+      ("key_names", JArray(key.map(k => JString(k)).toList)),
+      ("schema", JString(signature.toPrettyString(compact = true, printAttrs = true))),
+      ("partitions", JInt(rdd.partitions.length)))
+
+    hc.hadoopConf.writeTextFile(path + "/metadata.json.gz")(Serialization.writePretty(json, _))
+
+    val localSignature = signature
+    hc.hadoopConf.mkDir(path + "/rowstore")
+
+
+    val localPathBase = path
+
+    val sConf = new SerializableHadoopConfiguration(hc.hadoopConf)
+    val rowCount = rdd.mapPartitionsWithIndex { case (i, it) =>
+      val urb = new UnsafeRowBuilder(localSignature)
+      var rowCount = 0
+      sConf.value.writeDataFile(localPathBase + s"/rowstore/part-$i") { out =>
+
+        it.foreach {
+          case ur: UnsafeRow =>
+            rowCount += 1
+            ur.writeToRowStore(out)
+          case r: Row =>
+            rowCount += 1
+            urb.clear()
+            urb.ingest(r)
+            urb.result().writeToRowStore(out)
+        }
+
+        out.writeInt(-1)
+      }
+
+      Iterator(rowCount)
+    }.fold(0)(_ + _)
+
+    info(s"wrote $rowCount records")
+  }
 
   def write(path: String, overwrite: Boolean = false) {
     if (!path.endsWith(".kt") && !path.endsWith(".kt/"))

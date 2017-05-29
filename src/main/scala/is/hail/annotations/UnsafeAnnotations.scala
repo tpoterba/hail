@@ -1,8 +1,14 @@
 package is.hail.annotations
 
+import java.io.{DataInputStream, DataOutputStream}
+import java.util
+
+import is.hail.HailContext
 import is.hail.expr._
 import is.hail.utils._
 import is.hail.variant.{AltAllele, Variant}
+import org.apache.spark.{Partition, TaskContext}
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.Row
 import org.apache.spark.unsafe.Platform
 
@@ -203,7 +209,7 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false
     while (i < value.size) {
       val elt = iter.next()
       if (debug)
-        println(s"array index $i: writing value $elt (${elementType.toPrettyString(compact = true)}) to offset $cursor")
+        println(s"array index $i: writing value $elt (${ elementType.toPrettyString(compact = true) }) to offset $cursor")
       if (elt == null) {
         val intIndex = missingBitStart + ((i >> 5) << 2)
         val bitShift = i % 32
@@ -348,6 +354,11 @@ class UnsafeRowBuilder(t: TStruct, m: Array[Long] = null, debug: Boolean = false
     //      fatal(s"only wrote $i of ${ t.size } fields in UnsafeRowBuilder")
     new UnsafeRow(mem, t, debug = debug)
   }
+
+  def clear() {
+    appendPointer = UnsafeAnnotations.roundUpAlignment(t.byteSize)
+    mem = new Array[Long](mem.length)
+  }
 }
 
 class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boolean = false) extends Row {
@@ -373,7 +384,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
     val binStart = offset + shift
     val binLength = readInt(binStart)
     if (debug)
-      println(s"reading type Binary of length $binLength from offset $offset (+$shiftOffset=${offset+shiftOffset}) with shift $shift")
+      println(s"reading type Binary of length $binLength from offset $offset (+$shiftOffset=${ offset + shiftOffset }) with shift $shift")
     val arr = new Array[Byte](binLength)
     Platform.copyMemory(mem, absolute(binStart + 4), arr, Platform.BYTE_ARRAY_OFFSET, binLength)
 
@@ -390,7 +401,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
     val elemsStart = UnsafeAnnotations.roundUpAlignment(arrStart + 4 + missingBytes + shiftOffset) - shiftOffset
     val eltSize = UnsafeAnnotations.arrayElementSize(elementType)
     if (debug)
-      println(s"reading Array[${ elementType.toPrettyString(compact = true) }] of length $arrLength from $offset(+${ shiftOffset }+$shift=${offset+shiftOffset+shift})")
+      println(s"reading Array[${ elementType.toPrettyString(compact = true) }] of length $arrLength from $offset(+${ shiftOffset }+$shift=${ offset + shiftOffset + shift })")
     //    println(s"reading array at offset $offset with shift ${ shift }, has length $arrLength")
 
     //    println(s"t is $elementType")
@@ -417,13 +428,13 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
 
   private def readStruct(offset: Int, struct: TStruct): UnsafeRow = {
     if (debug)
-      println(s"generating new UnsafeRow for type ${ struct.toPrettyString(compact = true) } at offset $offset(+$shiftOffset=${offset+shiftOffset})")
+      println(s"generating new UnsafeRow for type ${ struct.toPrettyString(compact = true) } at offset $offset(+$shiftOffset=${ offset + shiftOffset })")
     new UnsafeRow(mem, struct, offset + shiftOffset, debug)
   }
 
   private def read(offset: Int, t: Type): Any = {
     if (debug)
-      println(s"reading type ${ t.toPrettyString(compact = true) } at offset $offset(+$shiftOffset=${offset+shiftOffset})")
+      println(s"reading type ${ t.toPrettyString(compact = true) } at offset $offset(+$shiftOffset=${ offset + shiftOffset })")
     t match {
       case TBoolean =>
         val b = readByte(offset)
@@ -454,7 +465,7 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
   override def get(i: Int): Any = {
     val offset = t.byteOffsets(i)
     if (debug)
-      println(s"The offset for element $i (type ${t.fields(i).typ}) is $offset(+${shiftOffset}=${offset+shiftOffset})")
+      println(s"The offset for element $i (type ${ t.fields(i).typ }) is $offset(+${ shiftOffset }=${ offset + shiftOffset })")
     if (isNullAt(i))
       null
     else
@@ -526,5 +537,70 @@ class UnsafeRow(mem: Array[Long], t: TStruct, shiftOffset: Int = 0, debug: Boole
     val intIndex = (i >> 5) << 2
     val bitShift = i % 32
     (readInt(intIndex) & (0x1 << bitShift)) != 0
+  }
+
+  def writeToRowStore(out: DataOutputStream) {
+    out.writeInt(mem.length * 8)
+    var i = 0
+    while (i < mem.length) {
+      out.writeLong(mem(i))
+      i += 1
+    }
+  }
+}
+
+case class UnsafeRowStoreRDDPartition(pathBase: String, index: Int) extends Partition
+
+class UnsafeRowStoreRDD(@transient hc: HailContext, pathBase: String, schema: TStruct, nPartitions: Int) extends RDD[Row](hc.sc, Nil) {
+  override def getPartitions: Array[Partition] = (0 until nPartitions)
+    .map { i => UnsafeRowStoreRDDPartition(pathBase, i): Partition }.toArray
+
+  private val sConf = new SerializableHadoopConfiguration(hc.hadoopConf)
+
+  override def compute(split: Partition, context: TaskContext): Iterator[Row] = {
+    val inputStream = new DataInputStream(sConf.value.unsafeReader(pathBase + s"/part-${ split.index }"))
+
+    new Iterator[Row] {
+
+      private var checked = false
+      private var nextRowLength = -1
+      private var buff = new Array[Byte](1024)
+
+      private def check() {
+        if (!checked) {
+          nextRowLength = inputStream.readInt()
+          checked = true
+
+          if (nextRowLength > buff.length)
+            buff = new Array[Byte](3 * nextRowLength / 2)
+        }
+      }
+
+      def hasNext: Boolean = {
+        check()
+
+        if (nextRowLength >= 0)
+          true
+        else {
+          inputStream.close()
+          false
+        }
+      }
+
+      def next(): Row = {
+        assert(hasNext, "iterator has no next element")
+        checked = false
+        var nRead = 0
+        while (nRead < nextRowLength)
+          nRead += inputStream.read(buff, nRead, nextRowLength)
+
+        val nLongs = (nextRowLength + 7) / 8
+        val rowArray = new Array[Long](nLongs)
+        Platform.copyMemory(buff, Platform.BYTE_ARRAY_OFFSET, rowArray, Platform.LONG_ARRAY_OFFSET, nextRowLength)
+
+        println(s"produced a row with an array of size ${nLongs} ($nextRowLength bytes)")
+        new UnsafeRow(rowArray, schema, debug=true)
+      }
+    }
   }
 }

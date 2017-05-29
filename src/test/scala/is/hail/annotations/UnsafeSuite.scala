@@ -4,6 +4,7 @@ import is.hail.SparkSuite
 import is.hail.check._
 import is.hail.check.Arbitrary._
 import is.hail.expr._
+import is.hail.keytable.KeyTable
 import org.apache.spark.sql.Row
 import org.testng.annotations.Test
 
@@ -63,5 +64,17 @@ class UnsafeSuite extends SparkSuite {
         urb.ingest(a.asInstanceOf[Row])
         urb.result() == a
     }.check()
+  }
+
+  @Test def testWrite() {
+    val kt = hc.importTable("src/test/resources/variantAnnotations.tsv", impute=true)
+    .repartition(1)
+    .keyBy("Position")
+      kt.writeRS("/tmp/test.rs", overwrite = true)
+
+    val rb = KeyTable.readRS(hc, "/tmp/test.rs")
+    println(rb.count())
+
+    assert(kt.same(rb))
   }
 }
