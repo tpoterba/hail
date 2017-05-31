@@ -9,11 +9,11 @@ import org.testng.annotations.Test
 
 class UnsafeSuite extends SparkSuite {
 
+  val g = for {
+    t <- Type.genStruct
+    a <- t.genNonmissingValue} yield (t, a)
+
   @Test def testRandom() {
-
-    val g = for {t <- Type.genArb.filter(_.isInstanceOf[TStruct]).map(_.asInstanceOf[TStruct])
-      a <- t.genNonmissingValue} yield (t, a)
-
     Prop.forAll(g) { case (t, a) =>
         val urb = new UnsafeRowBuilder(t)
         urb.convert(a.asInstanceOf[Row]) == a

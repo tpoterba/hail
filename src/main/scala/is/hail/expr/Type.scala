@@ -39,7 +39,7 @@ object Type {
         genArb,
         Gen.option(
           Gen.buildableOf2[Map, String, String](
-            Gen.zip(arbitrary[String].filter(s => !s.isEmpty), arbitrary[String])))
+            Gen.zip(arbitrary[String].filter(s => !s.isEmpty), arbitrary[String])),someFraction = 0.05)
           .map(o => o.getOrElse(Map.empty[String, String]))))
       .filter(fields => fields.map(_._1).areDistinct())
       .map(fields => TStruct(fields

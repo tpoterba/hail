@@ -6,6 +6,8 @@ import is.hail.variant.{AltAllele, Variant}
 import org.apache.spark.sql.Row
 import org.apache.spark.unsafe.Platform
 
+import scala.collection.mutable.ArrayBuffer
+
 object UnsafeAnnotations {
   def missingBytes(elems: Int): Int = (elems + 31) / 32 * 4
 
@@ -31,9 +33,12 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
   initializeAppendPointer()
   private var mem: Array[Byte] = new Array[Byte](math.max(sizeHint, appendPointer))
 
+  private val dictKeyBuffer = new ArrayBuffer[Any]()
+  private val dictValueBuffer = new ArrayBuffer[Any]()
+
   private def absolute(offset: Int): Int = Platform.BYTE_ARRAY_OFFSET + offset
 
-  def reallocate(target: Int) {
+  private def reallocate(target: Int) {
     if (target > mem.length) {
       val newMem = if (target < 2 * mem.length)
         new Array[Byte](mem.length * 2)
@@ -184,9 +189,15 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
       case TArray(et) => putArray(value.asInstanceOf[IndexedSeq[_]], offset, et)
       case TSet(et) => putArray(value.asInstanceOf[Set[_]], offset, et)
       case TDict(kt, vt) =>
-        val values = value.asInstanceOf[Map[_, _]].toArray
-        putArray(values.map(_._1), offset, kt)
-        putArray(values.map(_._2), offset + 4, vt)
+        val m = value.asInstanceOf[Map[Any, Any]]
+        dictKeyBuffer.clear()
+        dictValueBuffer.clear()
+        m.foreach { case (k, v) =>
+            dictKeyBuffer += k
+            dictValueBuffer += v
+        }
+        putArray(dictKeyBuffer, offset, kt)
+        putArray(dictValueBuffer, offset + 4, vt)
       case struct: TStruct =>
         if (struct.size > 0)
           putStruct(value.asInstanceOf[Row], offset, struct)
@@ -196,7 +207,6 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
         if (debug)
           println(s"putting expanded struct $expandedType at $offset")
         val expandedAnnotation = Annotation.expandAnnotation(value, elementType).asInstanceOf[Row]
-        assert(expandedType.typeCheck(expandedAnnotation))
         putStruct(expandedAnnotation, offset, expandedType)
 
       case err => throw new NotImplementedError(err.toPrettyString(compact = true))
