@@ -1181,8 +1181,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
 
   override def genNonmissingValue: Gen[Annotation] = {
     if (size == 0) {
-      val r = Row()
-      Gen.const(r)
+      Gen.const(Annotation.emptyRow)
     } else
       Gen.size.flatMap(fuel =>
         if (size > fuel) Gen.const(Annotation.empty)
