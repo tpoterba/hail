@@ -1237,8 +1237,6 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
   lazy val byteOffsets: Array[Int] = {
     val a = new Array[Int](size)
     val missingBytes = UnsafeAnnotations.missingBytes(size)
-    //    println(s"missing bits = $missingBytes")
-    //    println(fields.map(_.typ).mkString(","))
     var offset = missingBytes
     fields.foreach { f =>
       val fSize = f.typ.byteSize
@@ -1249,9 +1247,6 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
       a(f.index) = offset
       offset += fSize
     }
-    //    println(
-    //      s"""Fields:  $fields
-    //         |Offsets: ${a.toSeq}""".stripMargin)
     a
   }
 
