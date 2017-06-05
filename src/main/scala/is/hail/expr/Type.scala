@@ -139,7 +139,8 @@ sealed abstract class Type {
 
   def genNonmissingValue: Gen[Annotation] = Gen.const(Annotation.empty)
 
-  def genValue: Gen[Annotation] = Gen.oneOfGen(Gen.const(Annotation.empty), genNonmissingValue)
+  def genValue: Gen[Annotation] = Gen.nextCoin(0.05)
+    .flatMap(isEmpty => if (isEmpty) Gen.const(Annotation.empty) else genNonmissingValue)
 
   def isRealizable: Boolean = children.forall(_.isRealizable)
 
