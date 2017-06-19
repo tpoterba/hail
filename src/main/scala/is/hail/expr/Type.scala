@@ -39,7 +39,7 @@ object Type {
         genArb,
         Gen.option(
           Gen.buildableOf2[Map, String, String](
-            Gen.zip(arbitrary[String].filter(s => !s.isEmpty), arbitrary[String])),someFraction = 0.05)
+            Gen.zip(arbitrary[String].filter(s => !s.isEmpty), arbitrary[String])), someFraction = 0.05)
           .map(o => o.getOrElse(Map.empty[String, String]))))
       .filter(fields => fields.map(_._1).areDistinct())
       .map(fields => TStruct(fields
@@ -597,6 +597,8 @@ case class TSet(elementType: Type) extends TIterable {
 
 case class TDict(keyType: Type, valueType: Type) extends TContainer {
 
+  val memStruct: TStruct = TStruct("key" -> keyType, "value" -> valueType)
+
   override def canCompare(other: Type): Boolean = other match {
     case TDict(okt, ovt) => keyType.canCompare(okt) && valueType.canCompare(ovt)
     case _ => false
@@ -658,9 +660,7 @@ case class TDict(keyType: Type, valueType: Type) extends TContainer {
           elementType.ordering(missingGreatest))))
   }
 
-  override def byteSize: Int = 8
-
-  override def alignment: Int = 4
+  override def byteSize: Int = 4
 }
 
 case object TGenotype extends Type {
@@ -1235,8 +1235,8 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
 
   lazy val byteOffsets: Array[Int] = {
     val a = new Array[Int](size)
-    val missingBytes = UnsafeAnnotations.missingBytes(size)
-    var offset = missingBytes
+    val nMissingBytes = UnsafeAnnotations.nMissingBytes(size)
+    var offset = nMissingBytes
     fields.foreach { f =>
       val fSize = f.typ.byteSize
       val fAlignment = f.typ.alignment

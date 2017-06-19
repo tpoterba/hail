@@ -9,12 +9,16 @@ import org.testng.annotations.Test
 
 class UnsafeSuite extends SparkSuite {
 
-  val g = for {
-    t <- Type.genStruct
-    a <- t.genNonmissingValue} yield (t, a)
+  def genStructTypeAndNonMissingValue: Gen[(TStruct, Annotation)] = for {
+    (x, y) <- Gen.squareOfAreaAtMostSize
+    t <- Type.genStruct.resize(x)
+    v <- t.genNonmissingValue.resize(y)
+  } yield (t, v)
 
   @Test def testRandom() {
-    Prop.forAll(g) { case (t, a) =>
+    Prop.forAll(genStructTypeAndNonMissingValue.filter(_._2 != null)) { case (t, a) =>
+      println(t.toPrettyString(compact = true))
+      println(a)
         val urb = new UnsafeRowBuilder(t)
         urb.convert(a.asInstanceOf[Row]) == a
     }.check()

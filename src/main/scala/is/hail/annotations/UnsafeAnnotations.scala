@@ -9,7 +9,7 @@ import org.apache.spark.unsafe.Platform
 import scala.collection.mutable.ArrayBuffer
 
 object UnsafeAnnotations {
-  def missingBytes(elems: Int): Int = (elems + 31) / 32 * 4
+  def nMissingBytes(elems: Int): Int = (elems + 31) / 32 * 4
 
   def arrayElementSize(t: Type): Int = {
     var eltSize = t.byteSize
@@ -28,6 +28,29 @@ object UnsafeAnnotations {
   }
 }
 
+class KVStructEmulator(var k: Any, var v: Any) extends Row {
+  def length: Int = 2
+
+  override def get(i: Int): Any = if (i == 0) k else if (i == 1) v else throw new IndexOutOfBoundsException
+
+  override def copy(): Row = new KVStructEmulator(k, v)
+}
+
+class KVArrayEmulator(keys: ArrayBuffer[Any], values: ArrayBuffer[Any]) extends IndexedSeq[KVStructEmulator] {
+  private val em = new KVStructEmulator(null, null)
+
+  override def length: Int = {
+    assert(keys.length == values.length)
+    keys.length
+  }
+
+  override def apply(idx: Int): KVStructEmulator = {
+    em.k = keys(idx)
+    em.v = values(idx)
+    em
+  }
+}
+
 class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
   private var appendPointer: Int = _
   initializeAppendPointer()
@@ -35,6 +58,7 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
 
   private val dictKeyBuffer = new ArrayBuffer[Any]()
   private val dictValueBuffer = new ArrayBuffer[Any]()
+  private val dictArrayEmulator = new KVArrayEmulator(dictKeyBuffer, dictValueBuffer)
 
   private def absolute(offset: Int): Int = Platform.BYTE_ARRAY_OFFSET + offset
 
@@ -111,7 +135,7 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
 
   private def putArray(value: Iterable[_], offset: Int, elementType: Type) {
 
-    val missingBytes = UnsafeAnnotations.missingBytes(value.size)
+    val missingBytes = UnsafeAnnotations.nMissingBytes(value.size)
     val eltSize = UnsafeAnnotations.arrayElementSize(elementType)
 
     var cursor = appendPointer
@@ -121,6 +145,7 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
 
     val totalSize = UnsafeAnnotations.roundUpAlignment(
       UnsafeAnnotations.roundUpAlignment(4 + missingBytes) + value.size * eltSize)
+    println(s"total size of ${elementType} at offset $offset is $totalSize")
 
     if (debug)
       println(s"putting array ${ value.toSeq } at offset $offset with shift ${ appendPointer - offset }, totSize=$totalSize")
@@ -188,7 +213,7 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
       case TString => putBinary(value.asInstanceOf[String].getBytes(), offset)
       case TArray(et) => putArray(value.asInstanceOf[IndexedSeq[_]], offset, et)
       case TSet(et) => putArray(value.asInstanceOf[Set[_]], offset, et)
-      case TDict(kt, vt) =>
+      case t: TDict =>
         val m = value.asInstanceOf[Map[Any, Any]]
         dictKeyBuffer.clear()
         dictValueBuffer.clear()
@@ -196,8 +221,11 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
             dictKeyBuffer += k
             dictValueBuffer += v
         }
-        putArray(dictKeyBuffer, offset, kt)
-        putArray(dictValueBuffer, offset + 4, vt)
+        dictArrayEmulator.foreach(t.memStruct.typeCheck(_))
+//        println(dictArrayEmulator)
+        println(s"pre array write (offset $offset) = " + readInt(offset))
+        putArray(dictArrayEmulator, offset, t.memStruct)
+        println(s"post array write (offset $offset) = " + readInt(offset))
       case struct: TStruct =>
         if (struct.size > 0)
           putStruct(value.asInstanceOf[Row], offset, struct)
@@ -252,7 +280,7 @@ class UnsafeRow(mem: Array[Byte], t: TStruct, shiftOffset: Int = 0, debug: Boole
 
   def readBinary(offset: Int): Array[Byte] = {
     val shift = readInt(offset)
-    assert(shift > 0, s"invalid shift: $shift, from offset $offset (shift offset $shiftOffset)")
+    assert(shift > 0 && (shift & 0x3) == 0, s"invalid shift: $shift, from offset $offset (shift offset $shiftOffset)")
 
     val binStart = offset + shift
     val binLength = readInt(binStart)
@@ -266,11 +294,12 @@ class UnsafeRow(mem: Array[Byte], t: TStruct, shiftOffset: Int = 0, debug: Boole
 
   private def readArray(offset: Int, elementType: Type): IndexedSeq[Any] = {
     val shift = readInt(offset)
-    assert(shift > 0, s"invalid shift: $shift")
+    assert(shift > 0 && (shift & 0x3) == 0, s"invalid shift: $shift, from offset $offset (shift offset $shiftOffset)")
+    println(s"trying to read array with type ${elementType.toPrettyString(compact = true)} from offset $offset+$shift")
 
     val arrStart = offset + shift
     val arrLength = readInt(arrStart)
-    val missingBytes = UnsafeAnnotations.missingBytes(arrLength)
+    val missingBytes = UnsafeAnnotations.nMissingBytes(arrLength)
     val elemsStart = UnsafeAnnotations.roundUpAlignment(arrStart + 4 + missingBytes + shiftOffset) - shiftOffset
     val eltSize = UnsafeAnnotations.arrayElementSize(elementType)
     if (debug)
@@ -320,7 +349,9 @@ class UnsafeRow(mem: Array[Byte], t: TStruct, shiftOffset: Int = 0, debug: Boole
       case TArray(elt) => readArray(offset, elt)
       case TSet(elt) => readArray(offset, elt).toSet
       case TString => new String(readBinary(offset))
-      case TDict(kt, vt) => readArray(offset, kt).zip(readArray(offset + 4, vt)).toMap
+      case t: TDict =>
+        println(s"trying to read dict with type ${t.memStruct.toPrettyString(compact = true)} from offset $offset+$shiftOffset")
+        readArray(offset, t.memStruct).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
         if (struct.size == 0)
           Annotation.emptyRow
