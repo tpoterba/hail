@@ -9,8 +9,6 @@ import org.apache.spark.unsafe.Platform
 import scala.collection.mutable.ArrayBuffer
 
 object UnsafeAnnotations {
-  def nMissingBytes(elems: Int): Int = (elems + 31) / 32 * 4
-
   def arrayElementSize(t: Type): Int = {
     var eltSize = t.byteSize
     val mod = eltSize % t.alignment
@@ -19,12 +17,23 @@ object UnsafeAnnotations {
     eltSize
   }
 
-  def roundUpAlignment(offset: Int): Int = {
-    val mod = offset & 0x7
-    if (mod != 0)
-      offset + (8 - mod)
-    else
-      offset
+  def roundUpAlignment(offset: Int, alignment: Int): Int = {
+    alignment match {
+      case 1 => offset
+      case 4 =>
+        val mod = offset & 0x3
+        if (mod != 0)
+          offset + (4 - mod)
+        else
+          offset
+      case 8 =>
+        val mod = offset & 0x7
+        if (mod != 0)
+          offset + (8 - mod)
+        else
+          offset
+      case _ => throw new AssertionError(s"unexpected alignment: $alignment")
+    }
   }
 }
 
@@ -51,134 +60,53 @@ class KVArrayEmulator(keys: ArrayBuffer[Any], values: ArrayBuffer[Any]) extends 
   }
 }
 
-class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
-  private var appendPointer: Int = _
-  initializeAppendPointer()
-  private var mem: Array[Byte] = new Array[Byte](math.max(sizeHint, appendPointer))
-
-  private val dictKeyBuffer = new ArrayBuffer[Any]()
-  private val dictValueBuffer = new ArrayBuffer[Any]()
-  private val dictArrayEmulator = new KVArrayEmulator(dictKeyBuffer, dictValueBuffer)
-
-  private def absolute(offset: Int): Int = Platform.BYTE_ARRAY_OFFSET + offset
-
-  private def reallocate(target: Int) {
-    if (target > mem.length) {
-      val newMem = if (target < 2 * mem.length)
-        new Array[Byte](mem.length * 2)
-      else
-        new Array[Byte](target)
-      if (debug)
-        println(s"reallocated from ${ mem.length } to ${ newMem.length }")
-      System.arraycopy(mem, 0, newMem, 0, mem.length)
-      mem = newMem
-    }
-  }
-
-  private def initializeAppendPointer() {
-    appendPointer = UnsafeAnnotations.roundUpAlignment(t.byteSize)
-  }
-
-  private def readInt(offset: Int): Int = Platform.getInt(mem, absolute(offset))
-
-  private def putInt(value: Int, offset: Int) {
-    assert((offset & 0x3) == 0, s"invalid int offset: $offset")
-    if (debug) println(s"offset $offset writing int $value")
-
-    Platform.putInt(mem, absolute(offset), value)
-  }
-
-  private def putLong(value: Long, offset: Int) {
-    assert((offset & 0x7) == 0, s"invalid long offset: $offset")
-    if (debug) println(s"offset $offset writing long $value")
-
-    Platform.putLong(mem, absolute(offset), value)
-  }
-
-  private def putFloat(value: Float, offset: Int) {
-    assert((offset & 0x3) == 0, s"invalid float offset: $offset")
-    if (debug) println(s"offset $offset writing float $value")
-
-    Platform.putFloat(mem, absolute(offset), value)
-  }
-
-  private def putDouble(value: Double, offset: Int) {
-    assert((offset & 0x7) == 0, s"invalid double offset: $offset")
-    if (debug) println(s"offset $offset writing double $value")
-    Platform.putDouble(mem, absolute(offset), value)
-  }
-
-  private def putByte(value: Byte, offset: Int) {
-    if (debug) println(s"offset $offset writing byte $value")
-    Platform.putByte(mem, absolute(offset), value)
-  }
+class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) {
+  private var buffer: MemoryBuffer = MemoryBuffer(sizeHint)
 
   private def putBinary(value: Array[Byte], offset: Int) {
-    var cursor = appendPointer
+    assert(offset % 4 == 0, s"invalid binary offset: $offset")
 
-    // write the offset
-    putInt(appendPointer - offset, offset)
+    buffer.align(4)
+
+    buffer.storeInt(offset, buffer.offset)
 
     val totalSize = 4 + value.length
-    if (debug)
-      println(s"putting binary ${ value } at offset $offset with shift ${ appendPointer - offset }, totSize=$totalSize")
 
-    appendPointer = UnsafeAnnotations.roundUpAlignment(totalSize + appendPointer)
-    reallocate(appendPointer)
-
-    putInt(value.length, cursor)
-
-    cursor += 4
-
-    Platform.copyMemory(value, Platform.BYTE_ARRAY_OFFSET, mem, absolute(cursor), value.length)
+    buffer.appendInt(totalSize)
+    buffer.appendBytes(value)
   }
 
   private def putArray(value: Iterable[_], offset: Int, elementType: Type) {
+    assert(offset % 4 == 0, s"invalid array offset: $offset")
 
-    val missingBytes = UnsafeAnnotations.nMissingBytes(value.size)
     val eltSize = UnsafeAnnotations.arrayElementSize(elementType)
 
-    var cursor = appendPointer
+    buffer.align(4)
 
-    // write the offset
-    putInt(appendPointer - offset, offset)
+    buffer.storeInt(offset, buffer.offset)
 
-    val totalSize = UnsafeAnnotations.roundUpAlignment(
-      UnsafeAnnotations.roundUpAlignment(4 + missingBytes) + value.size * eltSize)
-    println(s"total size of ${elementType} at offset $offset is $totalSize")
+    val nElements = value.size
+    buffer.appendInt(nElements)
 
-    if (debug)
-      println(s"putting array ${ value.toSeq } at offset $offset with shift ${ appendPointer - offset }, totSize=$totalSize")
+    val missingBytesStart = buffer.allocate(value.size / 8 + 1)
 
-    appendPointer = totalSize + appendPointer
-    reallocate(appendPointer)
-    putInt(value.size, cursor)
+    buffer.align(elementType.alignment)
 
-    cursor += 4
-    val missingBitStart = cursor
-
-    cursor += missingBytes
-
-    // align the element
-    cursor = UnsafeAnnotations.roundUpAlignment(cursor)
+    val elementStart = buffer.allocate(nElements * eltSize)
+//    if (debug)
+//      println(s"putting array ${ value.toSeq } at offset $offset with shift ${ appendPointer - offset }, totSize=$totalSize")
 
     // TODO: specialize to numeric types. Non-nullable types make this easier, too
     var i = 0
-    val iter = value.iterator
-    while (i < value.size) {
-      val elt = iter.next()
-      if (debug)
-        println(s"array index $i: writing value $elt (${ elementType.toPrettyString(compact = true) }) to offset $cursor")
+    value.foreach { elt =>
       if (elt == null) {
-        val intIndex = missingBitStart + ((i >> 5) << 2)
-        val bitShift = i & 0x1f
-        val oldBits = readInt(intIndex)
-        val newBits = oldBits | (0x1 << bitShift)
-        putInt(newBits, intIndex)
+        val byteIndex = missingBytesStart + (i >> 3)
+        val shift = i & 0x7
+        val oldByte = buffer.loadByte(byteIndex)
+        buffer.storeByte(byteIndex, (oldByte | (0x1 << (i & 0x7))).toByte)
       } else {
-        val shift = put(elt, cursor, elementType)
+        put(elt, i * eltSize + elementStart, elementType)
       }
-      cursor += eltSize
       i += 1
     }
   }
@@ -189,12 +117,10 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
     var i = 0
     while (i < struct.size) {
       if (value.isNullAt(i)) {
-        val intIndex = ((i >> 5) << 2) + offset
-        val bitShift = i & 0x1f
-        val oldBits = readInt(intIndex)
-        val newBits = oldBits | (0x1 << bitShift)
-        putInt(newBits, intIndex)
-        assert(readInt(intIndex) == newBits)
+        val byteIndex = offset + (i >> 3)
+        val shift = i & 0x7
+        val oldByte = buffer.loadByte(byteIndex)
+        buffer.storeByte(byteIndex, (oldByte | (0x1 << (i & 0x7))).toByte)
       } else {
         put(value.get(i), struct.byteOffsets(i) + offset, struct.fields(i).typ)
       }
@@ -205,27 +131,17 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
   private def put(value: Annotation, offset: Int, elementType: Type) {
     assert(value != null, s"got a null value of type ${ elementType } at offset $offset")
     elementType match {
-      case TInt | TCall => putInt(value.asInstanceOf[Int], offset)
-      case TLong => putLong(value.asInstanceOf[Long], offset)
-      case TFloat => putFloat(value.asInstanceOf[Float], offset)
-      case TDouble => putDouble(value.asInstanceOf[Double], offset)
-      case TBoolean => putByte(value.asInstanceOf[Boolean].toByte, offset)
+      case TInt | TCall => buffer.storeInt(offset, value.asInstanceOf[Int])
+      case TLong => buffer.storeLong(offset, value.asInstanceOf[Long])
+      case TFloat => buffer.storeFloat(offset, value.asInstanceOf[Float])
+      case TDouble => buffer.storeDouble(offset, value.asInstanceOf[Double])
+      case TBoolean => buffer.storeByte(offset, value.asInstanceOf[Boolean].toByte)
       case TString => putBinary(value.asInstanceOf[String].getBytes(), offset)
-      case TArray(et) => putArray(value.asInstanceOf[IndexedSeq[_]], offset, et)
-      case TSet(et) => putArray(value.asInstanceOf[Set[_]], offset, et)
+      case t: TContainer => putArray(value.asInstanceOf[Iterable[_]], offset, t.elementType)
       case t: TDict =>
         val m = value.asInstanceOf[Map[Any, Any]]
-        dictKeyBuffer.clear()
-        dictValueBuffer.clear()
-        m.foreach { case (k, v) =>
-            dictKeyBuffer += k
-            dictValueBuffer += v
-        }
-        dictArrayEmulator.foreach(t.memStruct.typeCheck(_))
-//        println(dictArrayEmulator)
-        println(s"pre array write (offset $offset) = " + readInt(offset))
-        putArray(dictArrayEmulator, offset, t.memStruct)
-        println(s"post array write (offset $offset) = " + readInt(offset))
+        val arr = m.keys.view.map(k => Row(k, m(k)))
+        putArray(arr, offset, t.memStruct)
       case struct: TStruct =>
         if (struct.size > 0)
           putStruct(value.asInstanceOf[Row], offset, struct)
@@ -243,64 +159,49 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 0, debug: Boolean = false) {
 
   def convert(r: Row): UnsafeRow = {
     require(r != null, "cannot convert null row")
-    putStruct(r, 0, t)
-    val res = result()
-    clear()
-    res
+    buffer.clear()
+    val start = buffer.allocate(t.byteSize)
+    assert(start == 0)
+    putStruct(r, start, t)
+    new UnsafeRow(new Pointer(buffer.result(), 0), t)
   }
 
-  private def clear() {
-    java.util.Arrays.fill(mem, 0.toByte)
-    initializeAppendPointer()
-  }
-
-
-  private def result(): UnsafeRow = {
-    val memCopy = new Array[Byte](appendPointer)
-    Platform.copyMemory(mem, Platform.BYTE_ARRAY_OFFSET, memCopy, Platform.BYTE_ARRAY_OFFSET, appendPointer)
-    new UnsafeRow(memCopy, t, debug = debug)
-  }
+//  private def clear() {
+//    buffer.clear()
+//  }
+//
+//
+//  private def result(): UnsafeRow = {
+//    val memCopy = new Array[Byte](appendPointer)
+//    Platform.copyMemory(mem, Platform.BYTE_ARRAY_OFFSET, memCopy, Platform.BYTE_ARRAY_OFFSET, appendPointer)
+//    new UnsafeRow(memCopy, t, debug = debug)
+//  }
 }
 
-class UnsafeRow(mem: Array[Byte], t: TStruct, shiftOffset: Int = 0, debug: Boolean = false) extends Row {
+class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
 
   override def length: Int = t.size
 
-  private def absolute(offset: Int): Int = Platform.BYTE_ARRAY_OFFSET + shiftOffset + offset
-
-  private def readInt(offset: Int) = Platform.getInt(mem, absolute(offset))
-
-  private def readLong(offset: Int) = Platform.getLong(mem, absolute(offset))
-
-  private def readFloat(offset: Int) = Platform.getFloat(mem, absolute(offset))
-
-  private def readDouble(offset: Int) = Platform.getDouble(mem, absolute(offset))
-
-  private def readByte(offset: Int) = Platform.getByte(mem, absolute(offset))
-
   def readBinary(offset: Int): Array[Byte] = {
-    val shift = readInt(offset)
-    assert(shift > 0 && (shift & 0x3) == 0, s"invalid shift: $shift, from offset $offset (shift offset $shiftOffset)")
+    val shift = ptr.loadInt(offset)
+    assert(shift > 0 && (shift & 0x3) == 0, s"invalid shift: $shift, from offset $offset (shift offset $ptr)")
 
     val binStart = offset + shift
-    val binLength = readInt(binStart)
-    if (debug)
-      println(s"reading type Binary of length $binLength from offset $offset (+$shiftOffset=${ offset + shiftOffset }) with shift $shift")
-    val arr = new Array[Byte](binLength)
-    Platform.copyMemory(mem, absolute(binStart + 4), arr, Platform.BYTE_ARRAY_OFFSET, binLength)
-
-    arr
+    val binLength = ptr.mem.loadInt(binStart)
+//    if (debug)
+//      println(s"reading type Binary of length $binLength from offset $offset (+$shiftOffset=${ offset + shiftOffset }) with shift $shift")
+    ptr.loadBytes(binStart, binLength)
   }
 
   private def readArray(offset: Int, elementType: Type): IndexedSeq[Any] = {
-    val shift = readInt(offset)
-    assert(shift > 0 && (shift & 0x3) == 0, s"invalid shift: $shift, from offset $offset (shift offset $shiftOffset)")
-    println(s"trying to read array with type ${elementType.toPrettyString(compact = true)} from offset $offset+$shift")
+    val shift = ptr.loadInt(offset)
+//    assert(shift > 0 && (shift & 0x3) == 0, s"invalid shift: $shift, from offset $offset (shift offset $shiftOffset)")
+//    println(s"trying to read array with type ${elementType.toPrettyString(compact = true)} from offset $offset+$shift")
 
     val arrStart = offset + shift
-    val arrLength = readInt(arrStart)
-    val missingBytes = UnsafeAnnotations.nMissingBytes(arrLength)
-    val elemsStart = UnsafeAnnotations.roundUpAlignment(arrStart + 4 + missingBytes + shiftOffset) - shiftOffset
+    val arrLength = ptr.mem.loadInt(arrStart)
+    val missingBytes = (arrLength + 7) / 8
+    val elemsStart = UnsafeAnnotations.roundUpAlignment(arrStart + 4 + missingBytes, elementType.byteSize)
     val eltSize = UnsafeAnnotations.arrayElementSize(elementType)
     if (debug)
       println(s"reading Array[${ elementType.toPrettyString(compact = true) }] of length $arrLength from $offset(+${ shiftOffset }+$shift=${ offset + shiftOffset + shift })")
@@ -314,7 +215,7 @@ class UnsafeRow(mem: Array[Byte], t: TStruct, shiftOffset: Int = 0, debug: Boole
     var i = 0
     while (i < arrLength) {
 
-      val intIndex = (i >> 5) << 2
+      val byteIndex = i >> 3
       val bitShift = i & 0x1f
       val missingInt = readInt(arrStart + 4 + intIndex)
       val isMissing = (missingInt & (0x1 << bitShift)) != 0

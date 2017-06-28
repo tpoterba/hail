@@ -30,7 +30,8 @@ final class MemoryBlock(val mem: Array[Long]) {
   }
 }
 
-final class Pointer(mem: MemoryBlock, memOffset: Int) {
+final class Pointer(val mem: MemoryBlock, memOffset: Int) {
+
   def loadInt(): Int = mem.loadInt(memOffset)
 
   def loadInt(off: Int): Int = mem.loadInt(off + memOffset)
@@ -61,9 +62,11 @@ final class Pointer(mem: MemoryBlock, memOffset: Int) {
 object MemoryBuffer {
 
   def apply(): MemoryBuffer = new MemoryBuffer(new MemoryBlock(new Array[Long](8)))
+
+  def apply(size: Int): MemoryBuffer = new MemoryBuffer(new MemoryBlock(new Array[Long]((size + 7) / 8)))
 }
 
-final class MemoryBuffer(var mb: MemoryBlock) {
+final class MemoryBuffer(private var mb: MemoryBlock) {
   var offset: Int = 0
 
   def loadInt(off: Int): Int = mb.loadInt(off)
@@ -161,21 +164,32 @@ final class MemoryBuffer(var mb: MemoryBlock) {
 
   def align(alignment: Int) {
     alignment match {
-      case 8 =>
-        if ((offset & 0x7) != 0)
-          offset += (8 - (offset & 0x7))
+      case 1 =>
       case 4 =>
         if ((offset & 0x3) != 0)
           offset += (4 - (offset & 0x7))
+      case 8 =>
+        if ((offset & 0x7) != 0)
+          offset += (8 - (offset & 0x7))
       case _ => throw new AssertionError(s"tried to align to $alignment bytes")
     }
+  }
+
+  def clear() {
+    offset = 0
+  }
+
+  def result(): MemoryBlock = {
+    val reqLength = (offset + 7) / 8
+    val arr = new Array[Long](reqLength)
+    Platform.copyMemory(mb.mem, Platform.LONG_ARRAY_OFFSET, arr, Platform.LONG_ARRAY_OFFSET, offset)
+    new MemoryBlock(arr)
   }
 }
 
 /*
-What do we want to write?
+PROBLEMS
+array offsets are stored absolute, but pointer modifies everything by its own offset
 
-t.getField(i,
-
-
+clear? result? What do we want to do here?
  */

@@ -13,6 +13,7 @@ import org.json4s._
 import org.json4s.jackson.JsonMethods
 
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.reflect.classTag
 
@@ -1235,21 +1236,51 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
 
   lazy val byteOffsets: Array[Int] = {
     val a = new Array[Int](size)
-    val nMissingBytes = UnsafeAnnotations.nMissingBytes(size)
+    val oneByteSlots = new mutable.Queue[Int]()
+    val fourByteSlots = new mutable.Queue[Int]()
+    val nMissingBytes = (size + 7) / 8
     var offset = nMissingBytes
     fields.foreach { f =>
       val fSize = f.typ.byteSize
       val fAlignment = f.typ.alignment
-      val mod = offset % fAlignment
-      if (mod != 0)
-        offset += (fAlignment - mod)
-      a(f.index) = offset
-      offset += fSize
+
+      if (fSize == 1 && fAlignment == 1 && (oneByteSlots.nonEmpty || fourByteSlots.nonEmpty))
+        if (oneByteSlots.nonEmpty)
+          a(f.index) = oneByteSlots.dequeue()
+        else {
+          // greedily use four-byte slots, don't try to do a global optimization
+          val head = fourByteSlots.dequeue()
+          a(f.index) = head
+          oneByteSlots.enqueue(head + 1)
+          oneByteSlots.enqueue(head + 2)
+          oneByteSlots.enqueue(head + 3)
+        }
+      else if (fSize == 4 && fAlignment == 4 && fourByteSlots.nonEmpty)
+          a(f.index) = fourByteSlots.dequeue()
+      else {
+        val mod = offset % fAlignment
+        if (mod != 0) {
+          val shift = fAlignment - mod
+          var used = 0
+          while (used < shift) {
+            if (((offset + used) % 4 == 0) && (used + 4 < shift)) {
+              fourByteSlots.enqueue(offset + used)
+              used += 4
+            } else {
+              oneByteSlots.enqueue(offset + used)
+              used += 1
+            }
+          }
+          offset += (fAlignment - mod)
+        }
+        a(f.index) = offset
+        offset += fSize
+      }
     }
     a
   }
 
   override lazy val byteSize: Int = if (size == 0) 0 else byteOffsets.last + fields.last.typ.byteSize
 
-  override def alignment: Int = 8
+  override def alignment: Int = fields.map(_.typ.alignment).max
 }
