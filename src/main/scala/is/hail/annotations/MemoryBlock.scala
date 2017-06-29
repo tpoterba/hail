@@ -30,7 +30,7 @@ final class MemoryBlock(val mem: Array[Long]) {
   }
 }
 
-final class Pointer(val mem: MemoryBlock, memOffset: Int) {
+final class Pointer(val mem: MemoryBlock, val memOffset: Int) {
 
   def loadInt(): Int = mem.loadInt(memOffset)
 

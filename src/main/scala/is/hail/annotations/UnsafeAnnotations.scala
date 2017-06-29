@@ -203,8 +203,8 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
     val missingBytes = (arrLength + 7) / 8
     val elemsStart = UnsafeAnnotations.roundUpAlignment(arrStart + 4 + missingBytes, elementType.byteSize)
     val eltSize = UnsafeAnnotations.arrayElementSize(elementType)
-    if (debug)
-      println(s"reading Array[${ elementType.toPrettyString(compact = true) }] of length $arrLength from $offset(+${ shiftOffset }+$shift=${ offset + shiftOffset + shift })")
+//    if (debug)
+//      println(s"reading Array[${ elementType.toPrettyString(compact = true) }] of length $arrLength from $offset(+${ shiftOffset }+$shift=${ offset + shiftOffset + shift })")
     //    println(s"reading array at offset $offset with shift ${ shift }, has length $arrLength")
 
     //    println(s"t is $elementType")
@@ -215,10 +215,10 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
     var i = 0
     while (i < arrLength) {
 
-      val byteIndex = i >> 3
+      val byteIndex = i / 8
       val bitShift = i & 0x1f
-      val missingInt = readInt(arrStart + 4 + intIndex)
-      val isMissing = (missingInt & (0x1 << bitShift)) != 0
+      val missingByte = ptr.mem.loadByte(arrStart + 4 + byteIndex)
+      val isMissing = (missingByte & (0x1 << bitShift)) != 0
 
       if (!isMissing)
         a(i) = read(elemsStart + i * eltSize, elementType)
@@ -230,28 +230,26 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
   }
 
   private def readStruct(offset: Int, struct: TStruct): UnsafeRow = {
-    if (debug)
-      println(s"generating new UnsafeRow for type ${ struct.toPrettyString(compact = true) } at offset $offset(+$shiftOffset=${ offset + shiftOffset })")
-    new UnsafeRow(mem, struct, offset + shiftOffset, debug)
+    new UnsafeRow(new Pointer(ptr.mem, ptr.memOffset + offset), struct, debug)
   }
 
   private def read(offset: Int, t: Type): Any = {
-    if (debug)
-      println(s"reading type ${ t.toPrettyString(compact = true) } at offset $offset(+$shiftOffset=${ offset + shiftOffset })")
+//    if (debug)
+//      println(s"reading type ${ t.toPrettyString(compact = true) } at offset $offset(+$shiftOffset=${ offset + shiftOffset })")
     t match {
       case TBoolean =>
-        val b = readByte(offset)
+        val b = ptr.loadByte(offset)
         assert(b == 0 || b == 1, s"invalid boolean byte $b from offset $offset")
         b == 1
-      case TInt | TCall => readInt(offset)
-      case TLong => readLong(offset)
-      case TFloat => readFloat(offset)
-      case TDouble => readDouble(offset)
+      case TInt | TCall => ptr.loadInt(offset)
+      case TLong => ptr.loadLong(offset)
+      case TFloat => ptr.loadFloat(offset)
+      case TDouble => ptr.loadDouble(offset)
       case TArray(elt) => readArray(offset, elt)
       case TSet(elt) => readArray(offset, elt).toSet
       case TString => new String(readBinary(offset))
       case t: TDict =>
-        println(s"trying to read dict with type ${t.memStruct.toPrettyString(compact = true)} from offset $offset+$shiftOffset")
+//        println(s"trying to read dict with type ${t.memStruct.toPrettyString(compact = true)} from offset $offset+$shiftOffset")
         readArray(offset, t.memStruct).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
         if (struct.size == 0)
