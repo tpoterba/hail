@@ -1244,7 +1244,9 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
       val fSize = f.typ.byteSize
       val fAlignment = f.typ.alignment
 
-      if (fSize == 1 && fAlignment == 1 && (oneByteSlots.nonEmpty || fourByteSlots.nonEmpty))
+      if (fSize == 0)
+        offset
+      else if (fSize == 1 && fAlignment == 1 && (oneByteSlots.nonEmpty || fourByteSlots.nonEmpty))
         if (oneByteSlots.nonEmpty)
           a(f.index) = oneByteSlots.dequeue()
         else {
@@ -1282,5 +1284,5 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
 
   override lazy val byteSize: Int = if (size == 0) 0 else byteOffsets.last + fields.last.typ.byteSize
 
-  override def alignment: Int = fields.map(_.typ.alignment).max
+  override def alignment: Int = if (size == 0) 0 else fields.map(_.typ.alignment).max
 }

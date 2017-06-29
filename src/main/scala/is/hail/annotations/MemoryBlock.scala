@@ -28,6 +28,8 @@ final class MemoryBlock(val mem: Array[Long]) {
       new MemoryBlock(newMem)
     } else this
   }
+
+  def copy(): MemoryBlock = new MemoryBlock(mem.clone())
 }
 
 final class Pointer(val mem: MemoryBlock, val memOffset: Int) {
@@ -57,6 +59,8 @@ final class Pointer(val mem: MemoryBlock, val memOffset: Int) {
   def loadBytes(off: Int, size: Int): Array[Byte] = mem.loadBytes(off + memOffset, size)
 
   def offset(off: Int): Pointer = new Pointer(mem, memOffset + off)
+
+  def copy(): Pointer = new Pointer(mem.copy(), memOffset)
 }
 
 object MemoryBuffer {
@@ -66,7 +70,8 @@ object MemoryBuffer {
   def apply(size: Int): MemoryBuffer = new MemoryBuffer(new MemoryBlock(new Array[Long]((size + 7) / 8)))
 }
 
-final class MemoryBuffer(private var mb: MemoryBlock) {
+final class MemoryBuffer(private
+var mb: MemoryBlock) {
   var offset: Int = 0
 
   def loadInt(off: Int): Int = mb.loadInt(off)
@@ -106,7 +111,7 @@ final class MemoryBuffer(private var mb: MemoryBlock) {
   }
 
   def storeByte(off: Int, b: Byte) {
-    assert(off < (offset - 1))
+    assert(off < (offset - 1), s"tried to write to $off > $offset")
     Platform.putByte(mb.mem, Platform.LONG_ARRAY_OFFSET + off, b)
   }
 

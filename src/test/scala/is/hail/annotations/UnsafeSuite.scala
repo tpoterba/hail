@@ -9,7 +9,7 @@ import org.testng.annotations.Test
 
 class UnsafeSuite extends SparkSuite {
 
-  @Test def testMemoryBlock() {
+  @Test def testMemoryBuffer() {
     val buff = MemoryBuffer()
 
     buff.appendLong(124L)
@@ -19,13 +19,12 @@ class UnsafeSuite extends SparkSuite {
     buff.appendInt(1234567)
     buff.appendDouble(1.1)
 
-    val mb = buff.mb
-    assert(mb.loadLong(0) == 124L)
-    assert(mb.loadByte(8) == 2)
-    assert(mb.loadByte(9) == 1)
-    assert(mb.loadByte(10) == 4)
-    assert(mb.loadInt(12) == 1234567)
-    assert(mb.loadDouble(16) == 1.1)
+    assert(buff.loadLong(0) == 124L)
+    assert(buff.loadByte(8) == 2)
+    assert(buff.loadByte(9) == 1)
+    assert(buff.loadByte(10) == 4)
+    assert(buff.loadInt(12) == 1234567)
+    assert(buff.loadDouble(16) == 1.1)
   }
 
 
