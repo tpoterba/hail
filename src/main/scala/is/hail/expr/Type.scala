@@ -1245,7 +1245,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
       val fAlignment = f.typ.alignment
 
       if (fSize == 0)
-        offset
+        a(f.index) = -1 // don't ever realize empty things
       else if (fSize == 1 && fAlignment == 1 && (oneByteSlots.nonEmpty || fourByteSlots.nonEmpty))
         if (oneByteSlots.nonEmpty)
           a(f.index) = oneByteSlots.dequeue()
@@ -1260,6 +1260,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
       else if (fSize == 4 && fAlignment == 4 && fourByteSlots.nonEmpty)
           a(f.index) = fourByteSlots.dequeue()
       else {
+//        println(f, fSize, fAlignment)
         val mod = offset % fAlignment
         if (mod != 0) {
           val shift = fAlignment - mod
@@ -1282,7 +1283,14 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
     a
   }
 
-  override lazy val byteSize: Int = if (size == 0) 0 else byteOffsets.last + fields.last.typ.byteSize
+  override lazy val byteSize: Int = if (size == 0)
+    0
+  else if (byteOffsets.forall(_ < 0))
+    (size + 7) / 8
+  else {
+    val maxIndex = byteOffsets.indexOf(byteOffsets.max)
+    byteOffsets(maxIndex) + fields(maxIndex).typ.byteSize
+  }
 
-  override def alignment: Int = if (size == 0) 0 else fields.map(_.typ.alignment).max
+  override lazy val alignment: Int = if (size == 0) 0 else math.max(1, fields.map(_.typ.alignment).max)
 }

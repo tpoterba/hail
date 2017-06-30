@@ -4,6 +4,7 @@ import is.hail.SparkSuite
 import is.hail.check._
 import is.hail.check.Arbitrary._
 import is.hail.expr._
+import is.hail.variant.{Genotype, Locus}
 import org.apache.spark.sql.Row
 import org.testng.annotations.Test
 
@@ -37,9 +38,27 @@ class UnsafeSuite extends SparkSuite {
   @Test def testRandom() {
     Prop.forAll(genStructTypeAndNonMissingValue.filter(_._2 != null)) { case (t, a) =>
       println(t.toPrettyString(compact = true))
-      println(a)
-        val urb = new UnsafeRowBuilder(t)
-        urb.convert(a.asInstanceOf[Row]) == a
+        val urb = new UnsafeRowBuilder(t, debug = true)
+        val unsafeRow = urb.convert(a.asInstanceOf[Row])
+        val p = unsafeRow == a
+        if (!p) {
+          println(
+            s"""IN:  $a
+               |OUT: $unsafeRow""".stripMargin)
+
+          println(unsafeRow.get(2).asInstanceOf[Locus].contig)
+          println(unsafeRow.get(2).asInstanceOf[Locus].contig.length)
+//          for (i <- 0 until t.size)
+//            println(s"field $i is ${unsafeRow.get(i)}")
+        }
+        p
+
     }.check()
   }
+
+//  @Test def test2() {
+//    println(Locus.intervalExpandedType.byteOffsets)
+//    println(Genotype.expandedType.byteOffsets.toSeq)
+//    println(Genotype.expandedType.byteSize)
+//  }
 }
