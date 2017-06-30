@@ -174,8 +174,11 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
 
   def convert(r: Row): UnsafeRow = {
     require(r != null, "cannot convert null row")
-    println(s"size of $t is ${ t.byteSize }")
-    println(s"byteIndices: \n  ${t.byteOffsets.zip(t.fields.map(_.typ)).mkString("\n  ")}")
+    if (debug) {
+      println(s"size of $t is ${ t.byteSize }")
+      println(s"byteIndices: \n  ${t.byteOffsets.zip(t.fields.map(_.typ)).mkString("\n  ")}")
+
+    }
     buffer.clear()
     val start = buffer.allocate(t.byteSize)
     assert(start == 0)

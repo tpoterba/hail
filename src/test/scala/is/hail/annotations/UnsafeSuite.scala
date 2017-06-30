@@ -2,9 +2,8 @@ package is.hail.annotations
 
 import is.hail.SparkSuite
 import is.hail.check._
-import is.hail.check.Arbitrary._
 import is.hail.expr._
-import is.hail.variant.{Genotype, Locus}
+import org.apache.commons.math3.random.RandomDataGenerator
 import org.apache.spark.sql.Row
 import org.testng.annotations.Test
 
@@ -28,37 +27,32 @@ class UnsafeSuite extends SparkSuite {
     assert(buff.loadDouble(16) == 1.1)
   }
 
-
-  def genStructTypeAndNonMissingValue: Gen[(TStruct, Annotation)] = for {
-    (x, y) <- Gen.squareOfAreaAtMostSize
+  val g = for {
+    s <- Gen.size
+    // prefer smaller type and bigger values
+    fraction <- Gen.choose(0.1, 0.3)
+    x = (fraction * s).toInt
+    y = s - x
     t <- Type.genStruct.resize(x)
     v <- t.genNonmissingValue.resize(y)
   } yield (t, v)
 
   @Test def testRandom() {
-    Prop.forAll(genStructTypeAndNonMissingValue.filter(_._2 != null)) { case (t, a) =>
-      println(t.toPrettyString(compact = true))
-        val urb = new UnsafeRowBuilder(t, debug = true)
-        val unsafeRow = urb.convert(a.asInstanceOf[Row])
-        val p = unsafeRow == a
-        if (!p) {
-          println(
-            s"""IN:  $a
-               |OUT: $unsafeRow""".stripMargin)
 
-          println(unsafeRow.get(2).asInstanceOf[Locus].contig)
-          println(unsafeRow.get(2).asInstanceOf[Locus].contig.length)
-//          for (i <- 0 until t.size)
-//            println(s"field $i is ${unsafeRow.get(i)}")
-        }
-        p
+    val rng = new RandomDataGenerator()
+    rng.reSeed(Prop.seed)
 
-    }.check()
+    Prop.forAll(g.filter(_._2 != null)) { case (t, a) =>
+      val urb = new UnsafeRowBuilder(t, debug = false)
+      val unsafeRow = urb.convert(a.asInstanceOf[Row])
+      val p = unsafeRow == a
+      if (!p) {
+        println(
+          s"""IN:  $a
+             |OUT: $unsafeRow""".stripMargin)
+      }
+
+      p
+    }.apply(Parameters(rng, 1000, 1000))
   }
-
-//  @Test def test2() {
-//    println(Locus.intervalExpandedType.byteOffsets)
-//    println(Genotype.expandedType.byteOffsets.toSeq)
-//    println(Genotype.expandedType.byteSize)
-//  }
 }

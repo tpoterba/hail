@@ -211,10 +211,3 @@ var mb: MemoryBlock) {
     new MemoryBlock(arr)
   }
 }
-
-/*
-PROBLEMS
-array offsets are stored absolute, but pointer modifies everything by its own offset
-
-clear? result? What do we want to do here?
- */
