@@ -45,7 +45,11 @@ class UnsafeSuite extends SparkSuite {
     Prop.forAll(g.filter(_._2 != null)) { case (t, a) =>
       val urb = new UnsafeRowBuilder(t, debug = false)
       val unsafeRow = urb.convert(a.asInstanceOf[Row])
+      val ur2 = urb.convert(a.asInstanceOf[Row])
       val p = unsafeRow == a
+
+      assert(unsafeRow == ur2)
+
       if (!p) {
         println(
           s"""IN:  $a

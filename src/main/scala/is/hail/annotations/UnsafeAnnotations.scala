@@ -40,29 +40,6 @@ object UnsafeAnnotations {
   }
 }
 
-class KVStructEmulator(var k: Any, var v: Any) extends Row {
-  def length: Int = 2
-
-  override def get(i: Int): Any = if (i == 0) k else if (i == 1) v else throw new IndexOutOfBoundsException
-
-  override def copy(): Row = new KVStructEmulator(k, v)
-}
-
-class KVArrayEmulator(keys: ArrayBuffer[Any], values: ArrayBuffer[Any]) extends IndexedSeq[KVStructEmulator] {
-  private val em = new KVStructEmulator(null, null)
-
-  override def length: Int = {
-    assert(keys.length == values.length)
-    keys.length
-  }
-
-  override def apply(idx: Int): KVStructEmulator = {
-    em.k = keys(idx)
-    em.v = values(idx)
-    em
-  }
-}
-
 class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) {
   private var buffer: MemoryBuffer = MemoryBuffer(sizeHint)
 
@@ -78,7 +55,6 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
 
     buffer.appendInt(value.length)
     buffer.appendBytes(value)
-
 
     if (debug)
       println(s"after putting binary, offset is now ${ buffer.offset }, start=${buffer.offset - value.size}, bytes=${buffer.loadBytes(buffer.offset - value.size, value.size).toSeq}")
@@ -103,14 +79,12 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
     buffer.align(elementType.alignment)
 
     val elementStart = buffer.allocate(nElements * eltSize)
-    //    if (debug)
-    //      println(s"putting array ${ value.toSeq } at offset $offset with shift ${ appendPointer - offset }, totSize=$totalSize")
 
     // TODO: specialize to numeric types. Non-nullable types make this easier, too
     var i = 0
     value.foreach { elt =>
       if (elt == null) {
-        val byteIndex = missingBytesStart + (i >> 3)
+        val byteIndex = missingBytesStart + (i / 8)
         val shift = i & 0x7
         val oldByte = buffer.loadByte(byteIndex)
         buffer.storeByte(byteIndex, (oldByte | (0x1 << (i & 0x7))).toByte)
@@ -131,7 +105,7 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
     var i = 0
     while (i < struct.size) {
       if (value.isNullAt(i)) {
-        val byteIndex = offset + (i >> 3)
+        val byteIndex = offset + (i / 8)
         val shift = i & 0x7
         val oldByte = buffer.loadByte(byteIndex)
         buffer.storeByte(byteIndex, (oldByte | (0x1 << (i & 0x7))).toByte)
@@ -180,22 +154,14 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
 
     }
     buffer.clear()
+
     val start = buffer.allocate(t.byteSize)
+
     assert(start == 0)
+
     putStruct(r, start, t)
     new UnsafeRow(new Pointer(buffer.result(), 0), t, debug)
   }
-
-  //  private def clear() {
-  //    buffer.clear()
-  //  }
-  //
-  //
-  //  private def result(): UnsafeRow = {
-  //    val memCopy = new Array[Byte](appendPointer)
-  //    Platform.copyMemory(mem, Platform.BYTE_ARRAY_OFFSET, memCopy, Platform.BYTE_ARRAY_OFFSET, appendPointer)
-  //    new UnsafeRow(memCopy, t, debug = debug)
-  //  }
 }
 
 class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
@@ -231,15 +197,8 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
 
     val arrLength = ptr.mem.loadInt(offset)
     val missingBytes = (arrLength + 7) / 8
-    //    println(elementType, elementType.byteSize)
     val elemsStart = UnsafeAnnotations.roundUpAlignment(offset + 4 + missingBytes, elementType.alignment)
     val eltSize = UnsafeAnnotations.arrayElementSize(elementType)
-    //    if (debug)
-    //      println(s"reading Array[${ elementType.toPrettyString(compact = true) }] of length $arrLength from $offset(+${ shiftOffset }+$shift=${ offset + shiftOffset + shift })")
-    //    println(s"reading array at offset $offset with shift ${ shift }, has length $arrLength")
-
-    //    println(s"t is $elementType")
-    //    println(s"arrLength is $arrLength")
 
     val a = new Array[Any](arrLength)
 
@@ -306,7 +265,6 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
       case TSet(elt) => readArrayAbsolute(offset, elt).toSet
       case TString => new String(readBinaryAbsolute(offset))
       case t: TDict =>
-        //        println(s"trying to read dict with type ${t.memStruct.toPrettyString(compact = true)} from offset $offset+$shiftOffset")
         readArrayAbsolute(offset, t.memStruct).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
         if (struct.size == 0)
@@ -323,8 +281,6 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
   }
 
   private def read(offset: Int, t: Type): Any = {
-    //    if (debug)
-    //      println(s"reading type ${ t.toPrettyString(compact = true) } at offset $offset(+$shiftOffset=${ offset + shiftOffset })")
     t match {
       case TBoolean =>
         val b = ptr.loadByte(offset)
@@ -361,8 +317,6 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
 
   override def get(i: Int): Any = {
     val offset = t.byteOffsets(i)
-    //    if (debug)
-    //      println(s"The offset for element $i (type ${ t.fields(i).typ }) is $offset(+${ shiftOffset }=${ offset + shiftOffset })")
     if (isNullAt(i))
       null
     else
