@@ -97,7 +97,7 @@ sealed abstract class Type {
     if (path.nonEmpty)
       throw new AnnotationPathException(s"invalid path ${ path.mkString(".") } from type ${ this }")
     else
-      (TStruct.empty, a => Annotation.empty)
+      (TStruct.empty, a => null)
   }
 
   def insert(signature: Type, fields: String*): (Type, Inserter) = insert(signature, fields.toList)
@@ -139,9 +139,9 @@ sealed abstract class Type {
 
   def toJSON(a: Annotation): JValue = JSONAnnotationImpex.exportAnnotation(a, this)
 
-  def genNonmissingValue: Gen[Annotation] = Gen.const(Annotation.empty)
+  def genNonmissingValue: Gen[Annotation] = ???
 
-  def genValue: Gen[Annotation] = Gen.oneOfGen(Gen.const(Annotation.empty), genNonmissingValue)
+  def genValue: Gen[Annotation] = Gen.oneOfGen(Gen.const(null), genNonmissingValue)
 
   def isRealizable: Boolean = children.forall(_.isRealizable)
 
@@ -936,7 +936,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
           val q = f.typ.query(p.tail)
           val localIndex = f.index
           a =>
-            if (a == Annotation.empty)
+            if (a == null)
               null
             else
               q(a.asInstanceOf[Row].get(localIndex))
@@ -947,7 +947,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
 
   override def delete(p: List[String]): (Type, Deleter) = {
     if (p.isEmpty)
-      (TStruct.empty, a => Annotation.empty)
+      (TStruct.empty, a => null)
     else {
       val key = p.head
       val f = selfField(key) match {
@@ -965,8 +965,8 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
       val localDeleteFromRow = newFieldType == TStruct.empty
 
       val deleter: Deleter = { a =>
-        if (a == Annotation.empty)
-          Annotation.empty
+        if (a == null)
+          null
         else {
           val r = a.asInstanceOf[Row]
 
@@ -1006,7 +1006,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
           a.asInstanceOf[Row]
         keyIndex match {
           case Some(i) => r.update(i, keyF(r.get(i), toIns))
-          case None => r.append(keyF(Annotation.empty, toIns))
+          case None => r.append(keyF(null, toIns))
         }
       }
       (newSignature, inserter)
@@ -1067,7 +1067,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
 
     val merger = (a1: Annotation, a2: Annotation) => {
       if (a1 == null && a2 == null)
-        Annotation.empty
+        null
       else {
         val s1 = Option(a1).map(_.asInstanceOf[Row].toSeq)
           .getOrElse(Seq.fill[Any](size1)(null))
@@ -1130,7 +1130,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
       if (a == null)
         a
       else if (newSize == 0)
-        Annotation.empty
+        null
       else {
         val r = a.asInstanceOf[Row]
         val newValues = included.zipWithIndex
@@ -1182,10 +1182,10 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
 
   override def genNonmissingValue: Gen[Annotation] = {
     if (size == 0) {
-      Gen.const(Annotation.emptyRow)
+      Gen.const(Annotation.empty)
     } else
       Gen.size.flatMap(fuel =>
-        if (size > fuel) Gen.const(Annotation.empty)
+        if (size > fuel) Gen.const(null)
         else Gen.uniformSequence(fields.map(f => f.typ.genValue)).map(a => Annotation(a: _*)))
   }
 

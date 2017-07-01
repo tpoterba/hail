@@ -268,7 +268,7 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
         readArrayAbsolute(offset, t.memStruct).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
         if (struct.size == 0)
-          Annotation.emptyRow
+          Annotation.empty
         else
           readStructAbsolute(offset, struct)
 
@@ -298,7 +298,7 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
         readArray(offset, t.memStruct).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
         if (struct.size == 0)
-          Annotation.emptyRow
+          Annotation.empty
         else
           readStruct(offset, struct)
 
@@ -366,6 +366,8 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
   }
 
   override def isNullAt(i: Int): Boolean = {
+    if (i < 0 || i >= t.size)
+      throw new IndexOutOfBoundsException(i.toString)
     val byteIndex = i / 8
     val bitShift = i & 0x7
     (ptr.loadByte(byteIndex) & (0x1 << bitShift)) != 0
