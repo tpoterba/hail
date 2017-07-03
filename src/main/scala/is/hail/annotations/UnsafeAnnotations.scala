@@ -294,14 +294,12 @@ class UnsafeRow(ptr: Pointer, t: TStruct, debug: Boolean = false) extends Row {
       case TSet(elt) => readArray(offset, elt).toSet
       case TString => new String(readBinary(offset))
       case t: TDict =>
-        //        println(s"trying to read dict with type ${t.memStruct.toPrettyString(compact = true)} from offset $offset+$shiftOffset")
         readArray(offset, t.memStruct).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
         if (struct.size == 0)
           Annotation.empty
         else
           readStruct(offset, struct)
-
       case TVariant | TLocus | TAltAllele | TGenotype | TInterval =>
         val r = readStruct(offset, Annotation.expandType(t).asInstanceOf[TStruct])
         SparkAnnotationImpex.importAnnotation(r, t)
