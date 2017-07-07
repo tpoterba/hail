@@ -10,7 +10,7 @@ import org.testng.annotations.Test
 class UnsafeSuite extends SparkSuite {
 
   @Test def testMemoryBuffer() {
-    val buff = MemoryBuffer()
+    val buff = new MemoryBuffer()
 
     buff.appendLong(124L)
     buff.appendByte(2)
