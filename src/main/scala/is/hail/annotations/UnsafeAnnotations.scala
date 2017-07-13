@@ -41,7 +41,7 @@ object UnsafeAnnotations {
 }
 
 class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) {
-  private var buffer: MemoryBuffer = MemoryBuffer(sizeHint)
+  private var buffer: MemoryBuffer = new MemoryBuffer(sizeHint)
 
   private def putBinary(value: Array[Byte], offset: Int) {
     assert(offset % 4 == 0, s"invalid binary offset: $offset")

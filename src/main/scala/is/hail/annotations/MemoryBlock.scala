@@ -1,54 +1,86 @@
 package is.hail.annotations
 
+import java.util
+
 import org.apache.spark.unsafe.Platform
 
 final class MemoryBlock(val mem: Array[Long]) {
   require(mem.length < (Integer.MAX_VALUE / 8), "too big")
 
+  def sizeInBytes: Int = mem.length * 8
+
   def loadInt(off: Int): Int = {
-    assert(off <= (mem.length * 8 - 4), s"tried to read int from offset $off with array size ${ mem.length * 8 }")
+    assert(off + 4 <= sizeInBytes, s"tried to read int from offset $off with array size $sizeInBytes")
     Platform.getInt(mem, Platform.LONG_ARRAY_OFFSET + off)
   }
 
   def loadLong(off: Int): Long = {
-    assert(off <= (mem.length * 8 - 8), s"tried to read long from offset $off with array size ${ mem.length * 8 }")
+    assert(off + 8 <= sizeInBytes, s"tried to read long from offset $off with array size $sizeInBytes")
     Platform.getLong(mem, Platform.LONG_ARRAY_OFFSET + off)
   }
 
   def loadFloat(off: Int): Float = {
-    assert(off <= (mem.length * 8 - 4), s"tried to read float from offset $off with array size ${ mem.length * 8 }")
-
+    assert(off + 4 <= sizeInBytes, s"tried to read float from offset $off with array size $sizeInBytes")
     Platform.getFloat(mem, Platform.LONG_ARRAY_OFFSET + off)
   }
 
   def loadDouble(off: Int): Double = {
-    assert(off <= (mem.length * 8 - 8), s"tried to read double from offset $off with array size ${ mem.length * 8 }")
-
+    assert(off + 8 <= sizeInBytes, s"tried to read double from offset $off with array size $sizeInBytes")
     Platform.getDouble(mem, Platform.LONG_ARRAY_OFFSET + off)
   }
 
   def loadByte(off: Int): Byte = {
-    assert(off <= (mem.length * 8 - 1), s"tried to read byte from offset $off with array size ${ mem.length * 8 }")
-
+    assert(off + 1 <= sizeInBytes, s"tried to read byte from offset $off with array size $sizeInBytes")
     Platform.getByte(mem, Platform.LONG_ARRAY_OFFSET + off)
   }
 
   def loadBytes(off: Int, size: Int): Array[Byte] = {
-    assert(off + size <= (mem.length * 8), s"tried to read bytes of size $size from offset $off with array size ${ mem.length * 8 }")
+    assert(off + size <= sizeInBytes, s"tried to read bytes of size $size from offset $off with array size $sizeInBytes")
     val a = new Array[Byte](size)
     Platform.copyMemory(mem, Platform.LONG_ARRAY_OFFSET + off, a, Platform.BYTE_ARRAY_OFFSET, size)
     a
   }
 
-  def reallocate(size: Int): MemoryBlock = {
-    if (mem.length * 8 < size) {
-      val newMem = new Array[Long](math.min(Int.MaxValue, (size.toLong * 2 + 7) / 8).toInt)
-      Platform.copyMemory(mem, Platform.LONG_ARRAY_OFFSET, newMem, Platform.LONG_ARRAY_OFFSET, mem.length * 8)
-      new MemoryBlock(newMem)
-    } else this
+  def storeInt(off: Int, i: Int) {
+    assert(off + 4 <= sizeInBytes, s"tried to store int to offset $off with array size $sizeInBytes")
+    Platform.putInt(mem, Platform.LONG_ARRAY_OFFSET + off, i)
   }
 
-  def copy(): MemoryBlock = new MemoryBlock(mem.clone())
+  def storeLong(off: Int, l: Long) {
+    assert(off + 8 <= sizeInBytes, s"tried to store long to offset $off with array size $sizeInBytes")
+    Platform.putLong(mem, Platform.LONG_ARRAY_OFFSET + off, l)
+  }
+
+  def storeFloat(off: Int, f: Float) {
+    assert(off + 4 <= sizeInBytes, s"tried to store float to offset $off with array size $sizeInBytes")
+    Platform.putFloat(mem, Platform.LONG_ARRAY_OFFSET + off, f)
+  }
+
+  def storeDouble(off: Int, d: Double) {
+    assert(off + 8 <= sizeInBytes, s"tried to store double to offset $off with array size $sizeInBytes")
+    Platform.putDouble(mem, Platform.LONG_ARRAY_OFFSET + off, d)
+  }
+
+  def storeByte(off: Int, b: Byte) {
+    assert(off + 1 <= sizeInBytes, s"tried to store byte to offset $off with array size $sizeInBytes")
+    Platform.putByte(mem, Platform.LONG_ARRAY_OFFSET + off, b)
+  }
+
+  def storeBytes(off: Int, bytes: Array[Byte]) {
+    assert(off + bytes.length <= sizeInBytes, s"tried to store ${ bytes.length } bytes to offset $off with array size $sizeInBytes")
+    Platform.copyMemory(bytes, Platform.BYTE_ARRAY_OFFSET, mem, Platform.LONG_ARRAY_OFFSET + off, bytes.length)
+  }
+
+  def reallocate(size: Int): MemoryBlock = {
+    if (sizeInBytes < size) {
+      val newMem = new Array[Long](math.max(mem.length * 2, (size + 7) / 8))
+      Platform.copyMemory(mem, Platform.LONG_ARRAY_OFFSET, newMem, Platform.LONG_ARRAY_OFFSET, sizeInBytes)
+      new MemoryBlock(newMem)
+    } else
+      this
+  }
+
+  def copy(): MemoryBlock = new MemoryBlock(util.Arrays.copyOf(mem, mem.length))
 }
 
 final class Pointer(val mem: MemoryBlock, val memOffset: Int) {
@@ -77,21 +109,48 @@ final class Pointer(val mem: MemoryBlock, val memOffset: Int) {
 
   def loadBytes(off: Int, size: Int): Array[Byte] = mem.loadBytes(off + memOffset, size)
 
+  def storeInt(i: Int): Unit = mem.storeInt(memOffset, i)
+
+  def storeInt(off: Int, i: Int): Unit = mem.storeInt(memOffset + off, i)
+
+  def storeLong(l: Long): Unit = mem.storeLong(memOffset, l)
+
+  def storeLong(off: Int, l: Long): Unit = mem.storeLong(memOffset + off, l)
+
+  def storeFloat(f: Float): Unit = mem.storeFloat(memOffset, f)
+
+  def storeFloat(off: Int, f: Float): Unit = mem.storeFloat(memOffset + off, f)
+
+  def storeDouble(d: Double): Unit = mem.storeDouble(memOffset, d)
+
+  def storeDouble(off: Int, d: Double): Unit = mem.storeDouble(memOffset + off, d)
+
+  def storeByte(b: Byte): Unit = mem.storeByte(memOffset, b)
+
+  def storeByte(off: Int, b: Byte): Unit = mem.storeByte(memOffset + off, b)
+
+  def storeBytes(bytes: Array[Byte]): Unit = mem.storeBytes(memOffset, bytes)
+
+  def storeBytes(off: Int, bytes: Array[Byte]): Unit = mem.storeBytes(memOffset + off, bytes)
+
   def offset(off: Int): Pointer = new Pointer(mem, memOffset + off)
 
   def copy(): Pointer = new Pointer(mem.copy(), memOffset)
 }
 
-object MemoryBuffer {
+final class MemoryBuffer(sizeHint: Int = 128) {
+  var mb = new MemoryBlock(new Array[Long]((sizeHint + 7) / 8))
 
-  def apply(): MemoryBuffer = new MemoryBuffer(new MemoryBlock(new Array[Long](8)))
-
-  def apply(size: Int): MemoryBuffer = new MemoryBuffer(new MemoryBlock(new Array[Long]((size + 7) / 8)))
-}
-
-final class MemoryBuffer(private
-var mb: MemoryBlock) {
   var offset: Int = 0
+
+  def alignAndEnsure(size: Int) {
+    align(size)
+    ensure(size)
+  }
+
+  def ensure(size: Int) {
+    mb = mb.reallocate(offset + size)
+  }
 
   def loadInt(off: Int): Int = mb.loadInt(off)
 
@@ -105,99 +164,65 @@ var mb: MemoryBlock) {
 
   def loadBytes(off: Int, size: Int): Array[Byte] = mb.loadBytes(off, size)
 
-  def storeInt(off: Int, i: Int) {
-    assert((off & 0x3) == 0, s"invalid int offset: $off")
-    assert(off <= (offset - 4))
-    Platform.putInt(mb.mem, Platform.LONG_ARRAY_OFFSET + off, i)
-  }
+  def storeInt(off: Int, i: Int): Unit = mb.storeInt(off, i)
 
-  def storeLong(off: Int, l: Long) {
-    assert((off & 0x7) == 0, s"invalid long offset: $off")
-    assert(off <= (offset - 8))
-    Platform.putLong(mb.mem, Platform.LONG_ARRAY_OFFSET + off, l)
-  }
+  def storeLong(off: Int, l: Long): Unit = mb.storeLong(off, l)
 
-  def storeFloat(off: Int, f: Float) {
-    assert((off & 0x3) == 0, s"invalid float offset: $off")
-    assert(off <= (offset - 4))
-    Platform.putFloat(mb.mem, Platform.LONG_ARRAY_OFFSET + off, f)
-  }
+  def storeFloat(off: Int, f: Float): Unit = mb.storeFloat(off, f)
 
-  def storeDouble(off: Int, d: Double) {
-    assert((off & 0x7) == 0, s"invalid double offset: $off")
-    assert(off <= (offset - 8))
-    Platform.putDouble(mb.mem, Platform.LONG_ARRAY_OFFSET + off, d)
-  }
+  def storeDouble(off: Int, d: Double): Unit = mb.storeDouble(off, d)
 
-  def storeByte(off: Int, b: Byte) {
-    assert(off <= offset - 1, s"tried to write to $off > $offset")
-    Platform.putByte(mb.mem, Platform.LONG_ARRAY_OFFSET + off, b)
-  }
+  def storeByte(off: Int, b: Byte): Unit = mb.storeByte(off, b)
 
-  def storeBytes(off: Int, bytes: Array[Byte]) {
-    assert(off <= (offset - bytes.length))
-    Platform.copyMemory(bytes, Platform.BYTE_ARRAY_OFFSET, mb.mem, Platform.LONG_ARRAY_OFFSET + off, bytes.length)
-  }
+  def storeBytes(off: Int, bytes: Array[Byte]): Unit = mb.storeBytes(off, bytes)
 
   def appendInt(i: Int) {
-    align(4)
-    mb = mb.reallocate(offset + 4)
-    Platform.putInt(mb.mem, Platform.LONG_ARRAY_OFFSET + offset, i)
+    alignAndEnsure(4)
+    mb.storeInt(offset, i)
     offset += 4
   }
 
   def appendLong(l: Long) {
-    align(8)
-    mb = mb.reallocate(offset + 8)
-    Platform.putLong(mb.mem, Platform.LONG_ARRAY_OFFSET + offset, l)
+    alignAndEnsure(8)
+    mb.storeLong(offset, l)
     offset += 8
   }
 
   def appendFloat(f: Float) {
-    align(4)
-    mb = mb.reallocate(offset + 4)
-    Platform.putFloat(mb.mem, Platform.LONG_ARRAY_OFFSET + offset, f)
+    alignAndEnsure(4)
+    mb.storeFloat(offset, f)
     offset += 4
   }
 
   def appendDouble(d: Double) {
-    align(8)
-    mb = mb.reallocate(offset + 8)
-    Platform.putDouble(mb.mem, Platform.LONG_ARRAY_OFFSET + offset, d)
+    alignAndEnsure(8)
+    mb.storeDouble(offset, d)
     offset += 8
   }
 
   def appendByte(b: Byte) {
-    mb = mb.reallocate(offset + 1)
-    Platform.putByte(mb.mem, Platform.LONG_ARRAY_OFFSET + offset, b)
+    ensure(1)
+    mb.storeByte(offset, b)
     offset += 1
   }
 
   def appendBytes(bytes: Array[Byte]) {
-    mb = mb.reallocate(offset + bytes.length)
-    Platform.copyMemory(bytes, Platform.BYTE_ARRAY_OFFSET, mb.mem, Platform.LONG_ARRAY_OFFSET + offset, bytes.length)
+    ensure(bytes.length)
+    mb.storeBytes(offset, bytes)
     offset += bytes.length
   }
 
   def allocate(nBytes: Int): Int = {
     val currentOffset = offset
-    mb = mb.reallocate(offset + nBytes)
+    ensure(nBytes)
     offset += nBytes
     currentOffset
   }
 
   def align(alignment: Int) {
-    alignment match {
-      case 0 =>
-      case 1 =>
-      case 4 =>
-        if ((offset & 0x3) != 0)
-          offset += (4 - (offset & 0x3))
-      case 8 =>
-        if ((offset & 0x7) != 0)
-          offset += (8 - (offset & 0x7))
-      case _ => throw new AssertionError(s"tried to align to $alignment bytes")
-    }
+    assert(alignment > 0)
+    assert((alignment & (alignment - 1)) == 0) // power of 2
+    offset = (offset + (alignment - 1)) & ~(alignment - 1)
   }
 
   def clear() {
