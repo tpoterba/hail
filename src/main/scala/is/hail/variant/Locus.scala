@@ -45,14 +45,6 @@ object Locus {
     )
   }
 
-  val expandedType: TStruct = TStruct(
-    "contig" -> TString,
-    "position" -> TInt)
-
-  val intervalExpandedType: TStruct = TStruct(
-    "start" -> Locus.expandedType,
-    "end" -> Locus.expandedType)
-
   def gen(contigs: Seq[String]): Gen[Locus] =
     Gen.zip(Gen.oneOfSeq(contigs), Gen.posInt)
       .map { case (contig, pos) => Locus(contig, pos) }

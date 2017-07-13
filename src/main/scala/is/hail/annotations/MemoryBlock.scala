@@ -89,54 +89,41 @@ final class MemoryBlock(val mem: Array[Long]) {
 }
 
 final class Pointer(val mb: MemoryBlock, val offset: Int) {
-
-  def loadInt(): Int = mb.loadInt(offset)
-
   def loadInt(off: Int): Int = mb.loadInt(off + offset)
-
-  def loadLong(): Int = mb.loadInt(offset)
 
   def loadLong(off: Int): Long = mb.loadLong(off + offset)
 
-  def loadFloat(): Float = mb.loadFloat(offset)
-
   def loadFloat(off: Int): Float = mb.loadFloat(off + offset)
-
-  def loadDouble(): Double = mb.loadDouble(offset)
 
   def loadDouble(off: Int): Double = mb.loadDouble(off + offset)
 
-  def loadByte(): Byte = mb.loadByte(offset)
-
   def loadByte(off: Int): Byte = mb.loadByte(off + offset)
-
-  def loadBytes(size: Int): Array[Byte] = mb.loadBytes(offset, size)
 
   def loadBytes(off: Int, size: Int): Array[Byte] = mb.loadBytes(off + offset, size)
 
-  def storeInt(i: Int): Unit = mb.storeInt(offset, i)
+  def storeInt(off: Int, i: Int) {
+    mb.storeInt(offset + off, i)
+  }
 
-  def storeInt(off: Int, i: Int): Unit = mb.storeInt(offset + off, i)
+  def storeLong(off: Int, l: Long) {
+    mb.storeLong(offset + off, l)
+  }
 
-  def storeLong(l: Long): Unit = mb.storeLong(offset, l)
+  def storeFloat(off: Int, f: Float) {
+    mb.storeFloat(offset + off, f)
+  }
 
-  def storeLong(off: Int, l: Long): Unit = mb.storeLong(offset + off, l)
+  def storeDouble(off: Int, d: Double) {
+    mb.storeDouble(offset + off, d)
+  }
 
-  def storeFloat(f: Float): Unit = mb.storeFloat(offset, f)
-
-  def storeFloat(off: Int, f: Float): Unit = mb.storeFloat(offset + off, f)
-
-  def storeDouble(d: Double): Unit = mb.storeDouble(offset, d)
-
-  def storeDouble(off: Int, d: Double): Unit = mb.storeDouble(offset + off, d)
-
-  def storeByte(b: Byte): Unit = mb.storeByte(offset, b)
-
-  def storeByte(off: Int, b: Byte): Unit = mb.storeByte(offset + off, b)
-
-  def storeBytes(bytes: Array[Byte]): Unit = mb.storeBytes(offset, bytes)
-
-  def storeBytes(off: Int, bytes: Array[Byte]): Unit = mb.storeBytes(offset + off, bytes)
+  def storeByte(off: Int, b: Byte) {
+    mb.storeByte(offset + off, b)
+  }
+  
+  def storeBytes(off: Int, bytes: Array[Byte]) {
+    mb.storeBytes(offset + off, bytes)
+  }
 
   def offset(off: Int): Pointer = new Pointer(mb, offset + off)
 
@@ -169,17 +156,29 @@ final class MemoryBuffer(sizeHint: Int = 128) {
 
   def loadBytes(off: Int, size: Int): Array[Byte] = mb.loadBytes(off, size)
 
-  def storeInt(off: Int, i: Int): Unit = mb.storeInt(off, i)
+  def storeInt(off: Int, i: Int) {
+    mb.storeInt(off, i)
+  }
 
-  def storeLong(off: Int, l: Long): Unit = mb.storeLong(off, l)
+  def storeLong(off: Int, l: Long) {
+    mb.storeLong(off, l)
+  }
 
-  def storeFloat(off: Int, f: Float): Unit = mb.storeFloat(off, f)
+  def storeFloat(off: Int, f: Float) {
+    mb.storeFloat(off, f)
+  }
 
-  def storeDouble(off: Int, d: Double): Unit = mb.storeDouble(off, d)
+  def storeDouble(off: Int, d: Double) {
+    mb.storeDouble(off, d)
+  }
 
-  def storeByte(off: Int, b: Byte): Unit = mb.storeByte(off, b)
+  def storeByte(off: Int, b: Byte) {
+    mb.storeByte(off, b)
+  }
 
-  def storeBytes(off: Int, bytes: Array[Byte]): Unit = mb.storeBytes(off, bytes)
+  def storeBytes(off: Int, bytes: Array[Byte]) {
+    mb.storeBytes(off, bytes)
+  }
 
   def appendInt(i: Int) {
     alignAndEnsure(4)

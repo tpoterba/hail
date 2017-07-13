@@ -1,7 +1,6 @@
 package is.hail.annotations
 
-import is.hail.expr.{TAltAllele, TArray, TBoolean, TCall, TDict, TDouble, TFloat, TGenotype, TInt, TInterval, TLocus, TLong, TSet, TString, TStruct, TVariant, Type}
-import is.hail.variant.{AltAllele, Genotype, Locus, Variant}
+import is.hail.expr._
 import is.hail.utils._
 import org.apache.spark.sql.Row
 
@@ -104,6 +103,8 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
       i += 1
     }
 
+    if (debug)
+      println(s"trying to align ${elementType} at alignment ${elementType.alignment}")
     buffer.align(elementType.alignment)
 
     val elementStart = buffer.allocate(nElements * eltSize)
@@ -163,7 +164,7 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
       case t: TDict =>
         val m = value.asInstanceOf[Map[Any, Any]]
         val arr = m.keys.view.map(k => Row(k, m(k)))
-        putArray(arr, offset, t.memStruct)
+        putArray(arr, offset, t.elementType)
       case struct: TStruct =>
         putStruct(value.asInstanceOf[Row], offset, struct)
       case TAltAllele | TVariant | TGenotype | TLocus | TInterval =>
@@ -343,17 +344,8 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
       case st: TStruct =>
         if (st.size > 0)
           copyStructFromPointer(st, o1, o2, ptr)
-      case TVariant => copyStructFromPointer(Variant.expandedType, o1, o2, ptr)
-      case TAltAllele => copyStructFromPointer(AltAllele.expandedType, o1, o2, ptr)
-      case TLocus => copyStructFromPointer(Locus.expandedType, o1, o2, ptr)
-      case TGenotype => copyStructFromPointer(Genotype.expandedType, o1, o2, ptr)
-      case TInterval => copyStructFromPointer(Locus.intervalExpandedType, o1, o2, ptr)
-      case TCall =>
-        val value = ptr.loadInt(o2)
-        buffer.storeInt(o1, value)
-      case TArray(et) => copyArrayFromPointer(et, o1, o2, ptr)
-      case TSet(et) => copyArrayFromPointer(et, o1, o2, ptr)
-      case td: TDict => copyArrayFromPointer(td.memStruct, o1, o2, ptr)
+      case ct: ComplexType => copyFromPointer(ct.representation, o1, o2, ptr)
+      case coll: TContainer => copyArrayFromPointer(coll.elementType, o1, o2, ptr)
       case _ => ???
     }
   }
@@ -391,17 +383,8 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
       case st: TStruct =>
         if (st.size > 0)
           copyStructFromMem(st, o1, o2, mb)
-      case TVariant => copyStructFromMem(Variant.expandedType, o1, o2, mb)
-      case TAltAllele => copyStructFromMem(AltAllele.expandedType, o1, o2, mb)
-      case TLocus => copyStructFromMem(Locus.expandedType, o1, o2, mb)
-      case TGenotype => copyStructFromMem(Genotype.expandedType, o1, o2, mb)
-      case TInterval => copyStructFromMem(Locus.intervalExpandedType, o1, o2, mb)
-      case TCall =>
-        val value = mb.loadInt(o2)
-        buffer.storeInt(o1, value)
-      case TArray(et) => copyArrayFromMem(et, o1, o2, mb)
-      case TSet(et) => copyArrayFromMem(et, o1, o2, mb)
-      case td: TDict => copyArrayFromMem(td.memStruct, o1, o2, mb)
+      case ct: ComplexType => copyFromMem(ct.representation, o1, o2, mb)
+      case coll: TContainer => copyArrayFromMem(coll.elementType, o1, o2, mb)
       case _ => ???
     }
   }

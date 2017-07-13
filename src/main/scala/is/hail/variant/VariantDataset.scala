@@ -91,7 +91,7 @@ object VariantDataset {
     new VariantSampleMatrix[Genotype](hc, fileMetadata, rdd.toOrderedRDD)
   }
 
-  def kuduRowType(vaSignature: Type): Type = TStruct("variant" -> Variant.expandedType,
+  def kuduRowType(vaSignature: Type): Type = TStruct("variant" -> TVariant.representation,
     "annotations" -> vaSignature,
     "gs" -> GenotypeStream.t,
     "sample_group" -> TString)

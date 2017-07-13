@@ -103,17 +103,17 @@ class UnsafeRow(@transient var t: TStruct, var ptr: Pointer, debug: Boolean = fa
       case TSet(elementType) => readArrayAbsolute(offset, elementType).toSet
       case TString => new String(readBinaryAbsolute(offset))
       case td: TDict =>
-        readArrayAbsolute(offset, td.memStruct).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
+        readArrayAbsolute(offset, td.elementType).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
         if (struct.size == 0)
           Annotation.empty
         else
           readStructAbsolute(offset, struct)
-      case TVariant => Variant.fromRow(readStructAbsolute(offset, Variant.expandedType))
-      case TLocus => Locus.fromRow(readStructAbsolute(offset, Locus.expandedType))
-      case TAltAllele => AltAllele.fromRow(readStructAbsolute(offset, AltAllele.expandedType))
-      case TGenotype => Genotype.fromRow(readStructAbsolute(offset, Genotype.expandedType))
-      case TInterval => Locus.intervalFromRow(readStructAbsolute(offset, Locus.intervalExpandedType))
+      case TVariant => Variant.fromRow(readStructAbsolute(offset, TVariant.representation.asInstanceOf[TStruct]))
+      case TLocus => Locus.fromRow(readStructAbsolute(offset, TLocus.representation.asInstanceOf[TStruct]))
+      case TAltAllele => AltAllele.fromRow(readStructAbsolute(offset, TAltAllele.representation.asInstanceOf[TStruct]))
+      case TGenotype => Genotype.fromRow(readStructAbsolute(offset, TGenotype.representation.asInstanceOf[TStruct]))
+      case TInterval => Locus.intervalFromRow(readStructAbsolute(offset, TInterval.representation.asInstanceOf[TStruct]))
 
       case _ => ???
     }
@@ -133,17 +133,17 @@ class UnsafeRow(@transient var t: TStruct, var ptr: Pointer, debug: Boolean = fa
       case TSet(elementType) => readArray(offset, elementType).toSet
       case TString => new String(readBinary(offset))
       case td: TDict =>
-        readArray(offset, td.memStruct).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
+        readArray(offset, td.elementType).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
         if (struct.size == 0)
           Annotation.empty
         else
           readStruct(offset, struct)
-      case TVariant => Variant.fromRow(readStruct(offset, Variant.expandedType))
-      case TLocus => Locus.fromRow(readStruct(offset, Locus.expandedType))
-      case TAltAllele => AltAllele.fromRow(readStruct(offset, AltAllele.expandedType))
-      case TGenotype => Genotype.fromRow(readStruct(offset, Genotype.expandedType))
-      case TInterval => Locus.intervalFromRow(readStruct(offset, Locus.intervalExpandedType))
+      case TVariant => Variant.fromRow(readStruct(offset, TVariant.representation.asInstanceOf[TStruct]))
+      case TLocus => Locus.fromRow(readStruct(offset, TLocus.representation.asInstanceOf[TStruct]))
+      case TAltAllele => AltAllele.fromRow(readStruct(offset, TAltAllele.representation.asInstanceOf[TStruct]))
+      case TGenotype => Genotype.fromRow(readStruct(offset, TGenotype.representation.asInstanceOf[TStruct]))
+      case TInterval => Locus.intervalFromRow(readStruct(offset, TInterval.representation.asInstanceOf[TStruct]))
 
       case _ => ???
     }

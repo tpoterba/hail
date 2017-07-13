@@ -8,7 +8,6 @@ import is.hail.utils.{Interval, StringEscapeUtils, _}
 import is.hail.variant.{AltAllele, Call, Genotype, Locus, Variant}
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.DataType
-import org.apache.spark.unsafe.Platform
 import org.json4s._
 import org.json4s.jackson.JsonMethods
 
@@ -158,7 +157,15 @@ sealed abstract class Type {
 
   def byteSize: Int = ???
 
-  def alignment: Int = byteSize.max(1)
+  def alignment: Int = byteSize
+}
+
+abstract class ComplexType extends Type {
+  def representation: Type
+
+  override def byteSize: Int = representation.byteSize
+
+  override def alignment: Int = representation.alignment
 }
 
 case object TBinary extends Type {
@@ -474,6 +481,8 @@ case class TAggregable(elementType: Type) extends TContainer {
 abstract class TContainer extends Type {
   def elementType: Type
 
+  override def byteSize: Int = 4
+
   override def children = Seq(elementType)
 }
 
@@ -545,8 +554,6 @@ case class TArray(elementType: Type) extends TIterable {
     """
 
   override def scalaClassTag: ClassTag[IndexedSeq[AnyRef]] = classTag[IndexedSeq[AnyRef]]
-
-  override def byteSize: Int = 4
 }
 
 case class TSet(elementType: Type) extends TIterable {
@@ -592,20 +599,16 @@ case class TSet(elementType: Type) extends TIterable {
     """
 
   override def scalaClassTag: ClassTag[Set[AnyRef]] = classTag[Set[AnyRef]]
-
-  override def byteSize: Int = 4
 }
 
 case class TDict(keyType: Type, valueType: Type) extends TContainer {
-
-  val memStruct: TStruct = TStruct("key" -> keyType, "value" -> valueType)
 
   override def canCompare(other: Type): Boolean = other match {
     case TDict(okt, ovt) => keyType.canCompare(okt) && valueType.canCompare(ovt)
     case _ => false
   }
 
-  def elementType: Type = valueType
+  val elementType: Type = TStruct("key" -> keyType, "value" -> valueType)
 
   override def children = Seq(keyType, valueType)
 
@@ -660,12 +663,19 @@ case class TDict(keyType: Type, valueType: Type) extends TContainer {
           elementType.ordering(missingGreatest),
           elementType.ordering(missingGreatest))))
   }
-
-  override def byteSize: Int = 4
 }
 
-case object TGenotype extends Type {
+case object TGenotype extends ComplexType {
   override def toString = "Genotype"
+
+  val representation: Type = TStruct(
+    "gt" -> TInt,
+    "ad" -> TArray(TInt),
+    "dp" -> TInt,
+    "gq" -> TInt,
+    "px" -> TArray(TInt),
+    "fakeRef" -> TBoolean,
+    "isLinearScale" -> TBoolean)
 
   def typeCheck(a: Any): Boolean = a == null || a.isInstanceOf[Genotype]
 
@@ -678,13 +688,15 @@ case object TGenotype extends Type {
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Genotype]])
 
-  override def byteSize: Int = Genotype.expandedType.byteSize
+  override def byteSize: Int = representation.byteSize
 
   override def alignment: Int = 4
 }
 
-case object TCall extends Type {
+case object TCall extends ComplexType {
   override def toString = "Call"
+
+  def representation: Type = TInt
 
   def typeCheck(a: Any): Boolean = a == null || a.isInstanceOf[Int]
 
@@ -696,11 +708,9 @@ case object TCall extends Type {
 
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Int]])
-
-  override def byteSize: Int = 4
 }
 
-case object TAltAllele extends Type {
+case object TAltAllele extends ComplexType {
   override def toString = "AltAllele"
 
   def typeCheck(a: Any): Boolean = a == null || a == null || a.isInstanceOf[AltAllele]
@@ -714,12 +724,12 @@ case object TAltAllele extends Type {
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[AltAllele]])
 
-  override def byteSize: Int = AltAllele.expandedType.byteSize
-
-  override def alignment: Int = 4
+  val representation: Type = TStruct(
+    "ref" -> TString,
+    "alt" -> TString)
 }
 
-case object TVariant extends Type {
+case object TVariant extends ComplexType {
   override def toString = "Variant"
 
   def typeCheck(a: Any): Boolean = a == null || a.isInstanceOf[Variant]
@@ -743,12 +753,14 @@ case object TVariant extends Type {
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Variant]])
 
-  override def byteSize: Int = Variant.expandedType.byteSize
-
-  override def alignment: Int = 4
+  val representation: Type = TStruct(
+    "contig" -> TString,
+    "start" -> TInt,
+    "ref" -> TString,
+    "altAlleles" -> TArray(TAltAllele.representation))
 }
 
-case object TLocus extends Type {
+case object TLocus extends ComplexType {
   override def toString = "Locus"
 
   def typeCheck(a: Any): Boolean = a == null || a.isInstanceOf[Locus]
@@ -762,12 +774,12 @@ case object TLocus extends Type {
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Locus]])
 
-  override def byteSize: Int = Locus.expandedType.byteSize
-
-  override def alignment: Int = 4
+  val representation: Type = TStruct(
+    "contig" -> TString,
+    "position" -> TInt)
 }
 
-case object TInterval extends Type {
+case object TInterval extends ComplexType {
   override def toString = "Interval"
 
   def typeCheck(a: Any): Boolean = a == null || a.isInstanceOf[Interval[_]] && a.asInstanceOf[Interval[_]].end.isInstanceOf[Locus]
@@ -781,9 +793,9 @@ case object TInterval extends Type {
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Interval[Locus]]])
 
-  override val byteSize: Int = Locus.intervalExpandedType.byteSize
-
-  override def alignment: Int = 4
+  val representation: Type = TStruct(
+    "start" -> TLocus.representation,
+    "end" -> TLocus.representation)
 }
 
 case class Field(name: String, typ: Type,

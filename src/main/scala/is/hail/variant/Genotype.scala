@@ -455,15 +455,6 @@ object Genotype {
       r.getBoolean(6))
   }
 
-  val expandedType: TStruct = TStruct(
-    "gt" -> TInt,
-    "ad" -> TArray(TInt),
-    "dp" -> TInt,
-    "gq" -> TInt,
-    "px" -> TArray(TInt),
-    "fakeRef" -> TBoolean,
-    "isLinearScale" -> TBoolean)
-
   final val flagMultiHasGTBit = 0x1
   final val flagMultiGTRefBit = 0x2
   final val flagBiGTMask = 0x3
