@@ -158,7 +158,7 @@ sealed abstract class Type {
 
   def byteSize: Int = ???
 
-  def alignment: Int = byteSize
+  def alignment: Int = byteSize.max(1)
 }
 
 case object TBinary extends Type {
@@ -1258,9 +1258,9 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
           oneByteSlots.enqueue(head + 3)
         }
       else if (fSize == 4 && fAlignment == 4 && fourByteSlots.nonEmpty)
-          a(f.index) = fourByteSlots.dequeue()
+        a(f.index) = fourByteSlots.dequeue()
       else {
-//        println(f, fSize, fAlignment)
+        //        println(f, fSize, fAlignment)
         val mod = offset % fAlignment
         if (mod != 0) {
           val shift = fAlignment - mod
@@ -1292,5 +1292,9 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
     byteOffsets(maxIndex) + fields(maxIndex).typ.byteSize
   }
 
-  override lazy val alignment: Int = if (size == 0) 0 else math.max(1, fields.map(_.typ.alignment).max)
+  override lazy val alignment: Int =
+    if (fields.isEmpty)
+      1
+    else
+      fields.map(_.typ.alignment).max
 }
