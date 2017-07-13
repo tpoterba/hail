@@ -34,6 +34,17 @@ object Locus {
       StructField("contig", StringType, nullable = false),
       StructField("position", IntegerType, nullable = false)))
 
+  def fromRow(r: Row): Locus = {
+    Locus(r.getAs[String](0), r.getInt(1))
+  }
+
+  def intervalFromRow(r: Row): Interval[Locus] = {
+    Interval[Locus](
+      Locus.fromRow(r.getAs[Row](0)),
+      Locus.fromRow(r.getAs[Row](1))
+    )
+  }
+
   val expandedType: TStruct = TStruct(
     "contig" -> TString,
     "position" -> TInt)

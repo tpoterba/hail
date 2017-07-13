@@ -9,6 +9,11 @@ final class MemoryBlock(val mem: Array[Long]) {
 
   def sizeInBytes: Int = mem.length * 8
 
+  def copyFrom(other: MemoryBlock, readStart: Int, writeStart: Int, size: Int) {
+    Platform.copyMemory(other.mem, readStart + Platform.LONG_ARRAY_OFFSET, mem,
+      writeStart + Platform.LONG_ARRAY_OFFSET, size)
+  }
+
   def loadInt(off: Int): Int = {
     assert(off + 4 <= sizeInBytes, s"tried to read int from offset $off with array size $sizeInBytes")
     Platform.getInt(mem, Platform.LONG_ARRAY_OFFSET + off)
@@ -83,59 +88,59 @@ final class MemoryBlock(val mem: Array[Long]) {
   def copy(): MemoryBlock = new MemoryBlock(util.Arrays.copyOf(mem, mem.length))
 }
 
-final class Pointer(val mem: MemoryBlock, val memOffset: Int) {
+final class Pointer(val mb: MemoryBlock, val offset: Int) {
 
-  def loadInt(): Int = mem.loadInt(memOffset)
+  def loadInt(): Int = mb.loadInt(offset)
 
-  def loadInt(off: Int): Int = mem.loadInt(off + memOffset)
+  def loadInt(off: Int): Int = mb.loadInt(off + offset)
 
-  def loadLong(): Int = mem.loadInt(memOffset)
+  def loadLong(): Int = mb.loadInt(offset)
 
-  def loadLong(off: Int): Long = mem.loadLong(off + memOffset)
+  def loadLong(off: Int): Long = mb.loadLong(off + offset)
 
-  def loadFloat(): Float = mem.loadFloat(memOffset)
+  def loadFloat(): Float = mb.loadFloat(offset)
 
-  def loadFloat(off: Int): Float = mem.loadFloat(off + memOffset)
+  def loadFloat(off: Int): Float = mb.loadFloat(off + offset)
 
-  def loadDouble(): Double = mem.loadDouble(memOffset)
+  def loadDouble(): Double = mb.loadDouble(offset)
 
-  def loadDouble(off: Int): Double = mem.loadDouble(off + memOffset)
+  def loadDouble(off: Int): Double = mb.loadDouble(off + offset)
 
-  def loadByte(): Byte = mem.loadByte(memOffset)
+  def loadByte(): Byte = mb.loadByte(offset)
 
-  def loadByte(off: Int): Byte = mem.loadByte(off + memOffset)
+  def loadByte(off: Int): Byte = mb.loadByte(off + offset)
 
-  def loadBytes(size: Int): Array[Byte] = mem.loadBytes(memOffset, size)
+  def loadBytes(size: Int): Array[Byte] = mb.loadBytes(offset, size)
 
-  def loadBytes(off: Int, size: Int): Array[Byte] = mem.loadBytes(off + memOffset, size)
+  def loadBytes(off: Int, size: Int): Array[Byte] = mb.loadBytes(off + offset, size)
 
-  def storeInt(i: Int): Unit = mem.storeInt(memOffset, i)
+  def storeInt(i: Int): Unit = mb.storeInt(offset, i)
 
-  def storeInt(off: Int, i: Int): Unit = mem.storeInt(memOffset + off, i)
+  def storeInt(off: Int, i: Int): Unit = mb.storeInt(offset + off, i)
 
-  def storeLong(l: Long): Unit = mem.storeLong(memOffset, l)
+  def storeLong(l: Long): Unit = mb.storeLong(offset, l)
 
-  def storeLong(off: Int, l: Long): Unit = mem.storeLong(memOffset + off, l)
+  def storeLong(off: Int, l: Long): Unit = mb.storeLong(offset + off, l)
 
-  def storeFloat(f: Float): Unit = mem.storeFloat(memOffset, f)
+  def storeFloat(f: Float): Unit = mb.storeFloat(offset, f)
 
-  def storeFloat(off: Int, f: Float): Unit = mem.storeFloat(memOffset + off, f)
+  def storeFloat(off: Int, f: Float): Unit = mb.storeFloat(offset + off, f)
 
-  def storeDouble(d: Double): Unit = mem.storeDouble(memOffset, d)
+  def storeDouble(d: Double): Unit = mb.storeDouble(offset, d)
 
-  def storeDouble(off: Int, d: Double): Unit = mem.storeDouble(memOffset + off, d)
+  def storeDouble(off: Int, d: Double): Unit = mb.storeDouble(offset + off, d)
 
-  def storeByte(b: Byte): Unit = mem.storeByte(memOffset, b)
+  def storeByte(b: Byte): Unit = mb.storeByte(offset, b)
 
-  def storeByte(off: Int, b: Byte): Unit = mem.storeByte(memOffset + off, b)
+  def storeByte(off: Int, b: Byte): Unit = mb.storeByte(offset + off, b)
 
-  def storeBytes(bytes: Array[Byte]): Unit = mem.storeBytes(memOffset, bytes)
+  def storeBytes(bytes: Array[Byte]): Unit = mb.storeBytes(offset, bytes)
 
-  def storeBytes(off: Int, bytes: Array[Byte]): Unit = mem.storeBytes(memOffset + off, bytes)
+  def storeBytes(off: Int, bytes: Array[Byte]): Unit = mb.storeBytes(offset + off, bytes)
 
-  def offset(off: Int): Pointer = new Pointer(mem, memOffset + off)
+  def offset(off: Int): Pointer = new Pointer(mb, offset + off)
 
-  def copy(): Pointer = new Pointer(mem.copy(), memOffset)
+  def copy(): Pointer = new Pointer(mb.copy(), offset)
 }
 
 final class MemoryBuffer(sizeHint: Int = 128) {
@@ -220,9 +225,19 @@ final class MemoryBuffer(sizeHint: Int = 128) {
   }
 
   def align(alignment: Int) {
-    assert(alignment > 0)
-    assert((alignment & (alignment - 1)) == 0) // power of 2
+    assert(alignment > 0, s"invalid alignment: $alignment")
+    assert((alignment & (alignment - 1)) == 0, s"invalid alignment: $alignment") // power of 2
     offset = (offset + (alignment - 1)) & ~(alignment - 1)
+  }
+
+  def copyFrom(other: MemoryBlock, readStart: Int, writeStart: Int, size: Int) {
+    assert(writeStart <= (offset - size))
+    mb.copyFrom(other, readStart, writeStart, size)
+  }
+
+  def copyFrom(other: Pointer, readStart: Int, writeStart: Int, size: Int) {
+    assert(readStart <= (offset - size))
+    mb.copyFrom(other.mb, readStart + other.offset, writeStart, size)
   }
 
   def clear() {
