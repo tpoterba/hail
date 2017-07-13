@@ -1,5 +1,7 @@
 package is.hail.expr
 
+import java.util
+
 import is.hail.annotations.{Annotation, AnnotationPathException, _}
 import is.hail.check.Arbitrary._
 import is.hail.check.{Gen, _}
@@ -1246,63 +1248,35 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
     })
   }
 
-  lazy val byteOffsets: Array[Int] = {
+  val (byteOffsets, _byteSize): (Array[Int], Int) = {
     val a = new Array[Int](size)
-    val oneByteSlots = new mutable.Queue[Int]()
-    val fourByteSlots = new mutable.Queue[Int]()
+
+    val bp = new BytePacker
+
     val nMissingBytes = (size + 7) / 8
     var offset = nMissingBytes
     fields.foreach { f =>
       val fSize = f.typ.byteSize
       val fAlignment = f.typ.alignment
 
-      if (fSize == 0)
-        a(f.index) = -1 // don't ever realize empty things
-      else if (fSize == 1 && fAlignment == 1 && (oneByteSlots.nonEmpty || fourByteSlots.nonEmpty))
-        if (oneByteSlots.nonEmpty)
-          a(f.index) = oneByteSlots.dequeue()
-        else {
-          // greedily use four-byte slots, don't try to do a global optimization
-          val head = fourByteSlots.dequeue()
-          a(f.index) = head
-          oneByteSlots.enqueue(head + 1)
-          oneByteSlots.enqueue(head + 2)
-          oneByteSlots.enqueue(head + 3)
-        }
-      else if (fSize == 4 && fAlignment == 4 && fourByteSlots.nonEmpty)
-        a(f.index) = fourByteSlots.dequeue()
-      else {
-        //        println(f, fSize, fAlignment)
-        val mod = offset % fAlignment
-        if (mod != 0) {
-          val shift = fAlignment - mod
-          var used = 0
-          while (used < shift) {
-            if (((offset + used) % 4 == 0) && (used + 4 < shift)) {
-              fourByteSlots.enqueue(offset + used)
-              used += 4
-            } else {
-              oneByteSlots.enqueue(offset + used)
-              used += 1
-            }
+      bp.getSpace(fSize, fAlignment) match {
+        case Some(start) =>
+          a(f.index) = start
+        case None =>
+          val mod = offset % fAlignment
+          if (mod != 0) {
+            val shift = fAlignment - mod
+            bp.insertSpace(offset, shift)
+            offset += (fAlignment - mod)
           }
-          offset += (fAlignment - mod)
-        }
-        a(f.index) = offset
-        offset += fSize
+          a(f.index) = offset
+          offset += fSize
       }
     }
-    a
+    a -> offset
   }
 
-  override lazy val byteSize: Int = if (size == 0)
-    0
-  else if (byteOffsets.forall(_ < 0))
-    (size + 7) / 8
-  else {
-    val maxIndex = byteOffsets.indexOf(byteOffsets.max)
-    byteOffsets(maxIndex) + fields(maxIndex).typ.byteSize
-  }
+  override def byteSize: Int = _byteSize
 
   override lazy val alignment: Int =
     if (fields.isEmpty)

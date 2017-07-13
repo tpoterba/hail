@@ -8,6 +8,7 @@ import org.apache.spark.sql.Row
 import org.testng.annotations.Test
 
 class UnsafeSuite extends SparkSuite {
+  val globalDebug = false
 
   @Test def testMemoryBuffer() {
     val buff = new MemoryBuffer()
@@ -43,7 +44,7 @@ class UnsafeSuite extends SparkSuite {
     rng.reSeed(Prop.seed)
 
     Prop.forAll(g) { case (t, a) =>
-      val urb = new UnsafeRowBuilder(t, debug = false)
+      val urb = new UnsafeRowBuilder(t, debug = globalDebug)
       urb.setAll(a.asInstanceOf[Row])
       val unsafeRow = urb.result()
 
@@ -75,7 +76,7 @@ class UnsafeSuite extends SparkSuite {
     } yield (x, r)
 
     Prop.forAll(g2) { case ((t, a), r) =>
-      val urb = new UnsafeRowBuilder(t, debug = false)
+      val urb = new UnsafeRowBuilder(t, debug = globalDebug)
       val row = a.asInstanceOf[Row]
       var i = 0
       urb.setAll(row)
@@ -84,7 +85,7 @@ class UnsafeSuite extends SparkSuite {
       val p1 = ur1 == row
 
       val t2 = TStruct(r.map(t.fields).map(f => f.name -> f.typ): _*)
-      val urb2 = new UnsafeRowBuilder(t2, debug = false)
+      val urb2 = new UnsafeRowBuilder(t2, debug = globalDebug)
 
       i = 0
 
@@ -118,5 +119,45 @@ class UnsafeSuite extends SparkSuite {
 
       p
     }.apply(Parameters(rng, 1000, 1000))
+  }
+
+  @Test def testPacking() {
+
+    def makeStruct(types: Type*): TStruct = {
+      TStruct(types.zipWithIndex.map { case (t, i) => (s"f$i", t) }: _*)
+    }
+
+    val t1 = makeStruct( // missing byte is 0
+      TInt, //4-8
+      TInt, //8-12
+      TDouble, //16-24
+      TBoolean, //1-2
+      TBoolean, //2-3
+      TBoolean, //3-4
+      TBoolean, //12-13
+      TBoolean) //13-14
+    assert(t1.byteOffsets.toSeq == Seq(4, 8, 16, 1, 2, 3, 12, 13))
+    assert(t1.byteSize == 24)
+
+    val t2 = makeStruct( //missing bytes 0, 1
+      TBoolean, //2-3
+      TInt, //4-8
+      TInt, //8-12
+      TDouble, //16-24
+      TInt, //12-16
+      TInt, //24-28
+      TDouble, //32-40
+      TInt, //28-32
+      TBoolean, //3-4
+      TDouble, //40-48
+      TBoolean) //48-49
+
+    assert(t2.byteOffsets.toSeq == Seq(2, 4, 8, 16, 12, 24, 32, 28, 3, 40, 48))
+    assert(t2.byteSize == 49)
+
+    val t3 = makeStruct((0 until 512).map(_ => TDouble): _*)
+    assert(t3.byteSize == (512 / 8) + 512 * 8)
+    val t4 = makeStruct((0 until 256).flatMap(_ => Iterator(TInt, TInt, TDouble, TBoolean)): _*)
+    assert(t4.byteSize == 256 * 4 / 8 + 256 * 4 * 2 + 256 * 8 + 256)
   }
 }

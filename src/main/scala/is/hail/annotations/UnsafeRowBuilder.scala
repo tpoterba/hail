@@ -57,6 +57,13 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
   }
 
   def setFromRow(index: Int, oldIndex: Int, r: Row) {
+    if (debug) {
+      println(
+        s"""trying to set index $index from old index $oldIndex
+           |  t: ${t}
+           |  value: ${r.get(oldIndex)}
+           |  offset: ${t.byteOffsets(index)} [${t.byteOffsets.mkString(", ")}]""".stripMargin)
+    }
     if (r.isNullAt(oldIndex))
       setMissing(index)
     else

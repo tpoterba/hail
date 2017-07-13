@@ -1,6 +1,6 @@
 package is.hail.annotations
 
-import is.hail.expr.{TAltAllele, TArray, TBoolean, TCall, TDict, TDouble, TFloat, TGenotype, TInt, TInterval, TLocus, TLong, TSet, TString, TStruct, TVariant, Type}
+import is.hail.expr._
 import is.hail.variant.{AltAllele, Genotype, Locus, Variant}
 import org.apache.spark.sql.Row
 
