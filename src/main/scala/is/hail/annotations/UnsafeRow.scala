@@ -105,9 +105,6 @@ class UnsafeRow(@transient var t: TStruct, var ptr: Pointer, debug: Boolean = fa
       case td: TDict =>
         readArrayAbsolute(offset, td.elementType).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
-        if (struct.size == 0)
-          Annotation.empty
-        else
           readStructAbsolute(offset, struct)
       case TVariant => Variant.fromRow(readStructAbsolute(offset, TVariant.representation.asInstanceOf[TStruct]))
       case TLocus => Locus.fromRow(readStructAbsolute(offset, TLocus.representation.asInstanceOf[TStruct]))
@@ -135,9 +132,6 @@ class UnsafeRow(@transient var t: TStruct, var ptr: Pointer, debug: Boolean = fa
       case td: TDict =>
         readArray(offset, td.elementType).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
-        if (struct.size == 0)
-          Annotation.empty
-        else
           readStruct(offset, struct)
       case TVariant => Variant.fromRow(readStruct(offset, TVariant.representation.asInstanceOf[TStruct]))
       case TLocus => Locus.fromRow(readStruct(offset, TLocus.representation.asInstanceOf[TStruct]))
