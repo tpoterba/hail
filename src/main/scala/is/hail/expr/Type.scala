@@ -157,7 +157,7 @@ sealed abstract class Type {
 
   def ordering(missingGreatest: Boolean): Ordering[Annotation]
 
-  def byteSize: Int = ???
+  def byteSize: Int = throw new NotImplementedError(toString)
 
   def alignment: Int = byteSize
 }
