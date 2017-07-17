@@ -1248,10 +1248,11 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
     })
   }
 
-  val (byteOffsets, _byteSize): (Array[Int], Int) = {
+  // needs to be lazy, because the compiler uses placeholders
+  lazy val (byteOffsets, _byteSize): (Array[Int], Int) = {
     val a = new Array[Int](size)
 
-    val bp = new BytePacker
+    val bp = new BytePacker()
 
     val nMissingBytes = (size + 7) / 8
     var offset = nMissingBytes
