@@ -160,4 +160,8 @@ class UnsafeSuite extends SparkSuite {
     val t4 = makeStruct((0 until 256).flatMap(_ => Iterator(TInt, TInt, TDouble, TBoolean)): _*)
     assert(t4.byteSize == 256 * 4 / 8 + 256 * 4 * 2 + 256 * 8 + 256)
   }
+
+  @Test def testEmptySize() {
+    assert(TStruct().byteSize == 0)
+  }
 }
