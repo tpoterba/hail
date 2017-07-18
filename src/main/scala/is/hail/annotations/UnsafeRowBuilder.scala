@@ -1,5 +1,7 @@
 package is.hail.annotations
 
+import java.io.DataOutputStream
+
 import is.hail.expr._
 import is.hail.utils._
 import org.apache.spark.sql.Row

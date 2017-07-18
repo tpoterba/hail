@@ -58,6 +58,12 @@ object HailContext {
     conf.set("spark.sql.files.openCostInBytes", tera.toString)
     conf.set("spark.sql.files.maxPartitionBytes", tera.toString)
 
+    conf.set("spark.kryo.referenceTracking", "false")
+    conf.set("spark.kryo.unsafe", "true")
+    // conf.set("spark.kryo.registrationRequired", "true")
+    conf.set("spark.kryo.registrator", "is.hail.utils.HailKryoRegistrator")
+
+
     conf.set("spark.hadoop.mapreduce.input.fileinputformat.split.minsize", (blockSize * 1024L * 1024L).toString)
 
     /* `DataFrame.write` writes one file per partition.  Without this, read will split files larger than the default

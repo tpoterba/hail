@@ -3,11 +3,33 @@ package is.hail.annotations
 import java.util
 
 import org.apache.spark.unsafe.Platform
+import com.esotericsoftware.kryo.io.{Input, Output}
+
+object MemoryBlock {
+    def readKryo(in: Input): MemoryBlock = {
+        val length = in.readInt()
+        new MemoryBlock(in.readLongs(length))
+    }
+
+    def writeKryo(mb: MemoryBlock, out: Output) {
+        out.writeInt(mb.mem.length)
+        out.writeLongs(mb.mem)
+    }
+}
 
 final class MemoryBlock(val mem: Array[Long]) {
   require(mem.length < (Integer.MAX_VALUE / 8), "too big")
 
   def sizeInBytes: Int = mem.length * 8
+
+  def zero() {
+    java.util.Arrays.fill(mem, 0)
+  }
+
+  def copyTo(bytes: Array[Byte]) {
+    require(sizeInBytes <= bytes.length)
+    Platform.copyMemory(mem, Platform.LONG_ARRAY_OFFSET, bytes, Platform.BYTE_ARRAY_OFFSET, sizeInBytes)
+  }
 
   def copyFrom(other: MemoryBlock, readStart: Int, writeStart: Int, size: Int) {
     Platform.copyMemory(other.mem, readStart + Platform.LONG_ARRAY_OFFSET, mem,
@@ -194,6 +216,7 @@ final class MemoryBuffer(sizeHint: Int = 128) {
 
   def clear() {
     offset = 0
+    mb.zero()
   }
 
   def result(): MemoryBlock = {

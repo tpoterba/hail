@@ -4,6 +4,7 @@ import java.io._
 
 import is.hail.io.compress.BGzipCodec
 import is.hail.utils.{TextContext, WithContext, _}
+import net.jpountz.lz4.{LZ4BlockInputStream, LZ4BlockOutputStream, LZ4Compressor, LZ4FastDecompressor}
 import org.apache.hadoop
 import org.apache.hadoop.fs.FileStatus
 import org.apache.hadoop.io.IOUtils._
@@ -300,4 +301,26 @@ class RichHadoopConfiguration(val hConf: hadoop.conf.Configuration) extends AnyV
   def unsafeReader(filename: String): InputStream = open(filename)
 
   def unsafeWriter(filename: String): OutputStream = create(filename)
+
+  def writeLZ4DataFile[T](filename: String, blockSize: Int, compressor: LZ4Compressor)(writer: (DataOutputStream) => T): T = {
+    val oos = create(filename)
+    val comp = new LZ4BlockOutputStream(oos, blockSize, compressor)
+    val dos = new DataOutputStream(comp)
+    try {
+      writer(dos)
+    } finally {
+      dos.flush()
+      dos.close()
+    }
+  }
+
+  def readLZ4DataFile[T](filename: String, decompressor: LZ4FastDecompressor)(reader: (DataInputStream) => T): T = {
+    val decomp = new LZ4BlockInputStream(open(filename), decompressor)
+    val dis = new DataInputStream(decomp)
+    try {
+      reader(dis)
+    } finally {
+      dis.close()
+    }
+  }
 }

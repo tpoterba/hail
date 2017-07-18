@@ -8,6 +8,7 @@ import is.hail.io.plink.{FamFileConfig, PlinkLoader}
 import is.hail.io.{CassandraConnector, SolrConnector, exportTypes}
 import is.hail.methods.{Aggregators, Filter}
 import is.hail.utils._
+import net.jpountz.lz4.LZ4Factory
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
@@ -55,6 +56,51 @@ object KeyTable {
       SparkAnnotationImpex.importAnnotation(r, signature).asInstanceOf[Row]
     },
       signature, key)
+  }
+
+  def readRS(hc: HailContext, path: String): KeyTable = {
+    val metadataFile = path + "/metadata.json.gz"
+    val (signature, key, partitions) = try {
+      val json = hc.hadoopConf.readFile(metadataFile)(in =>
+        JsonMethods.parse(in))
+
+      val fields = json.asInstanceOf[JObject].obj.toMap
+
+      (fields.get("version"): @unchecked) match {
+        case Some(JInt(v)) =>
+          if (v != KeyTable.fileVersion)
+            fatal(
+              s"""Invalid KeyTable: old version
+                 |  got version $v, expected version ${ KeyTable.fileVersion }""".stripMargin)
+      }
+
+      val signature = (fields.get("schema"): @unchecked) match {
+        case Some(JString(s)) =>
+          Parser.parseType(s).asInstanceOf[TStruct]
+      }
+
+      val key = (fields.get("key_names"): @unchecked) match {
+        case Some(JArray(a)) =>
+          a.map { case JString(s) => s }.toArray[String]
+      }
+
+      val parts = (fields.get("partitions"): @unchecked) match {
+        case Some(JInt(a)) => a.toInt
+      }
+
+      (signature, key, parts)
+    } catch {
+      case e: Throwable =>
+        fatal(
+          s"""
+             |corrupt KeyTable: invalid metadata file.
+             |  caught exception: ${ expandException(e, logMessage = true) }
+          """.stripMargin)
+    }
+
+    val rdd = new UnsafeRowStoreRDD(hc, path + "/rowstore/", signature, partitions)
+
+    KeyTable(hc, rdd, signature, key)
   }
 
   def read(hc: HailContext, path: String): KeyTable = {
@@ -683,6 +729,60 @@ case class KeyTable(hc: HailContext, rdd: RDD[Row],
     hc.sqlContext.createDataFrame(rowRDD, signature.schema.asInstanceOf[StructType])
       .write.parquet(path + "/rdd.parquet")
   }
+
+  def writeRS(path: String, overwrite: Boolean = false, buffer: Int = 8 * 1024 * 1024) {
+    if (overwrite)
+      hc.hadoopConf.delete(path, recursive = true)
+    else if (hc.hadoopConf.exists(path))
+      fatal(s"$path already exists")
+    hc.hadoopConf.mkDir(path)
+
+    val json = JObject(
+      ("version", JInt(KeyTable.fileVersion)),
+      ("key_names", JArray(key.map(k => JString(k)).toList)),
+      ("schema", JString(signature.toPrettyString(compact = true, printAttrs = true))),
+      ("partitions", JInt(rdd.partitions.length)))
+
+    hc.hadoopConf.writeTextFile(path + "/metadata.json.gz")(Serialization.writePretty(json, _))
+
+    val localSignature = signature
+    hc.hadoopConf.mkDir(path + "/rowstore")
+
+
+    val localPathBase = path
+
+    val sConf = new SerializableHadoopConfiguration(hc.hadoopConf)
+    val rowCount = rdd.mapPartitionsWithIndex { case (i, it) =>
+      val urb = new UnsafeRowBuilder(localSignature)
+      var rowCount = 0L
+      sConf.value.writeLZ4DataFile(localPathBase + s"/rowstore/part-$i", buffer,
+        LZ4Factory.fastestInstance().highCompressor()) { out =>
+
+        var buff = new Array[Byte](1024)
+        it.foreach { r =>
+          urb.clear()
+          urb.setAll(r)
+          val ur = urb.result()
+          val size = ur.mb.sizeInBytes
+          out.writeInt(size)
+          if (size > buff.length) {
+            buff = new Array[Byte](size * 2)
+          }
+          ur.mb.copyTo(buff)
+          out.write(buff, 0, size)
+          rowCount += 1
+        }
+
+        out.writeInt(-1)
+        out.flush()
+      }
+
+      Iterator(rowCount)
+    }.fold(0L)(_ + _)
+
+    info(s"wrote $rowCount records")
+  }
+
 
   def cache(): KeyTable = persist("MEMORY_ONLY")
 

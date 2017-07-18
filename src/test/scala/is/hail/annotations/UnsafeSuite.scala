@@ -3,6 +3,7 @@ package is.hail.annotations
 import is.hail.SparkSuite
 import is.hail.check._
 import is.hail.expr._
+import is.hail.keytable.KeyTable
 import org.apache.commons.math3.random.RandomDataGenerator
 import org.apache.spark.sql.Row
 import org.testng.annotations.Test
@@ -164,4 +165,17 @@ class UnsafeSuite extends SparkSuite {
   @Test def testEmptySize() {
     assert(TStruct().byteSize == 0)
   }
+
+    @Test def testWrite() {
+      val kt = hc.importTable("src/test/resources/variantAnnotations.tsv", impute = true)
+        .keyBy("Position")
+      kt.typeCheck()
+      println(s"n partitions = ${kt.nPartitions}")
+      kt.writeRS("/tmp/test.rs", overwrite = true)
+
+      val rb = KeyTable.readRS(hc, "/tmp/test.rs")
+
+//      rb.rdd.foreach(println)
+      assert(kt.same(rb))
+    }
 }
