@@ -37,7 +37,7 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
   }
 
   def result(): UnsafeRow = {
-    new UnsafeRow(t, new Pointer(buffer.result(), 0), debug)
+    new UnsafeRow(t, buffer.result(), 0, debug)
   }
 
   def setFromUnsafe(index: Int, oldIndex: Int, u: UnsafeRow) {
@@ -52,7 +52,7 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
     } else {
       if (debug)
         println(s"setting $index/${ t.size } [$fieldType] at $o1, value = ${ u.get(oldIndex) }, oldOffset=${ u.t.byteOffsets(oldIndex) }")
-      copyFromPointer(fieldType, o1, o1, u.ptr)
+      copyFromUnsafe(fieldType, o1, o1 + u.mbOffset, u.mb)
     }
   }
 
@@ -193,27 +193,27 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
     buffer.storeByte(byteIndex, (oldBits | (0x1 << bitIndex)).toByte)
   }
 
-  private def copyStructFromPointer(st: TStruct, o1: Int, o2: Int, p: Pointer) {
-    val missingBytes = (st.size + 7) / 8
-    buffer.copyFrom(p, o1, o2, missingBytes)
-    var i = 0
-    var b = 0
-    while (i < st.size) {
-      if ((i & 0x7) == 0)
-        b = p.loadByte((i >> 3) + o2)
-      val isMissing = (b & (0x1 << (i & 0x7))) != 0
-      if (!isMissing) {
-        val offset = st.byteOffsets(i)
-        val fieldType = st.fields(i).typ
-        if (debug)
-          println(s"reading field $i [$fieldType] from ${ o2 + offset }, putting at ${ o1 }+$offset+${ p.offset }")
-        copyFromPointer(fieldType, o1 + offset, o2 + offset, p)
-      }
-      i += 1
-    }
-  }
+//  private def copyStructFromPointer(st: TStruct, o1: Int, o2: Int, p: Pointer) {
+//    val missingBytes = (st.size + 7) / 8
+//    buffer.copyFrom(p, o1, o2, missingBytes)
+//    var i = 0
+//    var b = 0
+//    while (i < st.size) {
+//      if ((i & 0x7) == 0)
+//        b = p.loadByte((i >> 3) + o2)
+//      val isMissing = (b & (0x1 << (i & 0x7))) != 0
+//      if (!isMissing) {
+//        val offset = st.byteOffsets(i)
+//        val fieldType = st.fields(i).typ
+//        if (debug)
+//          println(s"reading field $i [$fieldType] from ${ o2 + offset }, putting at ${ o1 }+$offset+${ p.offset }")
+//        copyFromPointer(fieldType, o1 + offset, o2 + offset, p)
+//      }
+//      i += 1
+//    }
+//  }
 
-  private def copyStructFromMem(st: TStruct, o1: Int, o2: Int, mb: MemoryBlock) {
+  private def copyStructFromUnsafe(st: TStruct, o1: Int, o2: Int, mb: MemoryBlock) {
     val missingBytes = (st.size + 7) / 8
     buffer.copyFrom(mb, o1, o2, missingBytes)
     var i = 0
@@ -229,47 +229,7 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
         val fieldType = st.fields(i).typ
         if (debug)
           println(s"reading field $i [$fieldType] from ${ o2 + offset }, setting ${ o1 }+$offset")
-        copyFromMem(fieldType, o1 + offset, o2 + offset, mb)
-      }
-      i += 1
-    }
-  }
-
-  private def copyArrayFromPointer(et: Type, o1: Int, o2: Int, ptr: Pointer) {
-    buffer.align(4)
-    val leftStart = buffer.allocate(4)
-    buffer.storeInt(o1, leftStart)
-
-    val rightStart = ptr.loadInt(o2)
-    val arrSize = ptr.mb.loadInt(rightStart)
-    buffer.storeInt(leftStart, arrSize)
-    val nMissingBytes = (arrSize + 7) / 8
-    buffer.allocate(nMissingBytes)
-    buffer.copyFrom(ptr.mb, leftStart + 4, rightStart + 4, nMissingBytes)
-    buffer.align(et.alignment)
-    val arrElementSize = UnsafeUtils.arrayElementSize(et)
-    val arrStart = buffer.allocate(arrSize * arrElementSize)
-    val rightArrStart = UnsafeUtils.roundUpAlignment(rightStart + 4 + nMissingBytes, et.alignment)
-
-    if (debug) {
-      println(s"reading Array from $o2->$rightStart+4+$nMissingBytes")
-      println(s"writing Array[$et] to $o1->$leftStart + 4 + $nMissingBytes, total size is ${ arrElementSize }*${ arrSize }=${ arrElementSize * arrSize }, buffer at ${ buffer.offset }")
-    }
-    assert(arrSize >= 0)
-
-    var i = 0
-    var b = 0
-    while (i < arrSize) {
-      if ((i & 0x7) == 0)
-        b = buffer.loadByte(leftStart + 4 + (i >> 3))
-
-      val isMissing = (b & (0x1 << (i & 0x7))) != 0
-      if (!isMissing) {
-        val elementOffset = i * arrElementSize
-        if (debug)
-          println(s"trying to read element $i [$et] from ${ rightArrStart + elementOffset }")
-
-        copyFromMem(et, arrStart + elementOffset, rightArrStart + elementOffset, ptr.mb)
+        copyFromUnsafe(fieldType, o1 + offset, o2 + offset, mb)
       }
       i += 1
     }
@@ -315,49 +275,49 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
           if (et == TDouble && 2500 < rightArrStart + elementOffset)
             println(s"DEBUG double at ${ rightArrStart + elementOffset } is ${ mb.loadDouble(rightArrStart + elementOffset) }")
         }
-        copyFromMem(et, arrStart + elementOffset, rightArrStart + elementOffset, mb)
+        copyFromUnsafe(et, arrStart + elementOffset, rightArrStart + elementOffset, mb)
       }
       i += 1
     }
   }
 
-  private def copyFromPointer(ft: Type, o1: Int, o2: Int, ptr: Pointer) {
-    ft match {
-      case TInt =>
-        val value = ptr.loadInt(o2)
-        buffer.storeInt(o1, value)
-      case TFloat =>
-        val value = ptr.loadFloat(o2)
-        buffer.storeFloat(o1, value)
-      case TLong =>
-        val value = ptr.loadLong(o2)
-        buffer.storeLong(o1, value)
-      case TDouble =>
-        val value = ptr.loadDouble(o2)
-        buffer.storeDouble(o1, value)
-      case TBoolean =>
-        val value = ptr.loadByte(o2)
-        buffer.storeByte(o1, value)
-      case TString =>
-        val abs = ptr.loadInt(o2)
-        val size = ptr.mb.loadInt(abs)
-        buffer.align(4)
-        val start = buffer.allocate(4 + size)
-        buffer.storeInt(o1, start)
-        buffer.storeInt(start, size)
-        buffer.copyFrom(ptr.mb, start + 4, abs + 4, size)
-        if (debug)
-          println(s"copying string to $o1->$start, size=$size")
-      case st: TStruct =>
-        if (st.size > 0)
-          copyStructFromPointer(st, o1, o2, ptr)
-      case ct: ComplexType => copyFromPointer(ct.representation, o1, o2, ptr)
-      case coll: TContainer => copyArrayFromPointer(coll.elementType, o1, o2, ptr)
-      case _ => ???
-    }
-  }
+//  private def copyFromPointer(ft: Type, o1: Int, o2: Int, ptr: Pointer) {
+//    ft match {
+//      case TInt =>
+//        val value = ptr.loadInt(o2)
+//        buffer.storeInt(o1, value)
+//      case TFloat =>
+//        val value = ptr.loadFloat(o2)
+//        buffer.storeFloat(o1, value)
+//      case TLong =>
+//        val value = ptr.loadLong(o2)
+//        buffer.storeLong(o1, value)
+//      case TDouble =>
+//        val value = ptr.loadDouble(o2)
+//        buffer.storeDouble(o1, value)
+//      case TBoolean =>
+//        val value = ptr.loadByte(o2)
+//        buffer.storeByte(o1, value)
+//      case TString =>
+//        val abs = ptr.loadInt(o2)
+//        val size = ptr.mb.loadInt(abs)
+//        buffer.align(4)
+//        val start = buffer.allocate(4 + size)
+//        buffer.storeInt(o1, start)
+//        buffer.storeInt(start, size)
+//        buffer.copyFrom(ptr.mb, start + 4, abs + 4, size)
+//        if (debug)
+//          println(s"copying string to $o1->$start, size=$size")
+//      case st: TStruct =>
+//        if (st.size > 0)
+//          copyStructFromPointer(st, o1, o2, ptr)
+//      case ct: ComplexType => copyFromPointer(ct.representation, o1, o2, ptr)
+//      case coll: TContainer => copyArrayFromPointer(coll.elementType, o1, o2, ptr)
+//      case _ => ???
+//    }
+//  }
 
-  private def copyFromMem(ft: Type, o1: Int, o2: Int, mb: MemoryBlock) {
+  private def copyFromUnsafe(ft: Type, o1: Int, o2: Int, mb: MemoryBlock) {
     // Try to set primitives directly
     ft match {
       case TInt =>
@@ -389,8 +349,8 @@ class UnsafeRowBuilder(t: TStruct, sizeHint: Int = 128, debug: Boolean = false) 
           println(s"copying string to $o1->$start, size=$size")
       case st: TStruct =>
         if (st.size > 0)
-          copyStructFromMem(st, o1, o2, mb)
-      case ct: ComplexType => copyFromMem(ct.representation, o1, o2, mb)
+          copyStructFromUnsafe(st, o1, o2, mb)
+      case ct: ComplexType => copyFromUnsafe(ct.representation, o1, o2, mb)
       case coll: TContainer => copyArrayFromMem(coll.elementType, o1, o2, mb)
       case _ => ???
     }

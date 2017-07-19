@@ -114,7 +114,7 @@ class UnsafeSuite extends SparkSuite {
              |IN:   $a
              |OUT1: $ur1
              |OUT2: $ur2
-             |SIZE: ${ ur1.ptr.mb.sizeInBytes }/${ ur2.ptr.mb.sizeInBytes }""".stripMargin)
+             |SIZE: ${ ur1.mb.sizeInBytes }/${ ur2.mb.sizeInBytes }""".stripMargin)
       }
 
       p

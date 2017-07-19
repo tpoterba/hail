@@ -670,7 +670,7 @@ case class TDict(keyType: Type, valueType: Type) extends TContainer {
 case object TGenotype extends ComplexType {
   override def toString = "Genotype"
 
-  val representation: Type = TStruct(
+  val representation: TStruct = TStruct(
     "gt" -> TInt,
     "ad" -> TArray(TInt),
     "dp" -> TInt,
@@ -726,7 +726,7 @@ case object TAltAllele extends ComplexType {
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[AltAllele]])
 
-  val representation: Type = TStruct(
+  val representation: TStruct = TStruct(
     "ref" -> TString,
     "alt" -> TString)
 }
@@ -755,7 +755,7 @@ case object TVariant extends ComplexType {
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Variant]])
 
-  val representation: Type = TStruct(
+  val representation: TStruct = TStruct(
     "contig" -> TString,
     "start" -> TInt,
     "ref" -> TString,
@@ -776,7 +776,7 @@ case object TLocus extends ComplexType {
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Locus]])
 
-  val representation: Type = TStruct(
+  val representation: TStruct = TStruct(
     "contig" -> TString,
     "position" -> TInt)
 }
@@ -795,7 +795,7 @@ case object TInterval extends ComplexType {
   override def ordering(missingGreatest: Boolean): Ordering[Annotation] =
     extendOrderingToNull(missingGreatest)(implicitly[Ordering[Interval[Locus]]])
 
-  val representation: Type = TStruct(
+  val representation: TStruct = TStruct(
     "start" -> TLocus.representation,
     "end" -> TLocus.representation)
 }

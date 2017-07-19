@@ -4,44 +4,35 @@ import is.hail.expr._
 import is.hail.variant.{AltAllele, Genotype, Locus, Variant}
 import org.apache.spark.sql.Row
 
-class UnsafeRow(@transient var t: TStruct, var ptr: Pointer, debug: Boolean = false) extends Row {
+class UnsafeRow(@transient var t: TStruct, val mb: MemoryBlock, val mbOffset: Int, debug: Boolean = false) extends Row {
 
   def length: Int = t.size
 
-  private def readBinaryAbsolute(offset: Int): Array[Byte] = {
-    val start = ptr.mb.loadInt(offset)
-
-    readBytesAbsolute(start)
-  }
-
-  private def readBytesAbsolute(offset: Int): Array[Byte] = {
+  private def readBinary(offset: Int): Array[Byte] = {
+    val start = mb.loadInt(offset)
     assert(offset > 0 && (offset & 0x3) == 0, s"invalid binary start: $offset")
-    val binLength = ptr.mb.loadInt(offset)
-    val b = ptr.mb.loadBytes(offset + 4, binLength)
+    val binLength = mb.loadInt(start)
+    val b = mb.loadBytes(start + 4, binLength)
     if (debug)
-      println(s"from absolute offset $offset, read length ${ binLength }, bytes='${ new String(b) }'")
+      println(s"from absolute offset $start, read length ${ binLength }, bytes='${ new String(b) }'")
 
     b
   }
 
-  private def readBinary(offset: Int): Array[Byte] = {
-    val start = ptr.loadInt(offset)
+  private def readArray(offset: Int, t: Type): IndexedSeq[Any] = {
+    val start = mb.loadInt(offset)
     if (debug)
-      println(s"reading binary from initial offset $offset(+${ ptr.offset }=${ ptr.offset + offset }), going to $start")
+      println(s"reading array from ${ offset }+${ mbOffset }=${ offset + mbOffset } -> $start")
 
-    readBytesAbsolute(start)
-  }
+    assert(start > 0 && (start & 0x3) == 0, s"invalid array start: $offset")
 
-  private def readArrayElems(offset: Int, t: Type): IndexedSeq[Any] = {
-    assert(offset > 0 && (offset & 0x3) == 0, s"invalid array start: $offset")
-
-    val arrLength = ptr.mb.loadInt(offset)
+    val arrLength = mb.loadInt(start)
     val missingBytes = (arrLength + 7) / 8
-    val elemsStart = UnsafeUtils.roundUpAlignment(offset + 4 + missingBytes, t.alignment)
+    val elemsStart = UnsafeUtils.roundUpAlignment(start + 4 + missingBytes, t.alignment)
     val eltSize = UnsafeUtils.arrayElementSize(t)
 
     if (debug)
-      println(s"reading array from absolute offset $offset. Length=$arrLength, elemsStart=$elemsStart, elemSize=$eltSize")
+      println(s"reading array from absolute offset $start. Length=$arrLength, elemsStart=$elemsStart, elemSize=$eltSize")
 
     val a = new Array[Any](arrLength)
 
@@ -50,11 +41,11 @@ class UnsafeRow(@transient var t: TStruct, var ptr: Pointer, debug: Boolean = fa
 
       val byteIndex = i / 8
       val bitShift = i & 0x7
-      val missingByte = ptr.mb.loadByte(offset + 4 + byteIndex)
+      val missingByte = mb.loadByte(start + 4 + byteIndex)
       val isMissing = (missingByte & (0x1 << bitShift)) != 0
 
       if (!isMissing)
-        a(i) = readAbsolute(elemsStart + i * eltSize, t)
+        a(i) = read(elemsStart + i * eltSize, t)
 
       i += 1
     }
@@ -62,82 +53,34 @@ class UnsafeRow(@transient var t: TStruct, var ptr: Pointer, debug: Boolean = fa
     a
   }
 
-  private def readArrayAbsolute(offset: Int, t: Type): IndexedSeq[Any] = {
-    val start = ptr.mb.loadInt(offset)
-    if (debug)
-      println(s"reading array from $offset -> ${ start }")
-    readArrayElems(start, t)
-  }
-
-
-  private def readArray(offset: Int, t: Type): IndexedSeq[Any] = {
-    val start = ptr.loadInt(offset)
-    if (debug)
-      println(s"reading array from ${ offset }+${ ptr.offset }=${ offset + ptr.offset } -> $start")
-    readArrayElems(start, t)
-  }
-
-  private def readStructAbsolute(offset: Int, t: TStruct): UnsafeRow = {
-    if (debug)
-      println(s"reading struct $t from offset ${ offset }")
-    new UnsafeRow(t, new Pointer(ptr.mb, offset), debug)
-  }
-
   private def readStruct(offset: Int, t: TStruct): UnsafeRow = {
     if (debug)
-      println(s"reading struct $t from offset ${ offset }+${ ptr.offset }=${ offset + ptr.offset }")
-    new UnsafeRow(t, new Pointer(ptr.mb, ptr.offset + offset), debug)
-  }
-
-  private def readAbsolute(offset: Int, t: Type): Any = {
-    t match {
-      case TBoolean =>
-        val b = ptr.mb.loadByte(offset)
-        assert(b == 0 || b == 1, s"invalid boolean byte $b from offset $offset")
-        b == 1
-      case TInt | TCall => ptr.mb.loadInt(offset)
-      case TLong => ptr.mb.loadLong(offset)
-      case TFloat => ptr.mb.loadFloat(offset)
-      case TDouble => ptr.mb.loadDouble(offset)
-      case TArray(elementType) => readArrayAbsolute(offset, elementType)
-      case TSet(elementType) => readArrayAbsolute(offset, elementType).toSet
-      case TString => new String(readBinaryAbsolute(offset))
-      case td: TDict =>
-        readArrayAbsolute(offset, td.elementType).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
-      case struct: TStruct =>
-          readStructAbsolute(offset, struct)
-      case TVariant => Variant.fromRow(readStructAbsolute(offset, TVariant.representation.asInstanceOf[TStruct]))
-      case TLocus => Locus.fromRow(readStructAbsolute(offset, TLocus.representation.asInstanceOf[TStruct]))
-      case TAltAllele => AltAllele.fromRow(readStructAbsolute(offset, TAltAllele.representation.asInstanceOf[TStruct]))
-      case TGenotype => Genotype.fromRow(readStructAbsolute(offset, TGenotype.representation.asInstanceOf[TStruct]))
-      case TInterval => Locus.intervalFromRow(readStructAbsolute(offset, TInterval.representation.asInstanceOf[TStruct]))
-
-      case _ => ???
-    }
+      println(s"reading struct $t from offset ${ offset }+${ mbOffset }=${ offset + mbOffset }")
+    new UnsafeRow(t, mb, offset, debug)
   }
 
   private def read(offset: Int, t: Type): Any = {
     t match {
       case TBoolean =>
-        val b = ptr.loadByte(offset)
+        val b = mb.loadByte(offset)
         assert(b == 0 || b == 1, s"invalid boolean byte $b from offset $offset")
         b == 1
-      case TInt | TCall => ptr.loadInt(offset)
-      case TLong => ptr.loadLong(offset)
-      case TFloat => ptr.loadFloat(offset)
-      case TDouble => ptr.loadDouble(offset)
+      case TInt | TCall => mb.loadInt(offset)
+      case TLong => mb.loadLong(offset)
+      case TFloat => mb.loadFloat(offset)
+      case TDouble => mb.loadDouble(offset)
       case TArray(elementType) => readArray(offset, elementType)
       case TSet(elementType) => readArray(offset, elementType).toSet
       case TString => new String(readBinary(offset))
       case td: TDict =>
         readArray(offset, td.elementType).asInstanceOf[IndexedSeq[Row]].map(r => (r.get(0), r.get(1))).toMap
       case struct: TStruct =>
-          readStruct(offset, struct)
-      case TVariant => Variant.fromRow(readStruct(offset, TVariant.representation.asInstanceOf[TStruct]))
-      case TLocus => Locus.fromRow(readStruct(offset, TLocus.representation.asInstanceOf[TStruct]))
-      case TAltAllele => AltAllele.fromRow(readStruct(offset, TAltAllele.representation.asInstanceOf[TStruct]))
-      case TGenotype => Genotype.fromRow(readStruct(offset, TGenotype.representation.asInstanceOf[TStruct]))
-      case TInterval => Locus.intervalFromRow(readStruct(offset, TInterval.representation.asInstanceOf[TStruct]))
+        readStruct(offset, struct)
+      case TVariant => Variant.fromRow(readStruct(offset, TVariant.representation))
+      case TLocus => Locus.fromRow(readStruct(offset, TLocus.representation))
+      case TAltAllele => AltAllele.fromRow(readStruct(offset, TAltAllele.representation))
+      case TGenotype => Genotype.fromRow(readStruct(offset, TGenotype.representation))
+      case TInterval => Locus.intervalFromRow(readStruct(offset, TInterval.representation))
 
       case _ => ???
     }
@@ -153,33 +96,33 @@ class UnsafeRow(@transient var t: TStruct, var ptr: Pointer, debug: Boolean = fa
     if (isNullAt(i))
       null
     else
-      read(offset, t.fields(i).typ)
+      read(mbOffset + offset, t.fields(i).typ)
   }
 
-  def copy(): Row = new UnsafeRow(t, ptr.copy(), debug)
+  def copy(): Row = new UnsafeRow(t, mb.copy(), mbOffset, debug)
 
   override def getInt(i: Int): Int = {
     assertDefined(i)
     val offset = t.byteOffsets(i)
-    ptr.loadInt(offset)
+    mb.loadInt(mbOffset + offset)
   }
 
   override def getLong(i: Int): Long = {
     assertDefined(i)
     val offset = t.byteOffsets(i)
-    ptr.loadLong(offset)
+    mb.loadLong(mbOffset + offset)
   }
 
   override def getFloat(i: Int): Float = {
     assertDefined(i)
     val offset = t.byteOffsets(i)
-    ptr.loadFloat(offset)
+    mb.loadFloat(mbOffset + offset)
   }
 
   override def getDouble(i: Int): Double = {
     assertDefined(i)
     val offset = t.byteOffsets(i)
-    ptr.loadDouble(offset)
+    mb.loadDouble(mbOffset + offset)
   }
 
   override def getBoolean(i: Int): Boolean = {
@@ -189,7 +132,7 @@ class UnsafeRow(@transient var t: TStruct, var ptr: Pointer, debug: Boolean = fa
   override def getByte(i: Int): Byte = {
     assertDefined(i)
     val offset = t.byteOffsets(i)
-    ptr.loadByte(offset)
+    mb.loadByte(mbOffset + offset)
   }
 
   override def isNullAt(i: Int): Boolean = {
@@ -197,6 +140,6 @@ class UnsafeRow(@transient var t: TStruct, var ptr: Pointer, debug: Boolean = fa
       throw new IndexOutOfBoundsException(i.toString)
     val byteIndex = i / 8
     val bitShift = i & 0x7
-    (ptr.loadByte(byteIndex) & (0x1 << bitShift)) != 0
+    (mb.loadByte(mbOffset + byteIndex) & (0x1 << bitShift)) != 0
   }
 }

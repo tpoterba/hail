@@ -88,48 +88,6 @@ final class MemoryBlock(val mem: Array[Long]) {
   def copy(): MemoryBlock = new MemoryBlock(util.Arrays.copyOf(mem, mem.length))
 }
 
-final class Pointer(val mb: MemoryBlock, val offset: Int) {
-  def loadInt(off: Int): Int = mb.loadInt(off + offset)
-
-  def loadLong(off: Int): Long = mb.loadLong(off + offset)
-
-  def loadFloat(off: Int): Float = mb.loadFloat(off + offset)
-
-  def loadDouble(off: Int): Double = mb.loadDouble(off + offset)
-
-  def loadByte(off: Int): Byte = mb.loadByte(off + offset)
-
-  def loadBytes(off: Int, size: Int): Array[Byte] = mb.loadBytes(off + offset, size)
-
-  def storeInt(off: Int, i: Int) {
-    mb.storeInt(offset + off, i)
-  }
-
-  def storeLong(off: Int, l: Long) {
-    mb.storeLong(offset + off, l)
-  }
-
-  def storeFloat(off: Int, f: Float) {
-    mb.storeFloat(offset + off, f)
-  }
-
-  def storeDouble(off: Int, d: Double) {
-    mb.storeDouble(offset + off, d)
-  }
-
-  def storeByte(off: Int, b: Byte) {
-    mb.storeByte(offset + off, b)
-  }
-  
-  def storeBytes(off: Int, bytes: Array[Byte]) {
-    mb.storeBytes(offset + off, bytes)
-  }
-
-  def offset(off: Int): Pointer = new Pointer(mb, offset + off)
-
-  def copy(): Pointer = new Pointer(mb.copy(), offset)
-}
-
 final class MemoryBuffer(sizeHint: Int = 128) {
   var mb = new MemoryBlock(new Array[Long]((sizeHint + 7) / 8))
 
@@ -232,11 +190,6 @@ final class MemoryBuffer(sizeHint: Int = 128) {
   def copyFrom(other: MemoryBlock, readStart: Int, writeStart: Int, size: Int) {
     assert(writeStart <= (offset - size))
     mb.copyFrom(other, readStart, writeStart, size)
-  }
-
-  def copyFrom(other: Pointer, readStart: Int, writeStart: Int, size: Int) {
-    assert(readStart <= (offset - size))
-    mb.copyFrom(other.mb, readStart + other.offset, writeStart, size)
   }
 
   def clear() {
