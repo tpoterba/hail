@@ -1267,7 +1267,7 @@ case class TStruct(fields: IndexedSeq[Field]) extends Type {
           val mod = offset % fAlignment
           if (mod != 0) {
             val shift = fAlignment - mod
-            bp.insertSpace(offset, shift)
+            bp.insertSpace(shift, offset)
             offset += (fAlignment - mod)
           }
           a(f.index) = offset
