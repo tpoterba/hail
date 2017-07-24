@@ -1286,3 +1286,21 @@ class KeyTable(object):
         """
 
         return KeyTable(Env.hc(), Env.hail().keytable.KeyTable.range(Env.hc()._jhc, n, joption(num_partitions)))
+
+
+    @handle_py4j
+    @typecheck_method(path=strlike,
+                      overwrite=bool,
+                      buffer=integral)
+    def write_rs(self, path, overwrite=False, buffer=8*1024*1024):
+        """Write to row store"""
+        self._jkt.writeRS(path, overwrite, buffer)
+
+    @staticmethod
+    @handle_py4j
+    @typecheck(path=strlike)
+    def read_rs(path):
+        """read row store"""
+        hc = Env.hc()
+        jkt = Env.hail().keytable.KeyTable.readRS(hc._jhc, path)
+        return KeyTable(hc, jkt)
