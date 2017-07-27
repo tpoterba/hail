@@ -37,6 +37,7 @@ buildScan {
 
 String hailVersion = "0.1"
 String[] supportedSparkVersions = ["2.0.2", "2.1.0"]
+String gitHash = exec {commandLine 'git', 'rev-parse', '--short', 'HEAD'}
 
 String sparkVersion = System.getProperty("spark.version","2.0.2")
 
@@ -365,7 +366,7 @@ task cleanHailDocs(type: Exec) {
 }
 
 task setupDocsDirs(type: Exec, dependsOn: cleanHailDocs) {
-    commandLine 'mkdir', '-p', 'build/tmp/docs/', 'build/www/', 'build/tmp/python/'
+    commandLine 'mkdir', '-p', 'build/tmp/', 'build/www/', 'build/tmp/python/', 'build/tmp/docs', 'build/www/docs'
 }
 
 task copyPDF(type: Copy, dependsOn: setupDocsDirs) {
@@ -423,6 +424,8 @@ task makeHailDocs(type: Exec, dependsOn: ['shadowJar', 'makeFunctionsRst', 'gene
     environment SPARK_HOME: sparkHome
     environment SPARK_CLASSPATH: '' + projectDir + '/build/libs/hail-all-spark.jar'
     environment PYTHONPATH: '' + projectDir + '/python:' + sparkHome + '/python:' + sparkHome + '/python/lib/py4j-' + py4jVersion + '-src.zip'
+    environment HAIL_VERSION: hailVersion
+    environment HAIL_RELEASE: hailVersion + '-' + gitHash
 }
 
 task makeHailDocsNoTest(type: Exec, dependsOn: ['shadowJar', 'makeFunctionsRst', 'generateDistLinks', 'copyPythonDirToTmp']) {
@@ -431,17 +434,15 @@ task makeHailDocsNoTest(type: Exec, dependsOn: ['shadowJar', 'makeFunctionsRst',
     environment SPARK_HOME: sparkHome
     environment SPARK_CLASSPATH: '' + projectDir + '/build/libs/hail-all-spark.jar'
     environment PYTHONPATH: '' + projectDir + '/python:' + sparkHome + '/python:' + sparkHome + '/python/lib/py4j-' + py4jVersion + '-src.zip'
+    environment HAIL_VERSION: hailVersion
+    environment HAIL_RELEASE: hailVersion + '-' + gitHash
 }
 
-task makeDocsDir(type: Exec) {
-    commandLine 'mkdir', 'build/www/docs'
-}
-
-task copyHailDocs(type: Exec, dependsOn: ['makeHailDocs', 'setupDocsDirs', 'makeDocsDir']) {
+task copyHailDocs(type: Exec, dependsOn: ['makeHailDocs', 'setupDocsDirs']) {
     commandLine 'mv', 'build/tmp/python/hail/docs/_build/html', 'build/www/docs/stable'
 }
 
-task copyHailDocsNoTest(type: Exec, dependsOn: ['makeHailDocsNoTest', 'setupDocsDirs', 'makeDocsDir']) {
+task copyHailDocsNoTest(type: Exec, dependsOn: ['makeHailDocsNoTest', 'setupDocsDirs']) {
     commandLine 'mv', 'build/tmp/python/hail/docs/_build/html', 'build/www/docs/stable'
 }
 
