@@ -1355,7 +1355,7 @@ class Table(TableTemplate):
         :obj:`list` of :class:`Struct`
             List of rows.
         """
-        return TArray(self.schema)._convert_to_py(self._jt.collect())
+        return TArray(self.schema)._from_json(self._jt.collectJSON())
 
     @typecheck_method(truncate_at=integral)
     def describe(self, truncate_at=60):

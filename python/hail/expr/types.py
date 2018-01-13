@@ -5,7 +5,7 @@ from hail.typecheck import *
 from hail.utils import Struct
 from hail.utils.java import scala_object, jset, jindexed_seq, Env
 import hail.genetics as genetics
-
+import json
 
 class TypeCheckError(Exception):
     """
@@ -119,6 +119,18 @@ class Type(HistoryMixin):
         """
         return
 
+    def _from_json(self, s):
+        x = json.loads(s)
+        return self._convert_json_na(x)
+
+    def _convert_json_na(self, x):
+        if x is None:
+            return x
+        else:
+            return self._convert_json(x)
+
+    def _convert_json(self, x):
+        return x
 
 class Intern(type):
     _instances = {}
@@ -402,6 +414,9 @@ class TArray(Type):
     def _repr(self):
         return "TArray({})".format(repr(self.element_type))
 
+    def _convert_json(self, x):
+        return [self.element_type._convert_json_na(elt) for elt in x]
+
 
 class TSet(Type):
     """
@@ -464,6 +479,9 @@ class TSet(Type):
 
     def _repr(self):
         return "TSet({})".format(repr(self.element_type))
+
+    def _convert_json(self, x):
+        return {self.element_type._convert_json_na(elt) for elt in x}
 
 
 class TDict(Type):
@@ -534,6 +552,9 @@ class TDict(Type):
 
     def _repr(self):
         return "TDict({}, {})".format(repr(self.key_type), repr(self.value_type))
+
+    def _convert_json(self, x):
+        return {self.key_type._convert_json_na(elt['key']): self.value_type._convert_json_na(elt['value'])  for elt in x}
 
 class Field(object):
     """
@@ -660,6 +681,12 @@ class TStruct(Type):
     def _select(self, *identifiers):
         return TStruct._from_java(self._jtype.filter(jset(list(identifiers)), True)._1())
 
+    def _convert_json(self, x):
+        args = {}
+        for fd in self.fields:
+            args[fd.name] = fd.typ._convert_json_na(x.get(fd.name))
+        return Struct(**args)
+
 
 class TVariant(Type):
     """
@@ -721,6 +748,9 @@ class TVariant(Type):
         """
         return self._rg
 
+    def _convert_json(self, x):
+        return genetics.Variant(x['contig'], x['start'], x['ref'], [elt['alt'] for elt in x['altAlleles']])
+
 
 class TAltAllele(Type):
     """
@@ -759,6 +789,9 @@ class TAltAllele(Type):
 
     def _repr(self):
         return "TAltAllele()"
+
+    def _convert_json(self, x):
+        return genetics.AltAllele(x['ref'], x['alt'])
 
 
 class TCall(Type):
@@ -800,6 +833,9 @@ class TCall(Type):
 
     def _repr(self):
         return "TCall()"
+
+    def _convert_json(self, x):
+        return genetics.Call(x)
 
 
 class TLocus(Type):
@@ -864,6 +900,9 @@ class TLocus(Type):
         """
         return self._rg
 
+    def _convert_json(self, x):
+        return genetics.Locus(x['contig'], x['position'])
+
 
 class TInterval(Type):
     """
@@ -920,6 +959,12 @@ class TInterval(Type):
 
     def _repr(self):
         return "TInterval({})".format(repr(self.point_type))
+
+    def _convert_json(self, x):
+        if not isinstance(self.point_type, TLocus):
+            raise NotImplementedError(self.point_type)
+        return genetics.Interval(self.point_type._convert_json_na(x['start']),
+                                 self.point_type._convert_json_na(x['end']))
 
 _intern_classes = {'is.hail.expr.types.TInt32Optional$': (TInt32, False),
                    'is.hail.expr.types.TInt32Required$': (TInt32, True),

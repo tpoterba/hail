@@ -858,6 +858,11 @@ class Table(val hc: HailContext,
 
   def collect(): IndexedSeq[Annotation] = rdd.collect()
 
+  def collectJSON(): String = {
+    val r = JSONAnnotationImpex.exportAnnotation(collect(), TArray(signature))
+    Serialization.write(r)
+  }
+
   def write(path: String, overwrite: Boolean = false) {
     if (!path.endsWith(".kt") && !path.endsWith(".kt/"))
       fatal(s"write path must end in '.kt', but found '$path'")
