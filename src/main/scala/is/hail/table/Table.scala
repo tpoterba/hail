@@ -915,14 +915,16 @@ class Table(val hc: HailContext, val ir: TableIR) {
             isEnd = true
             return false
           }
-          if (current == null) {}
-          current = it.next()
+          if (current == null)
+            current = it.next()
 
           currentRowKey.setSelect(rowEntryStruct, orderedRKIndices, current)
           true
         }
 
         def next(): RegionValue = {
+          if (!hasNext)
+            throw new java.util.NoSuchElementException()
           region.clear()
           rvb.start(newRVType)
           rvb.startStruct()
@@ -936,11 +938,9 @@ class Table(val hc: HailContext, val ir: TableIR) {
 
           rvb.startArray(nCols)
           i = 0
-          var first = true
 
           // hasNext updates current
-          while (first || i < nCols && hasNext && orderedRKStruct.unsafeOrdering().compare(rvRowKey.value, currentRowKey.value) == 0) {
-            first = false
+          while (i < nCols && hasNext && orderedRKStruct.unsafeOrdering().compare(rvRowKey.value, currentRowKey.value) == 0) {
             val nextInt = current.region.loadInt(rowEntryStruct.fieldOffset(current.offset, idxIndex))
             while (i < nextInt) {
               rvb.setMissing()
