@@ -6,13 +6,6 @@ import is.hail.utils._
 import is.hail.variant.{GenomeReference, Genotype}
 
 object MatrixType {
-  def locusType(vType: Type): Type = {
-    vType match {
-      case t: TVariant => TLocus(t.gr)
-      case _ => vType
-    }
-  }
-
   val entriesIdentifier = "the entries! [877f12a8827e18f61222c6c8c5fb04a8]"
 
   def fromParts(globalType: TStruct,
