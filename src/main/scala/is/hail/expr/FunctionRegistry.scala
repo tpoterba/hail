@@ -725,6 +725,16 @@ object FunctionRegistry {
     Produce an array of called counts for each allele in the variant (including reference). For example, calling this function with a biallelic variant on hom-ref, het, and hom-var calls will produce ``[2, 0]``, ``[1, 1]``, and ``[0, 2]`` respectively.
     """,
     "v" -> ":ref:`variant(gr)`")(callHr, variantHr(GR), arrayHr(int32Hr))
+  registerMethod("oneHotAlleles", { (c: Call, alleles: IndexedSeq[String]) => Call.oneHotAlleles(c, alleles.length) },
+    """
+    Produce an array of called counts for each allele in the variant (including reference). For example, calling this function with a biallelic variant on hom-ref, het, and hom-var calls will produce ``[2, 0]``, ``[1, 1]``, and ``[0, 2]`` respectively.
+    """,
+    "v" -> ":ref:`variant(gr)`")(callHr, arrayHr(stringHr), arrayHr(int32Hr))
+  registerMethod("oneHotGenotype", { (c: Call, alleles: IndexedSeq[String]) => Call.oneHotGenotype(c, Variant.nGenotypes(alleles.length)) },
+    """
+    Produces an array with one element for each possible genotype in the variant, where the called genotype is 1 and all else 0. For example, calling this function with a biallelic variant on hom-ref, het, and hom-var calls will produce ``[1, 0, 0]``, ``[0, 1, 0]``, and ``[0, 0, 1]`` respectively.
+    """,
+    "v" -> ":ref:`variant(gr)`")(callHr, arrayHr(stringHr), arrayHr(int32Hr))
   registerMethod("oneHotGenotype", { (c: Call, v: Variant) => Call.oneHotGenotype(c, v) },
     """
     Produces an array with one element for each possible genotype in the variant, where the called genotype is 1 and all else 0. For example, calling this function with a biallelic variant on hom-ref, het, and hom-var calls will produce ``[1, 0, 0]``, ``[0, 1, 0]``, and ``[0, 0, 1]`` respectively.
@@ -789,6 +799,36 @@ object FunctionRegistry {
   }, "True if contig is mitochondrial")(variantHr(GR), boolHr)
   registerField("contig", { (x: Locus) => x.contig }, "String representation of contig.")(locusHr(GR), stringHr)
   registerField("position", { (x: Locus) => x.position }, "Chromosomal position.")(locusHr(GR), int32Hr)
+  registerMethodDependent("inXPar", { () =>
+    val gr = GR.gr
+    (x: Locus) => x.inXPar(gr)
+  }, "True if chromosome is X and start is in pseudoautosomal region of X.")(locusHr(GR), boolHr)
+  registerMethodDependent("inYPar", { () =>
+    val gr = GR.gr
+    (x: Locus) => x.inYPar(gr)
+  }, "True if chromosome is Y and start is in pseudoautosomal region of Y. *NB: most callers assign variants in PAR to X.*")(locusHr(GR), boolHr)
+  registerMethodDependent("inXNonPar", { () =>
+    val gr = GR.gr
+    (x: Locus) => x.inXNonPar(gr)
+  }, "True if chromosome is X and start is not in pseudoautosomal region of X.")(locusHr(GR), boolHr)
+  registerMethodDependent("inYNonPar", { () =>
+    val gr = GR.gr
+    (x: Locus) => x.inYNonPar(gr)
+  }, "True if chromosome is Y and start is not in pseudoautosomal region of Y.")(locusHr(GR), boolHr)
+
+  registerMethodDependent("isAutosomal", { () =>
+    val gr = GR.gr
+    (x: Locus) => x.isAutosomal(gr)
+  }, "True if chromosome is not an X, Y, or MT contig.")(locusHr(GR), boolHr)
+  registerMethodDependent("isAutosomalOrPseudoAutosomal", { () =>
+    val gr = GR.gr
+    (x: Locus) => x.isAutosomalOrPseudoAutosomal(gr)
+  }, "True if chromosome is autosomal or in PAR on X or Y.")(locusHr(GR), boolHr)
+  registerMethodDependent("isMitochondrial", { () =>
+    val gr = GR.gr
+    (x: Locus) => x.isMitochondrial(gr)
+  }, "True if contig is mitochondrial")(locusHr(GR), boolHr)
+
   registerField("start", { (x: Interval) => x.start }, "Start of the interval (inclusive).")(intervalHr(TTHr), TTHr)
   registerField("end", { (x: Interval) => x.end }, "End of the interval (exclusive).")(intervalHr(TTHr), TTHr)
   registerField("ref", { (x: AltAllele) => x.ref }, "Reference allele base sequence.")
@@ -815,6 +855,8 @@ object FunctionRegistry {
   register("is_complex", { (ref: String, alt: String) => AltAlleleMethods.isComplex(ref, alt) }, null)
   register("allele_type", { (ref: String, alt: String) => AltAlleleMethods.altAlleleType(ref, alt).toString }, null)
   register("hamming", { (ref: String, alt: String) => AltAlleleMethods.hamming(ref, alt) }, null)
+
+  register("triangle", { (i: Int) => triangle(i) }, null)
 
   register("plDosage", { (pl: IndexedSeq[Int]) =>
     if (pl.length != 3)
@@ -2187,7 +2229,7 @@ object FunctionRegistry {
     """
     """, "f" -> "Variant lambda expression such as ``g => v``."
   )(
-    aggregableHr(callHr), unaryHr(callHr, variantHr(GR)), new HailRep[Any] {
+    aggregableHr(callHr), unaryHr(callHr, arrayHr(stringHr)), new HailRep[Any] {
       def typ = CallStats.schema
     })
 

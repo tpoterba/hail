@@ -14,8 +14,9 @@ object HTSGenotypeView {
   val tArrayInt32 = TArray(!TInt32())
 }
 
-final class HTSGenotypeView(rs: TStruct) {
-  private val tgs = rs.fieldType(3).asInstanceOf[TArray]
+final class HTSGenotypeView(rvType: TStruct) {
+  private val entriesIndex = rvType.fieldByName(MatrixType.entriesIdentifier).index
+  private val tgs = rvType.fieldType(entriesIndex).asInstanceOf[TArray]
   private val tg = tgs.elementType.asInstanceOf[TStruct]
 
   private def lookupField(name: String, expected: Type): (Boolean, Int) = {
@@ -44,7 +45,7 @@ final class HTSGenotypeView(rs: TStruct) {
 
   def setRegion(mb: Region, offset: Long) {
     this.m = mb
-    gsOffset = rs.loadField(m, offset, 3)
+    gsOffset = rvType.loadField(m, offset, entriesIndex)
     gsLength = tgs.loadLength(m, gsOffset)
   }
 
@@ -117,8 +118,9 @@ object ArrayGenotypeView {
   val tArrayFloat64 = TArray(TFloat64())
 }
 
-final class ArrayGenotypeView(rvRowType: TStruct) {
-  private val tgs = rvRowType.fieldType(3).asInstanceOf[TArray]
+final class ArrayGenotypeView(rvType: TStruct) {
+  private val entriesIndex = rvType.fieldByName(MatrixType.entriesIdentifier).index
+  private val tgs = rvType.fieldType(entriesIndex).asInstanceOf[TArray]
   private val tg = tgs.elementType match {
     case tg: TStruct => tg
     case _ => null
@@ -150,7 +152,7 @@ final class ArrayGenotypeView(rvRowType: TStruct) {
 
   def setRegion(mb: Region, offset: Long) {
     this.m = mb
-    gsOffset = rvRowType.loadField(m, offset, 3)
+    gsOffset = rvType.loadField(m, offset, entriesIndex)
     gsLength = tgs.loadLength(m, gsOffset)
   }
 
@@ -189,12 +191,11 @@ object HardCallView {
   }
 }
 
-final class HardCallView(rvRowType: TStruct, callField: String) {
-  private val tgs = rvRowType.fieldType(3).asInstanceOf[TArray]
-  private val tg = tgs.elementType match {
-    case tg: TStruct => tg
-    case _ => null
-  }
+final class HardCallView(rvType: TStruct, callField: String) {
+  require(rvType.fieldNames(rvType.size - 1) == MatrixType.entriesIdentifier)
+  private val entriesIndex = rvType.fieldByName(MatrixType.entriesIdentifier).index
+  private val tgs = rvType.fieldType(entriesIndex).asInstanceOf[TArray]
+  private val tg = tgs.elementType.asInstanceOf[TStruct]
 
   private def lookupField(name: String, expected: Type): (Boolean, Int) = {
     if (tg != null) {
@@ -221,7 +222,7 @@ final class HardCallView(rvRowType: TStruct, callField: String) {
 
   def setRegion(mb: Region, offset: Long) {
     this.m = mb
-    gsOffset = rvRowType.loadField(m, offset, 3)
+    gsOffset = rvType.loadField(m, offset, entriesIndex)
     gsLength = tgs.loadLength(m, gsOffset)
   }
 
@@ -247,8 +248,9 @@ final class HardCallView(rvRowType: TStruct, callField: String) {
   def getLength: Int = gsLength
 }
 
-final class HardcallTrioGenotypeView(rs: TStruct, callField: String) {
-  private val trioTgs = rs.fieldType(3).asInstanceOf[TArray]
+final class HardcallTrioGenotypeView(rvType: TStruct, callField: String) {
+  private val entriesIndex = rvType.fieldByName(MatrixType.entriesIdentifier).index
+  private val trioTgs = rvType.fieldType(entriesIndex).asInstanceOf[TArray]
   private val trioTg = trioTgs.elementType.asInstanceOf[TStruct]
 
   require(trioTg.hasField("proband") && trioTg.hasField("mother") && trioTg.hasField("father"))
@@ -274,7 +276,7 @@ final class HardcallTrioGenotypeView(rs: TStruct, callField: String) {
 
   def setRegion(mb: Region, offset: Long) {
     this.m = mb
-    gsOffset = rs.loadField(m, offset, 3)
+    gsOffset = rvType.loadField(m, offset, entriesIndex)
     gsLength = trioTgs.loadLength(m, gsOffset)
   }
 

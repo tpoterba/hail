@@ -13,7 +13,7 @@ class HardCallsSuite extends SparkSuite {
       assert(hard.queryGenotypes("gs.map(g => g.GT).counter()") ==
         vds.queryGenotypes("gs.map(g => g.GT).counter()"))
 
-      assert(hard.genotypeSignature == TStruct(
+      assert(hard.entryType == TStruct(
         "GT" -> TCall()))
 
       true

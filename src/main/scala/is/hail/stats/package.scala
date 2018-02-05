@@ -344,7 +344,7 @@ package object stats {
     val rdd = hc.sc.parallelize(
       (0 until gtMat.cols).map { j =>
         (Variant("1", j + 1, "A", "C"),
-          (Annotation.empty,
+          (Annotation(Variant("1", j + 1, "A", "C")),
             (0 until gtMat.rows).map { i =>
               Genotype(gtMat(i, j))
             }: Iterable[Annotation]
@@ -373,7 +373,7 @@ package object stats {
     val rdd = hc.sc.parallelize(
       (0 until gpMat.cols).map { j =>
         (Variant("1", j + 1, "A", "C"),
-          (Annotation.empty,
+          (Annotation(Variant("1", j + 1, "A", "C")),
             (0 until gpMat.rows).map { i =>
               Row(gpMat(i, j): IndexedSeq[Annotation])
             }: Iterable[Annotation]))
@@ -381,8 +381,6 @@ package object stats {
       nPartitions)
 
     MatrixTable.fromLegacy(hc, MatrixFileMetadata(sampleIds.map(Annotation(_)),
-      colKey = Array("s"),
-      vSignature = TVariant(GenomeReference.defaultReference),
       genotypeSignature = TStruct(
         "GP" -> TArray(TFloat64()))),
       rdd)

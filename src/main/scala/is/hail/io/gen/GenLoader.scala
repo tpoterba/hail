@@ -30,8 +30,6 @@ object GenLoader {
         readGenLine(l, nSamples, tolerance, gr, chromosome, contigRecoding)
       }.value)
 
-    val signatures = TStruct("rsid" -> TString(), "varid" -> TString())
-
     GenResult(genFile, nSamples, rdd.count().toInt, rdd = rdd)
   }
 
@@ -80,7 +78,7 @@ object GenLoader {
       gsb += a
     }
 
-    val annotations = Annotation(rsid, varid)
+    val annotations = Annotation(variant, rsid, varid)
 
     (variant: Annotation, (annotations, gsb.result()))
   }

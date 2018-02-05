@@ -9,6 +9,6 @@ class GenotypeTableSuite extends SparkSuite {
 
     vds.genotypeKT().typeCheck()
 
-    assert(vds.genotypeKT().rdd.count() == vds.countVariants() * vds.nSamples)
+    assert(vds.genotypeKT().rdd.count() == vds.countVariants() * vds.numCols)
   }
 }

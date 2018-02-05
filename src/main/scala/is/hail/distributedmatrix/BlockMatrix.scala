@@ -981,8 +981,7 @@ case class WriteBlocksRDDPartition(index: Int, start: Int, skip: Int, end: Int) 
 class WriteBlocksRDD(path: String,
   rvd: RVD,
   sc: SparkContext,
-  rvRowType: TStruct,
-  sampleIdsBc: Broadcast[IndexedSeq[Annotation]],
+  matrixType: MatrixType,
   sampleAnnotationsBc: Broadcast[IndexedSeq[Annotation]],
   parentPartStarts: Array[Long],
   f: () => java.lang.Double,
@@ -1061,7 +1060,9 @@ class WriteBlocksRDD(path: String,
 
     val bytes = new Array[Byte](blockSize << 3)
 
-    val ur = new UnsafeRow(rvRowType)
+    val entriesIndex = matrixType.entriesIdx
+    val fullRow = new UnsafeRow(matrixType.rvRowType)
+    val row = fullRow.delete(entriesIndex)
 
     val writeBlocksPart = split.asInstanceOf[WriteBlocksRDDPartition]
     val start = writeBlocksPart.start
@@ -1079,21 +1080,19 @@ class WriteBlocksRDD(path: String,
       var i = 0
       while (it.hasNext && i < nRowsInBlock) {
         val rv = it.next()
-        ur.set(rv)
-        ec.set(1, ur.get(1))
-        ec.set(2, ur.get(2))
-        val gs = ur.getAs[IndexedSeq[Any]](3)
+        fullRow.set(rv)
+        ec.set(1, row)
+        val gs = fullRow.getAs[IndexedSeq[Any]](entriesIndex)
         var blockCol = 0
         var sampleIndex = 0
         while (blockCol < gp.nBlockCols) {
           val n = gp.blockColNCols(blockCol)
           var j = 0
           while (j < n) {
-            ec.set(3, sampleIdsBc.value(sampleIndex))
-            ec.set(4, sampleAnnotationsBc.value(sampleIndex))
-            ec.set(5, gs(sampleIndex))
+            ec.set(2, sampleAnnotationsBc.value(sampleIndex))
+            ec.set(3, gs(sampleIndex))
             f() match {
-              case null => fatal(s"Entry expr must be non-missing. Found missing value for sample ${ sampleIdsBc.value(j) } and variant ${ ur.get(1) }")
+              case null => fatal(s"Entry expr must be non-missing. Found missing value for col $j and row $row}")
               case t => Memory.storeDouble(bytes, j << 3, t.toDouble)
             }
             sampleIndex += 1

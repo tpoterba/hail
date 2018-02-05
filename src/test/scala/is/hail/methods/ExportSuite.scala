@@ -48,12 +48,12 @@ class ExportSuite extends SparkSuite {
       "rTiTv" -> TFloat64(),
       "rHetHomVar" -> TFloat64(),
       "rInsertionDeletion" -> TFloat64())).keyBy("Sample"),
-      root = "sa.readBackQC")
+      root = "readBackQC")
 
     val (t, qcQuerier) = readBackAnnotated.querySA("sa.qc")
     val (t2, rbQuerier) = readBackAnnotated.querySA("sa.readBackQC")
     assert(t == t2)
-    readBackAnnotated.sampleAnnotations.foreach { annotation =>
+    readBackAnnotated.colValues.foreach { annotation =>
       t.valuesSimilar(qcQuerier(annotation), rbQuerier(annotation))
     }
   }
@@ -61,7 +61,7 @@ class ExportSuite extends SparkSuite {
   @Test def testExportSamples() {
     val vds = SplitMulti(hc.importVCF("src/test/resources/sample.vcf")
       .filterSamplesExpr("""sa.s == "C469::HG02026""""))
-    assert(vds.nSamples == 1)
+    assert(vds.numCols == 1)
 
     // verify exports localSamples
     val f = tmpDir.createTempFile("samples", ".tsv")
@@ -106,17 +106,5 @@ class ExportSuite extends SparkSuite {
       .samplesKT()
       .select("computation = 5 * (if (qc.callRate < .95) 0 else 1)")
       .export(f)
-  }
-
-  @Test def testTypes() {
-    val vds = SplitMulti(hc.importVCF("src/test/resources/sample.vcf"))
-    val out = tmpDir.createTempFile("export", ".out")
-
-    vds.variantsKT().export(out, typesFile = out + ".types")
-
-    val types = Parser.parseAnnotationTypes(hadoopConf.readFile(out + ".types")(Source.fromInputStream(_).mkString))
-    val readBack = vds.annotateVariantsTable(hc.importTable(out, types = types).keyBy("v"),
-      expr = "va = table.va")
-    assert(vds.same(readBack))
   }
 }
