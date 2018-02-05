@@ -1898,8 +1898,10 @@ class MatrixTable(val hc: HailContext, val ast: MatrixIR) extends JoinAnnotator 
   def reorderSamples(newIds: java.util.ArrayList[String]): MatrixTable =
     reorderSamples(newIds.asScala.toArray.map(Annotation(_)))
 
-  def reorderSamples(newIds: Array[Annotation]): MatrixTable = {
+  def reorderSamples(newIds: IndexedSeq[Annotation]): MatrixTable = {
+    require(newIds.length == numCols)
     requireUniqueSamples("reorder_samples")
+    require(newIds.areDistinct())
 
     val sampleSet = colKeys.toSet[Annotation]
     val newSampleSet = newIds.toSet
@@ -1914,49 +1916,29 @@ class MatrixTable(val hc: HailContext, val ast: MatrixIR) extends JoinAnnotator 
       fatal(s"Found ${ notInDataset.size } ${ plural(notInDataset.size, "sample ID") } in new ordering that are not in dataset:\n  " +
         s"@1", notInDataset.truncatable("\n  "))
 
-    val oldIndex = (colKeys: IndexedSeq[Annotation]).zipWithIndex.toMap
+    val oldIndex = colKeys.zipWithIndex.toMap
     val newToOld = newIds.map(oldIndex)
 
-    val newAnnotations = Array.tabulate(numCols) { i =>
+    val newColValues = Array.tabulate(numCols) { i =>
       colValues(newToOld(i))
     }
 
-    val localNSamples = numCols
+    val localNumCols = numCols
     val localRVRowType = rvRowType
     val localEntriesIndex = entriesIndex
     val localEntriesType = matrixType.entryArrayType
 
-    val reorderedRDD2 = rvd.mapPartitionsPreservesPartitioning(rvd.typ) { it =>
-      val rvb = new RegionValueBuilder()
-      val rv2 = RegionValue()
-      val ur = new UnsafeRow(localRVRowType)
-
-      it.map { rv =>
-        rvb.set(rv.region)
-        rvb.start(localRVRowType)
-        rvb.startStruct()
-        var i = 0
-        while (i < localEntriesIndex) {
-          rvb.addField(localRVRowType, rv, i)
-          i += 1
-        }
-
+    rewriteEntries(noOp, colType, colKey, newColValues.toFastIndexedSeq)(entryType,
+      { case (_, rv, rvb) =>
         val entriesOffset = localRVRowType.loadField(rv, localEntriesIndex)
-        rvb.startArray(localNSamples) // gs
-        i = 0
-        while (i < localNSamples) {
+        rvb.startArray(localNumCols)
+        var i = 0
+        while (i < localNumCols) {
           rvb.addElement(localEntriesType, rv.region, entriesOffset, newToOld(i))
           i += 1
         }
-        rvb.endArray() // gs
-        rvb.endStruct()
-        rv2.set(rv.region, rvb.end())
-
-        rv2
-      }
-    }
-
-    copy2(rvd = reorderedRDD2, colValues = newAnnotations)
+        rvb.endArray()
+      })
   }
 
   def renameDuplicates(id: String): MatrixTable = {
@@ -2026,6 +2008,7 @@ class MatrixTable(val hc: HailContext, val ast: MatrixIR) extends JoinAnnotator 
     val localEntriesIndex = entriesIndex
     val localEntryType = entryType
     val localRKF = rowKeysF
+    val localColKeys = colKeys
 
     metadataSame &&
       rvd.rdd.zipPartitions(
@@ -2062,7 +2045,7 @@ class MatrixTable(val hc: HailContext, val ast: MatrixIR) extends JoinAnnotator 
             if (!localEntryType.valuesSimilar(gs1(i), gs2(i), tolerance)) {
               partSame = false
               println(
-                s"""different entry at row ${ localRKF(row1) }, col idx $i
+                s"""different entry at row ${ localRKF(row1) }, col ${localColKeys(i)}
                    |  ${ gs1(i) }
                    |  ${ gs2(i) }""".stripMargin)
             }

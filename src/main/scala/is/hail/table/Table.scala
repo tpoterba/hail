@@ -809,7 +809,6 @@ class Table(val hc: HailContext, val ir: TableIR) {
     assert(rowKeys.startsWith(partitionKeys))
     assert(partitionKeys.nonEmpty)
 
-
     val localRVType = signature
 
     val colKeyIndices = colKeys.map(signature.fieldIdx(_))
@@ -817,7 +816,6 @@ class Table(val hc: HailContext, val ir: TableIR) {
 
     val localColData = rvd.mapPartitions { it =>
       val ur = new UnsafeRow(localRVType)
-
       it.map { rv =>
         val rvCopy = rv.copy()
         ur.set(rvCopy)
@@ -925,8 +923,6 @@ class Table(val hc: HailContext, val ir: TableIR) {
         }
 
         def next(): RegionValue = {
-          if (!hasNext)
-            throw new java.util.NoSuchElementException()
           region.clear()
           rvb.start(newRVType)
           rvb.startStruct()
@@ -940,9 +936,11 @@ class Table(val hc: HailContext, val ir: TableIR) {
 
           rvb.startArray(nCols)
           i = 0
+          var first = true
 
           // hasNext updates current
-          while (i < nCols && hasNext && orderedRKStruct.unsafeOrdering().compare(rvRowKey.value, currentRowKey.value) == 0) {
+          while (first || i < nCols && hasNext && orderedRKStruct.unsafeOrdering().compare(rvRowKey.value, currentRowKey.value) == 0) {
+            first = false
             val nextInt = current.region.loadInt(rowEntryStruct.fieldOffset(current.offset, idxIndex))
             while (i < nextInt) {
               rvb.setMissing()

@@ -143,6 +143,7 @@ class VSMSuite extends SparkSuite {
       .annotateVariantsExpr("newGenos = gs.takeBy(g => sa.colIdx, 5)")
 
     assert(reorderedVds.variantsKT().forall("origGenos == newGenos"))
+    assert(vds.reorderSamples(vds.colKeys).same(vds))
   }
   
   @Test def testWriteBlockMatrix() {

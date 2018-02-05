@@ -75,9 +75,10 @@ class TableSuite extends SparkSuite {
       vds.colType.fieldNames.filter(_ != "s"),
       Array("locus"))
 
-    val sampleOrder = vds.stringSampleIds.map(Annotation(_)).toArray
+    val sampleOrder = vds.colKeys.toArray
 
     assert(reVDS.variantsKT().same(vds.variantsKT()))
+    assert(reVDS.samplesKT().same(vds.samplesKT()))
     assert(reVDS.reorderSamples(sampleOrder).same(vds))
   }
 
