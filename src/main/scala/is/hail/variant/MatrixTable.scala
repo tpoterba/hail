@@ -2805,7 +2805,7 @@ g = let newpl = if (isDefined(g.PL))
         NA: Array[Int] and
     newgt = gtFromPL(newpl) and
     newad = if (isDefined(g.AD))
-        range(triangle(newAlleles.length())).map(newi => g.AD[newToOld[newi]])
+        range(newAlleles.length()).map(newi => g.AD[newToOld[newi]])
       else
         NA: Array[Int] and
     newgq = gqFromPL(newpl) and
@@ -2817,12 +2817,12 @@ g = let newpl = if (isDefined(g.PL))
       s"""
 g = let newgt = gtIndex(oldToNew[gtj(g.GT)], oldToNew[gtk(g.GT)]) and
     newad = if (isDefined(g.AD))
-        range(newAlleles.length()).map(i => range(newAlleles.length()).filter(j => oldToNew[j] == i).map(j => g.AD[j]).sum())
+        range(newAlleles.length()).map(i => range(va.alleles.length()).filter(j => oldToNew[j] == i).map(j => g.AD[j]).sum())
       else
         NA: Array[Int] and
     newdp = g.DP and
     newpl = if (isDefined(g.PL))
-        range(triangle(newAlleles.length())).map(gi => range(triangle(newAlleles.length())).filter(gj => gtIndex(oldToNew[gtj(gj)], oldToNew[gtk(gj)]) == gi).map(gj => g.PL[gj]).min())
+        range(triangle(newAlleles.length())).map(gi => range(triangle(va.alleles.length())).filter(gj => gtIndex(oldToNew[gtj(gj)], oldToNew[gtk(gj)]) == gi).map(gj => g.PL[gj]).min())
       else
         NA: Array[Int] and
     newgq = gqFromPL(newpl)
