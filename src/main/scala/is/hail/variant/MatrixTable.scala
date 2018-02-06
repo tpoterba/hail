@@ -51,27 +51,26 @@ object MatrixTable {
       MatrixRead(dirname, nPartitions, fileMetadata, dropSamples, dropVariants))
   }
 
-  def fromLegacy[RK, T](hc: HailContext,
+  def fromLegacy[T](hc: HailContext,
     matrixType: MatrixType,
     localValue: MatrixLocalValue,
-    rdd: RDD[(RK, (Annotation, Iterable[T]))]): MatrixTable = {
+    rdd: RDD[(Annotation, Iterable[T])]): MatrixTable = {
 
     val localGType = matrixType.entryType
     val localRVRowType = matrixType.rvRowType
 
     assert(matrixType.rowPartitionKey == IndexedSeq("v"))
     assert(matrixType.rowKey == IndexedSeq("v"))
-    assert(matrixType.rowType.fieldByName("v").typ.isInstanceOf[TVariant])
     val localNSamples = localValue.nSamples
 
-    val ds = new MatrixTable(hc, matrixType, localValue,
+    var ds = new MatrixTable(hc, matrixType, localValue,
       OrderedRVD(matrixType.orderedRVType,
         rdd.mapPartitions { it =>
           val region = Region()
           val rvb = new RegionValueBuilder(region)
           val rv = RegionValue(region)
 
-          it.map { case (v, (va, gs)) =>
+          it.map { case (va, gs) =>
             val vaRow = va.asInstanceOf[Row]
             assert(matrixType.rowType.typeCheck(va))
 
@@ -92,16 +91,17 @@ object MatrixTable {
             rv
           }
         }, None, None))
-      .annotateVariantsExpr("locus = va.v.locus, alleles = [va.v.ref].extend(va.v.altAlleles.map(x => x.alt))")
-      .selectRows(Array("locus", "alleles") ++ matrixType.rowType.fieldNames.filter(_ != "v"): _*)
-      .keyRowsBy(Array("locus", "alleles"), Array("locus"))
+    if (matrixType.rowType.fieldByName("v").typ.isInstanceOf[TVariant])
+      ds = ds.annotateVariantsExpr("locus = va.v.locus, alleles = [va.v.ref].extend(va.v.altAlleles.map(x => x.alt))")
+        .selectRows(Array("locus", "alleles") ++ matrixType.rowType.fieldNames.filter(_ != "v"): _*)
+        .keyRowsBy(Array("locus", "alleles"), Array("locus"))
     ds.typecheck()
     ds
   }
 
-  def fromLegacy[RK, T](hc: HailContext,
+  def fromLegacy[T](hc: HailContext,
     fileMetadata: MatrixFileMetadata,
-    rdd: RDD[(RK, (Annotation, Iterable[T]))]): MatrixTable =
+    rdd: RDD[(Annotation, Iterable[T])]): MatrixTable =
     fromLegacy(hc, fileMetadata.matrixType, fileMetadata.localValue, rdd)
 
   def readFileMetadata(hConf: hadoop.conf.Configuration, dirname: String,
@@ -305,7 +305,7 @@ object MatrixTable {
 case class VSMSubgen(
   sSigGen: Gen[Type],
   saSigGen: Gen[TStruct],
-  vSigGen: Gen[TVariant],
+  vSigGen: Gen[Type],
   vaSigGen: Gen[TStruct],
   globalSigGen: Gen[TStruct],
   tSigGen: Gen[TStruct],
@@ -318,37 +318,36 @@ case class VSMSubgen(
 
   def gen(hc: HailContext): Gen[MatrixTable] =
     for (size <- Gen.size;
-    (l, w) <- Gen.squareOfAreaAtMostSize.resize((size / 3 / 10) * 8);
+      (l, w) <- Gen.squareOfAreaAtMostSize.resize((size / 3 / 10) * 8);
 
-    vSig <- vSigGen.resize(3);
-    vaSig <- vaSigGen.map(t => t.deepOptional().asInstanceOf[TStruct]).resize(3);
-    sSig <- sSigGen.resize(3);
-    saSig <- saSigGen.map(t => t.deepOptional().asInstanceOf[TStruct]).resize(3);
-    globalSig <- globalSigGen.resize(5);
-    tSig <- tSigGen.map(t => t.structOptional().asInstanceOf[TStruct]).resize(3);
-    global <- globalGen(globalSig).resize(25);
-    nPartitions <- Gen.choose(1, 10);
+      vSig <- vSigGen.resize(3);
+      vaSig <- vaSigGen.map(t => t.deepOptional().asInstanceOf[TStruct]).resize(3);
+      sSig <- sSigGen.resize(3);
+      saSig <- saSigGen.map(t => t.deepOptional().asInstanceOf[TStruct]).resize(3);
+      globalSig <- globalSigGen.resize(5);
+      tSig <- tSigGen.map(t => t.structOptional().asInstanceOf[TStruct]).resize(3);
+      global <- globalGen(globalSig).resize(25);
+      nPartitions <- Gen.choose(1, 10);
 
-    sampleIds <- Gen.buildableOfN[Array](w, sGen(sSig).resize(3))
-      .map(ids => ids.distinct);
-    nSamples = sampleIds.length;
-    saValues <- Gen.buildableOfN[Array](nSamples, saGen(saSig).resize(5));
-    rows <- Gen.buildableOfN[Array](l,
-      for (
-        v <- vGen(vSig).resize(3);
-        va <- vaGen(vaSig).resize(5);
-        ts <- Gen.buildableOfN[Array](nSamples, tGen(tSig, v).resize(3)))
-        yield (v, (va, ts: Iterable[Annotation]))))
+      sampleIds <- Gen.buildableOfN[Array](w, sGen(sSig).resize(3))
+        .map(ids => ids.distinct);
+      nSamples = sampleIds.length;
+      saValues <- Gen.buildableOfN[Array](nSamples, saGen(saSig).resize(5));
+      rows <- Gen.buildableOfN[Array](l,
+        for (
+          v <- vGen(vSig).resize(3);
+          va <- vaGen(vaSig).resize(5);
+          ts <- Gen.buildableOfN[Array](nSamples, tGen(tSig, v).resize(3)))
+          yield (v, (va, ts: Iterable[Annotation]))))
       yield {
         assert(sampleIds.forall(_ != null))
         assert(rows.forall(_._1 != null))
         val (finalSaSchema, ins) = saSig.structInsert(sSig, List("s"))
         val (finalVaSchema, ins2) = vaSig.structInsert(vSig, List("v"))
-        assert(vSig.isInstanceOf[TVariant])
         MatrixTable.fromLegacy(hc,
           MatrixType.fromParts(globalSig, Array("s"), finalSaSchema, Array("v"), Array("v"), finalVaSchema, tSig),
           MatrixLocalValue(global, sampleIds.zip(saValues).map { case (id, sa) => ins(sa, id) }),
-          hc.sc.parallelize(rows.map { case (v, (va, gs)) => (v, (ins2(va, v), gs)) }, nPartitions))
+          hc.sc.parallelize(rows.map { case (v, (va, gs)) => (ins2(va, v), gs) }, nPartitions))
           .deduplicate()
       }
 }
@@ -1928,17 +1927,16 @@ class MatrixTable(val hc: HailContext, val ast: MatrixIR) extends JoinAnnotator 
     val localEntriesIndex = entriesIndex
     val localEntriesType = matrixType.entryArrayType
 
-    rewriteEntries(noOp, colType, colKey, newColValues.toFastIndexedSeq)(entryType,
-      { case (_, rv, rvb) =>
-        val entriesOffset = localRVRowType.loadField(rv, localEntriesIndex)
-        rvb.startArray(localNumCols)
-        var i = 0
-        while (i < localNumCols) {
-          rvb.addElement(localEntriesType, rv.region, entriesOffset, newToOld(i))
-          i += 1
-        }
-        rvb.endArray()
-      })
+    rewriteEntries(noOp, colType, colKey, newColValues.toFastIndexedSeq)(entryType, { case (_, rv, rvb) =>
+      val entriesOffset = localRVRowType.loadField(rv, localEntriesIndex)
+      rvb.startArray(localNumCols)
+      var i = 0
+      while (i < localNumCols) {
+        rvb.addElement(localEntriesType, rv.region, entriesOffset, newToOld(i))
+        i += 1
+      }
+      rvb.endArray()
+    })
   }
 
   def renameDuplicates(id: String): MatrixTable = {
@@ -2045,7 +2043,7 @@ class MatrixTable(val hc: HailContext, val ast: MatrixIR) extends JoinAnnotator 
             if (!localEntryType.valuesSimilar(gs1(i), gs2(i), tolerance)) {
               partSame = false
               println(
-                s"""different entry at row ${ localRKF(row1) }, col ${localColKeys(i)}
+                s"""different entry at row ${ localRKF(row1) }, col ${ localColKeys(i) }
                    |  ${ gs1(i) }
                    |  ${ gs2(i) }""".stripMargin)
             }

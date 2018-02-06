@@ -343,12 +343,10 @@ package object stats {
 
     val rdd = hc.sc.parallelize(
       (0 until gtMat.cols).map { j =>
-        (Variant("1", j + 1, "A", "C"),
-          (Annotation(Variant("1", j + 1, "A", "C")),
-            (0 until gtMat.rows).map { i =>
-              Genotype(gtMat(i, j))
-            }: Iterable[Annotation]
-          )
+        (Annotation(Variant("1", j + 1, "A", "C")),
+          (0 until gtMat.rows).map { i =>
+            Genotype(gtMat(i, j))
+          }: Iterable[Annotation]
         )
       },
       nPartitions)
@@ -372,11 +370,10 @@ package object stats {
 
     val rdd = hc.sc.parallelize(
       (0 until gpMat.cols).map { j =>
-        (Variant("1", j + 1, "A", "C"),
-          (Annotation(Variant("1", j + 1, "A", "C")),
-            (0 until gpMat.rows).map { i =>
-              Row(gpMat(i, j): IndexedSeq[Annotation])
-            }: Iterable[Annotation]))
+        (Annotation(Variant("1", j + 1, "A", "C")),
+          (0 until gpMat.rows).map { i =>
+            Row(gpMat(i, j): IndexedSeq[Annotation])
+          }: Iterable[Annotation])
       },
       nPartitions)
 

@@ -17,7 +17,7 @@ class FilterAllelesSuite extends SparkSuite {
     val genotype12 = Genotype(Option(2), Option(Array(25, 35, 0)), Option(100), Option(5), Option(Array(10, 10, 0, 7, 5, 10)))
     val genotype13 = Genotype(Option(3), Option(Array(25, 10, 10)), Option(100), Option(5), Option(Array(10, 10, 10, 0, 5, 7)))
     val genotypes1 = Seq(genotype11, genotype12, genotype13)
-    val row1: (Variant, (Annotation, Iterable[Annotation])) = (variant1, (va1, genotypes1))
+    val row1: (Annotation, Iterable[Annotation]) = (va1, genotypes1)
 
     val vds = MatrixTable.fromLegacy(hc, MatrixFileMetadata(sampleAnnotations = Array("1", "2", "3").map(Annotation(_))),
       sc.parallelize(Seq(row1)))
@@ -43,7 +43,7 @@ class FilterAllelesSuite extends SparkSuite {
     val genotype12 = Genotype(Option(2), Option(Array(25, 35, 0)), Option(100), Option(5), Option(Array(10, 10, 0, 7, 5, 10)))
     val genotype13 = Genotype(Option(3), Option(Array(25, 10, 10)), Option(100), Option(5), Option(Array(10, 10, 10, 0, 5, 7)))
     val genotypes1 = Seq(genotype11, genotype12, genotype13)
-    val row1: (Variant, (Annotation, Iterable[Annotation])) = (variant1, (va1, genotypes1))
+    val row1: (Annotation, Iterable[Annotation]) = (va1, genotypes1)
 
     val vds = MatrixTable.fromLegacy(hc, MatrixFileMetadata(Array("1", "2", "3").map(Annotation(_))),
       sc.parallelize(Seq(row1)))
@@ -70,7 +70,7 @@ class FilterAllelesSuite extends SparkSuite {
     val genotype12 = Genotype(Option(2), Option(Array(25, 35, 0)), Option(100), Option(5), Option(Array(10, 10, 0, 7, 5, 10)))
     val genotype13 = Genotype(Option(3), Option(Array(25, 10, 10)), Option(100), Option(5), Option(Array(10, 10, 10, 0, 5, 7)))
     val genotypes1 = Seq(genotype11, genotype12, genotype13)
-    val row1: (Variant, (Annotation, Iterable[Annotation])) = (variant1, (va1, genotypes1))
+    val row1: (Annotation, Iterable[Annotation]) = (va1, genotypes1)
 
     val vds = MatrixTable.fromLegacy(hc, MatrixFileMetadata(Array("1", "2", "3").map(Annotation(_))),
       sc.parallelize(Seq(row1)))
@@ -94,7 +94,7 @@ class FilterAllelesSuite extends SparkSuite {
     val genotype12 = Genotype(Option(2), Option(Array(25, 35, 0)), Option(100), Option(5), Option(Array(10, 10, 0, 7, 5, 10)))
     val genotype13 = Genotype(Option(3), Option(Array(25, 10, 10)), Option(100), Option(5), Option(Array(10, 10, 10, 0, 5, 7)))
     val genotypes1 = Seq(genotype11, genotype12, genotype13)
-    val row1: (Variant, (Annotation, Iterable[Annotation])) = (variant1, (va1, genotypes1))
+    val row1: (Annotation, Iterable[Annotation]) = (va1, genotypes1)
 
     val vds = MatrixTable.fromLegacy(hc, MatrixFileMetadata(Array("1", "2", "3").map(Annotation(_))),
       sc.parallelize(Seq(row1)))
@@ -115,7 +115,7 @@ class FilterAllelesSuite extends SparkSuite {
     val variant1 = new Variant("contig", 0, "ref", IndexedSeq("alt1", "alt2").map(AltAllele("ref", _)))
     val va1 = Row(variant1)
     val genotypes1 = Seq(Genotype(1), Genotype(2), Genotype(3))
-    val row1: (Variant, (Annotation, Iterable[Annotation])) = (variant1, (va1, genotypes1))
+    val row1: (Annotation, Iterable[Annotation]) = (va1, genotypes1)
 
     val vds = MatrixTable.fromLegacy(hc, MatrixFileMetadata(Array("1", "2", "3").map(Annotation(_))),
       sc.parallelize(Seq(row1)))

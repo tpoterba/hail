@@ -50,8 +50,8 @@ class IntervalSuite extends SparkSuite {
   }
 
   @Test def testAll() {
-    val vds = MatrixTable.fromLegacy[Variant, Annotation](hc, MatrixFileMetadata(Array.empty[String]),
-      sc.parallelize(Seq((Variant("1", 100, "A", "T"), (Annotation(Variant("1", 100, "A", "T")), Iterable.empty[Annotation])))))
+    val vds = MatrixTable.fromLegacy[Annotation](hc, MatrixFileMetadata(Array.empty[String]),
+      sc.parallelize(Seq((Annotation(Variant("1", 100, "A", "T")), Iterable.empty[Annotation]))))
 
     val intervalFile = tmpDir.createTempFile("intervals")
     hadoopConf.writeTextFile(intervalFile) { out =>
