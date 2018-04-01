@@ -1548,8 +1548,22 @@ class Table(ExprContainer):
         """
         return hl.tarray(self.row.dtype)._from_json(self._jt.collectJSON())
 
-    def describe(self, handler=print):
-        """Print information about the fields in the table."""
+    def describe(self, handler=print, widget=False):
+        """Print information about the fields in the table.
+
+        Note
+        ----
+        The `widget` argument is **experimental**.
+
+        Parameters
+        ----------
+        handler : Callable[[str], None]
+            Handler function for returned string.
+        widget : bool
+            [Experimental] create an interactive IPython widget.
+        """
+        if widget:
+            return hl.experimental.interact(self)
 
         def format_type(typ):
             return typ.pretty(indent=4)
@@ -2595,5 +2609,9 @@ class Table(ExprContainer):
     @typecheck_method(cols=table_type, entries_field_name=str)
     def _unlocalize_entries(self, cols, entries_field_name):
         return hl.MatrixTable(self._jt.unlocalizeEntries(cols._jt, entries_field_name))
+
+    def interact(self):
+        from .vis.interact import interact
+        interact(self)
 
 table_type.set(Table)
