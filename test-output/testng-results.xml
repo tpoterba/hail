@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results skipped="0" failed="0" total="65" passed="65">
+  <reporter-output>
+  </reporter-output>
+  <suite name="Command line suite" duration-ms="535" started-at="2018-07-18T13:29:28Z" finished-at="2018-07-18T13:29:28Z">
+    <groups>
+    </groups>
+    <test name="Command line test" duration-ms="535" started-at="2018-07-18T13:29:28Z" finished-at="2018-07-18T13:29:28Z">
+      <class name="is.hail.expr.ir.PruneSuite">
+        <test-method status="PASS" signature="testArrayFilterMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testArrayFilterMemo" duration-ms="19" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testArrayFilterMemo -->
+        <test-method status="PASS" signature="testArrayFlatMapMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testArrayFlatMapMemo" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testArrayFlatMapMemo -->
+        <test-method status="PASS" signature="testArrayFlatmapRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testArrayFlatmapRebuild" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testArrayFlatmapRebuild -->
+        <test-method status="PASS" signature="testArrayFoldMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testArrayFoldMemo" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testArrayFoldMemo -->
+        <test-method status="PASS" signature="testArrayForMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testArrayForMemo" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testArrayForMemo -->
+        <test-method status="PASS" signature="testArrayLenMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testArrayLenMemo" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testArrayLenMemo -->
+        <test-method status="PASS" signature="testArrayMapMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testArrayMapMemo" duration-ms="4" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testArrayMapMemo -->
+        <test-method status="PASS" signature="testArrayMapRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testArrayMapRebuild" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testArrayMapRebuild -->
+        <test-method status="PASS" signature="testArrayRefMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testArrayRefMemo" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testArrayRefMemo -->
+        <test-method status="PASS" signature="testCollectColsByKeyMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testCollectColsByKeyMemo" duration-ms="21" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testCollectColsByKeyMemo -->
+        <test-method status="PASS" signature="testGetTupleElementMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testGetTupleElementMemo" duration-ms="6" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testGetTupleElementMemo -->
+        <test-method status="PASS" signature="testGetFieldMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testGetFieldMemo" duration-ms="0" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testGetFieldMemo -->
+        <test-method status="PASS" signature="testIfMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testIfMemo" duration-ms="3" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testIfMemo -->
+        <test-method status="PASS" signature="testIfRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testIfRebuild" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testIfRebuild -->
+        <test-method status="PASS" signature="testInsertFieldsMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testInsertFieldsMemo" duration-ms="1" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testInsertFieldsMemo -->
+        <test-method status="PASS" signature="testInsertFieldsRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testInsertFieldsRebuild" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testInsertFieldsRebuild -->
+        <test-method status="PASS" signature="testLetMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testLetMemo" duration-ms="1" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testLetMemo -->
+        <test-method status="PASS" signature="testLetRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testLetRebuild" duration-ms="3" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testLetRebuild -->
+        <test-method status="PASS" signature="testMakeArrayMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMakeArrayMemo" duration-ms="0" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMakeArrayMemo -->
+        <test-method status="PASS" signature="testMakeArrayRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMakeArrayRebuild" duration-ms="1" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMakeArrayRebuild -->
+        <test-method status="PASS" signature="testMakeStructMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMakeStructMemo" duration-ms="3" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMakeStructMemo -->
+        <test-method status="PASS" signature="testMakeStructRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMakeStructRebuild" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMakeStructRebuild -->
+        <test-method status="PASS" signature="testMakeTupleMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMakeTupleMemo" duration-ms="1" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMakeTupleMemo -->
+        <test-method status="PASS" signature="testMatrixAggregateColsByKeyMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixAggregateColsByKeyMemo" duration-ms="28" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixAggregateColsByKeyMemo -->
+        <test-method status="PASS" signature="testMatrixAggregateColsByKeyRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixAggregateColsByKeyRebuild" duration-ms="19" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixAggregateColsByKeyRebuild -->
+        <test-method status="PASS" signature="testMatrixAggregateMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixAggregateMemo" duration-ms="7" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixAggregateMemo -->
+        <test-method status="PASS" signature="testMatrixAggregateRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixAggregateRebuild" duration-ms="6" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixAggregateRebuild -->
+        <test-method status="PASS" signature="testMatrixAggregateRowsByKeyMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixAggregateRowsByKeyMemo" duration-ms="18" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixAggregateRowsByKeyMemo -->
+        <test-method status="PASS" signature="testMatrixAggregateRowsByKeyRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixAggregateRowsByKeyRebuild" duration-ms="15" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixAggregateRowsByKeyRebuild -->
+        <test-method status="PASS" signature="testMatrixColsTableMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixColsTableMemo" duration-ms="8" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixColsTableMemo -->
+        <test-method status="PASS" signature="testMatrixEntriesTableMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixEntriesTableMemo" duration-ms="14" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixEntriesTableMemo -->
+        <test-method status="PASS" signature="testMatrixExplodeRowsMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixExplodeRowsMemo" duration-ms="16" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixExplodeRowsMemo -->
+        <test-method status="PASS" signature="testMatrixFilterColsMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixFilterColsMemo" duration-ms="55" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixFilterColsMemo -->
+        <test-method status="PASS" signature="testMatrixFilterColsRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixFilterColsRebuild" duration-ms="30" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixFilterColsRebuild -->
+        <test-method status="PASS" signature="testMatrixFilterEntriesMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixFilterEntriesMemo" duration-ms="8" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixFilterEntriesMemo -->
+        <test-method status="PASS" signature="testMatrixFilterEntriesRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixFilterEntriesRebuild" duration-ms="8" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixFilterEntriesRebuild -->
+        <test-method status="PASS" signature="testMatrixFilterRowsMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixFilterRowsMemo" duration-ms="7" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixFilterRowsMemo -->
+        <test-method status="PASS" signature="testMatrixMapColsMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixMapColsMemo" duration-ms="12" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixMapColsMemo -->
+        <test-method status="PASS" signature="testMatrixMapColsRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixMapColsRebuild" duration-ms="14" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixMapColsRebuild -->
+        <test-method status="PASS" signature="testMatrixMapEntriesRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixMapEntriesRebuild" duration-ms="11" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixMapEntriesRebuild -->
+        <test-method status="PASS" signature="testMatrixMapGlobalsMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixMapGlobalsMemo" duration-ms="12" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixMapGlobalsMemo -->
+        <test-method status="PASS" signature="testMatrixMapGlobalsRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixMapGlobalsRebuild" duration-ms="12" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixMapGlobalsRebuild -->
+        <test-method status="PASS" signature="testMatrixMapRowsMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixMapRowsMemo" duration-ms="19" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixMapRowsMemo -->
+        <test-method status="PASS" signature="testMatrixMapRowsRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixMapRowsRebuild" duration-ms="7" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixMapRowsRebuild -->
+        <test-method status="PASS" signature="testMatrixRowsTableMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testMatrixRowsTableMemo" duration-ms="5" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testMatrixRowsTableMemo -->
+        <test-method status="PASS" signature="testNARebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testNARebuild" duration-ms="4" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testNARebuild -->
+        <test-method status="PASS" signature="testSelectFieldsMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testSelectFieldsMemo" duration-ms="3" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testSelectFieldsMemo -->
+        <test-method status="PASS" signature="testSelectFieldsRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testSelectFieldsRebuild" duration-ms="4" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testSelectFieldsRebuild -->
+        <test-method status="PASS" signature="testTableAggregateMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableAggregateMemo" duration-ms="5" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableAggregateMemo -->
+        <test-method status="PASS" signature="testTableAggregateRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableAggregateRebuild" duration-ms="4" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableAggregateRebuild -->
+        <test-method status="PASS" signature="testTableCountMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableCountMemo" duration-ms="1" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableCountMemo -->
+        <test-method status="PASS" signature="testTableExplodeMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableExplodeMemo" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableExplodeMemo -->
+        <test-method status="PASS" signature="testTableFilterMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableFilterMemo" duration-ms="7" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableFilterMemo -->
+        <test-method status="PASS" signature="testTableFilterRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableFilterRebuild" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableFilterRebuild -->
+        <test-method status="PASS" signature="testTableImportRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableImportRebuild" duration-ms="8" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableImportRebuild -->
+        <test-method status="PASS" signature="testTableJoinMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableJoinMemo" duration-ms="15" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableJoinMemo -->
+        <test-method status="PASS" signature="testTableKeyByMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableKeyByMemo" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableKeyByMemo -->
+        <test-method status="PASS" signature="testTableMapGlobalsMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableMapGlobalsMemo" duration-ms="1" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableMapGlobalsMemo -->
+        <test-method status="PASS" signature="testTableMapGlobalsRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableMapGlobalsRebuild" duration-ms="2" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableMapGlobalsRebuild -->
+        <test-method status="PASS" signature="testTableMapRowsMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableMapRowsMemo" duration-ms="3" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableMapRowsMemo -->
+        <test-method status="PASS" signature="testTableMapRowsRebuild()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableMapRowsRebuild" duration-ms="4" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableMapRowsRebuild -->
+        <test-method status="PASS" signature="testTableOrderByMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableOrderByMemo" duration-ms="3" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableOrderByMemo -->
+        <test-method status="PASS" signature="testTableUnionMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableUnionMemo" duration-ms="5" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableUnionMemo -->
+        <test-method status="PASS" signature="testTableUnkeyMemo()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testTableUnkeyMemo" duration-ms="5" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testTableUnkeyMemo -->
+        <test-method status="PASS" signature="testUnionType()[pri:0, instance:is.hail.expr.ir.PruneSuite@43bdaa1b]" name="testUnionType" duration-ms="5" started-at="2018-07-18T09:29:28Z" finished-at="2018-07-18T09:29:28Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- testUnionType -->
+      </class> <!-- is.hail.expr.ir.PruneSuite -->
+    </test> <!-- Command line test -->
+  </suite> <!-- Command line suite -->
+</testng-results>

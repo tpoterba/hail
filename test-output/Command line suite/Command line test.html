@@ -1,0 +1,404 @@
+<html>
+<head>
+<title>TestNG:  Command line test</title>
+<link href="../testng.css" rel="stylesheet" type="text/css" />
+<link href="../my-testng.css" rel="stylesheet" type="text/css" />
+
+<style type="text/css">
+.log { display: none;} 
+.stack-trace { display: none;} 
+</style>
+<script type="text/javascript">
+<!--
+function flip(e) {
+  current = e.style.display;
+  if (current == 'block') {
+    e.style.display = 'none';
+    return 0;
+  }
+  else {
+    e.style.display = 'block';
+    return 1;
+  }
+}
+
+function toggleBox(szDivId, elem, msg1, msg2)
+{
+  var res = -1;  if (document.getElementById) {
+    res = flip(document.getElementById(szDivId));
+  }
+  else if (document.all) {
+    // this is the way old msie versions work
+    res = flip(document.all[szDivId]);
+  }
+  if(elem) {
+    if(res == 0) elem.innerHTML = msg1; else elem.innerHTML = msg2;
+  }
+
+}
+
+function toggleAllBoxes() {
+  if (document.getElementsByTagName) {
+    d = document.getElementsByTagName('div');
+    for (i = 0; i < d.length; i++) {
+      if (d[i].className == 'log') {
+        flip(d[i]);
+      }
+    }
+  }
+}
+
+// -->
+</script>
+
+</head>
+<body>
+<h2 align='center'>Command line test</h2><table border='1' align="center">
+<tr>
+<td>Tests passed/Failed/Skipped:</td><td>65/0/0</td>
+</tr><tr>
+<td>Started on:</td><td>Wed Jul 18 09:29:28 EDT 2018</td>
+</tr>
+<tr><td>Total time:</td><td>0 seconds (535 ms)</td>
+</tr><tr>
+<td>Included groups:</td><td></td>
+</tr><tr>
+<td>Excluded groups:</td><td></td>
+</tr>
+</table><p/>
+<small><i>(Hover the method name to see the test class name)</i></small><p/>
+<table width='100%' border='1' class='invocation-passed'>
+<tr><td colspan='4' align='center'><b>PASSED TESTS</b></td></tr>
+<tr><td><b>Test method</b></td>
+<td width="30%"><b>Exception</b></td>
+<td width="10%"><b>Time (seconds)</b></td>
+<td><b>Instance</b></td>
+</tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testArrayFilterMemo()'><b>testArrayFilterMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testArrayFlatMapMemo()'><b>testArrayFlatMapMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testArrayFlatmapRebuild()'><b>testArrayFlatmapRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testArrayFoldMemo()'><b>testArrayFoldMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testArrayForMemo()'><b>testArrayForMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testArrayLenMemo()'><b>testArrayLenMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testArrayMapMemo()'><b>testArrayMapMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testArrayMapRebuild()'><b>testArrayMapRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testArrayRefMemo()'><b>testArrayRefMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testCollectColsByKeyMemo()'><b>testCollectColsByKeyMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testGetFieldMemo()'><b>testGetFieldMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testGetTupleElementMemo()'><b>testGetTupleElementMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testIfMemo()'><b>testIfMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testIfRebuild()'><b>testIfRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testInsertFieldsMemo()'><b>testInsertFieldsMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testInsertFieldsRebuild()'><b>testInsertFieldsRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testLetMemo()'><b>testLetMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testLetRebuild()'><b>testLetRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMakeArrayMemo()'><b>testMakeArrayMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMakeArrayRebuild()'><b>testMakeArrayRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMakeStructMemo()'><b>testMakeStructMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMakeStructRebuild()'><b>testMakeStructRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMakeTupleMemo()'><b>testMakeTupleMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixAggregateColsByKeyMemo()'><b>testMatrixAggregateColsByKeyMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixAggregateColsByKeyRebuild()'><b>testMatrixAggregateColsByKeyRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixAggregateMemo()'><b>testMatrixAggregateMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixAggregateRebuild()'><b>testMatrixAggregateRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixAggregateRowsByKeyMemo()'><b>testMatrixAggregateRowsByKeyMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixAggregateRowsByKeyRebuild()'><b>testMatrixAggregateRowsByKeyRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixColsTableMemo()'><b>testMatrixColsTableMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixEntriesTableMemo()'><b>testMatrixEntriesTableMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixExplodeRowsMemo()'><b>testMatrixExplodeRowsMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixFilterColsMemo()'><b>testMatrixFilterColsMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixFilterColsRebuild()'><b>testMatrixFilterColsRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixFilterEntriesMemo()'><b>testMatrixFilterEntriesMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixFilterEntriesRebuild()'><b>testMatrixFilterEntriesRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixFilterRowsMemo()'><b>testMatrixFilterRowsMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixMapColsMemo()'><b>testMatrixMapColsMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixMapColsRebuild()'><b>testMatrixMapColsRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixMapEntriesRebuild()'><b>testMatrixMapEntriesRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixMapGlobalsMemo()'><b>testMatrixMapGlobalsMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixMapGlobalsRebuild()'><b>testMatrixMapGlobalsRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixMapRowsMemo()'><b>testMatrixMapRowsMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixMapRowsRebuild()'><b>testMatrixMapRowsRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testMatrixRowsTableMemo()'><b>testMatrixRowsTableMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testNARebuild()'><b>testNARebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testSelectFieldsMemo()'><b>testSelectFieldsMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testSelectFieldsRebuild()'><b>testSelectFieldsRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableAggregateMemo()'><b>testTableAggregateMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableAggregateRebuild()'><b>testTableAggregateRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableCountMemo()'><b>testTableCountMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableExplodeMemo()'><b>testTableExplodeMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableFilterMemo()'><b>testTableFilterMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableFilterRebuild()'><b>testTableFilterRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableImportRebuild()'><b>testTableImportRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableJoinMemo()'><b>testTableJoinMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableKeyByMemo()'><b>testTableKeyByMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableMapGlobalsMemo()'><b>testTableMapGlobalsMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableMapGlobalsRebuild()'><b>testTableMapGlobalsRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableMapRowsMemo()'><b>testTableMapRowsMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableMapRowsRebuild()'><b>testTableMapRowsRebuild</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableOrderByMemo()'><b>testTableOrderByMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableUnionMemo()'><b>testTableUnionMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testTableUnkeyMemo()'><b>testTableUnkeyMemo</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+<tr>
+<td title='is.hail.expr.ir.PruneSuite.testUnionType()'><b>testUnionType</b><br>Test class: is.hail.expr.ir.PruneSuite</td>
+<td></td>
+<td>0</td>
+<td>is.hail.expr.ir.PruneSuite@43bdaa1b</td></tr>
+</table><p>
+</body>
+</html>

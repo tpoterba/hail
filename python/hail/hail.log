@@ -1,0 +1,1114 @@
+2018-07-03 13:15:32 SparkContext: INFO: Running Spark version 2.2.0
+2018-07-03 13:15:32 NativeCodeLoader: WARN: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-07-03 13:15:33 Utils: WARN: Your hostname, wm9f1-8cf resolves to a loopback address: 127.0.0.1; using 10.94.104.182 instead (on interface en0)
+2018-07-03 13:15:33 Utils: WARN: Set SPARK_LOCAL_IP if you need to bind to another address
+2018-07-03 13:15:33 SparkContext: INFO: Submitted application: Hail
+2018-07-03 13:15:33 SparkContext: INFO: Spark configuration:
+spark.app.name=Hail
+spark.driver.extraClassPath=/Users/tpoterba/hail/build/libs/hail-all-spark.jar
+spark.driver.memory=8G
+spark.executor.extraClassPath=/Users/tpoterba/hail/build/libs/hail-all-spark.jar
+spark.hadoop.io.compression.codecs=org.apache.hadoop.io.compress.DefaultCodec,is.hail.io.compress.BGzipCodec,org.apache.hadoop.io.compress.GzipCodec
+spark.hadoop.mapreduce.input.fileinputformat.split.minsize=0
+spark.kryo.registrator=is.hail.kryo.HailKryoRegistrator
+spark.logConf=true
+spark.master=local[2]
+spark.serializer=org.apache.spark.serializer.KryoSerializer
+spark.submit.deployMode=client
+spark.ui.showConsoleProgress=false
+2018-07-03 13:15:33 SecurityManager: INFO: Changing view acls to: tpoterba
+2018-07-03 13:15:33 SecurityManager: INFO: Changing modify acls to: tpoterba
+2018-07-03 13:15:33 SecurityManager: INFO: Changing view acls groups to: 
+2018-07-03 13:15:33 SecurityManager: INFO: Changing modify acls groups to: 
+2018-07-03 13:15:33 SecurityManager: INFO: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(tpoterba); groups with view permissions: Set(); users  with modify permissions: Set(tpoterba); groups with modify permissions: Set()
+2018-07-03 13:15:34 Utils: INFO: Successfully started service 'sparkDriver' on port 50033.
+2018-07-03 13:15:34 SparkEnv: INFO: Registering MapOutputTracker
+2018-07-03 13:15:34 SparkEnv: INFO: Registering BlockManagerMaster
+2018-07-03 13:15:34 BlockManagerMasterEndpoint: INFO: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+2018-07-03 13:15:34 BlockManagerMasterEndpoint: INFO: BlockManagerMasterEndpoint up
+2018-07-03 13:15:34 DiskBlockManager: INFO: Created local directory at /private/var/folders/05/k7m5y49j4qnc998x4n5mzrqc0p8yhq/T/blockmgr-4295d5c4-4dee-4114-a49e-cde5b7173971
+2018-07-03 13:15:34 MemoryStore: INFO: MemoryStore started with capacity 4.1 GB
+2018-07-03 13:15:34 SparkEnv: INFO: Registering OutputCommitCoordinator
+2018-07-03 13:15:34 log: INFO: Logging initialized @5533ms
+2018-07-03 13:15:34 Server: INFO: jetty-9.3.z-SNAPSHOT
+2018-07-03 13:15:34 Server: INFO: Started @5726ms
+2018-07-03 13:15:34 AbstractConnector: INFO: Started ServerConnector@429cc070{HTTP/1.1,[http/1.1]}{0.0.0.0:4040}
+2018-07-03 13:15:34 Utils: INFO: Successfully started service 'SparkUI' on port 4040.
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@76a1364b{/jobs,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@6c5fcc86{/jobs/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@2b1eae74{/jobs/job,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5d6d72e1{/jobs/job/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@6a84c4c1{/stages,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@69520e52{/stages/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@56c05bac{/stages/stage,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@3b3e3667{/stages/stage/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@f58fe92{/stages/pool,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@125715e1{/stages/pool/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@4935de13{/storage,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@3fc7112c{/storage/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@515b002f{/storage/rdd,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@6c8e6835{/storage/rdd/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@1f732caf{/environment,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@51656428{/environment/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@412209d9{/executors,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5e5cea4c{/executors/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5a18925c{/executors/threadDump,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@538beabc{/executors/threadDump/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@6f69fc52{/static,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@12d9e6b2{/,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@88804b6{/api,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@209533f9{/jobs/job/kill,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@40e1ebc7{/stages/stage/kill,null,AVAILABLE,@Spark}
+2018-07-03 13:15:34 SparkUI: INFO: Bound SparkUI to 0.0.0.0, and started at http://10.94.104.182:4040
+2018-07-03 13:15:35 Executor: INFO: Starting executor ID driver on host localhost
+2018-07-03 13:15:35 Utils: INFO: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 50035.
+2018-07-03 13:15:35 NettyBlockTransferService: INFO: Server created on 10.94.104.182:50035
+2018-07-03 13:15:35 BlockManager: INFO: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+2018-07-03 13:15:35 BlockManagerMaster: INFO: Registering BlockManager BlockManagerId(driver, 10.94.104.182, 50035, None)
+2018-07-03 13:15:35 BlockManagerMasterEndpoint: INFO: Registering block manager 10.94.104.182:50035 with 4.1 GB RAM, BlockManagerId(driver, 10.94.104.182, 50035, None)
+2018-07-03 13:15:35 BlockManagerMaster: INFO: Registered BlockManager BlockManagerId(driver, 10.94.104.182, 50035, None)
+2018-07-03 13:15:35 BlockManager: INFO: Initialized BlockManager: BlockManagerId(driver, 10.94.104.182, 50035, None)
+2018-07-03 13:15:35 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5b5d8c5{/metrics/json,null,AVAILABLE,@Spark}
+2018-07-03 13:15:36 Hail: INFO: SparkUI: http://10.94.104.182:4040
+2018-07-03 13:15:36 Hail: INFO: Running Hail version devel-3418e8b28e94
+2018-07-03 13:15:37 MemoryStore: INFO: Block broadcast_0 stored as values in memory (estimated size 237.1 KB, free 4.1 GB)
+2018-07-03 13:15:38 MemoryStore: INFO: Block broadcast_0_piece0 stored as bytes in memory (estimated size 23.0 KB, free 4.1 GB)
+2018-07-03 13:15:38 BlockManagerInfo: INFO: Added broadcast_0_piece0 in memory on 10.94.104.182:50035 (size: 23.0 KB, free: 4.1 GB)
+2018-07-03 13:15:38 SparkContext: INFO: Created broadcast 0 from broadcast at LoadVCF.scala:832
+2018-07-03 13:15:38 MemoryStore: INFO: Block broadcast_1 stored as values in memory (estimated size 6.4 KB, free 4.1 GB)
+2018-07-03 13:15:38 MemoryStore: INFO: Block broadcast_1_piece0 stored as bytes in memory (estimated size 1350.0 B, free 4.1 GB)
+2018-07-03 13:15:38 BlockManagerInfo: INFO: Added broadcast_1_piece0 in memory on 10.94.104.182:50035 (size: 1350.0 B, free: 4.1 GB)
+2018-07-03 13:15:38 SparkContext: INFO: Created broadcast 1 from broadcast at LoadVCF.scala:833
+2018-07-03 13:15:38 SparkContext: INFO: Starting job: foreach at LoadVCF.scala:835
+2018-07-03 13:15:39 DAGScheduler: INFO: Got job 0 (foreach at LoadVCF.scala:835) with 1 output partitions
+2018-07-03 13:15:39 DAGScheduler: INFO: Final stage: ResultStage 0 (foreach at LoadVCF.scala:835)
+2018-07-03 13:15:39 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-03 13:15:39 DAGScheduler: INFO: Missing parents: List()
+2018-07-03 13:15:39 DAGScheduler: INFO: Submitting ResultStage 0 (ParallelCollectionRDD[0] at parallelize at LoadVCF.scala:835), which has no missing parents
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_2 stored as values in memory (estimated size 2.7 KB, free 4.1 GB)
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_2_piece0 stored as bytes in memory (estimated size 1755.0 B, free 4.1 GB)
+2018-07-03 13:15:39 BlockManagerInfo: INFO: Added broadcast_2_piece0 in memory on 10.94.104.182:50035 (size: 1755.0 B, free: 4.1 GB)
+2018-07-03 13:15:39 SparkContext: INFO: Created broadcast 2 from broadcast at DAGScheduler.scala:1006
+2018-07-03 13:15:39 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 0 (ParallelCollectionRDD[0] at parallelize at LoadVCF.scala:835) (first 15 tasks are for partitions Vector(0))
+2018-07-03 13:15:39 TaskSchedulerImpl: INFO: Adding task set 0.0 with 1 tasks
+2018-07-03 13:15:39 TaskSetManager: INFO: Starting task 0.0 in stage 0.0 (TID 0, localhost, executor driver, partition 0, PROCESS_LOCAL, 4723 bytes)
+2018-07-03 13:15:39 Executor: INFO: Running task 0.0 in stage 0.0 (TID 0)
+2018-07-03 13:15:39 Executor: INFO: Finished task 0.0 in stage 0.0 (TID 0). 666 bytes result sent to driver
+2018-07-03 13:15:39 TaskSetManager: INFO: Finished task 0.0 in stage 0.0 (TID 0) in 232 ms on localhost (executor driver) (1/1)
+2018-07-03 13:15:39 TaskSchedulerImpl: INFO: Removed TaskSet 0.0, whose tasks have all completed, from pool 
+2018-07-03 13:15:39 DAGScheduler: INFO: ResultStage 0 (foreach at LoadVCF.scala:835) finished in 0.279 s
+2018-07-03 13:15:39 DAGScheduler: INFO: Job 0 finished: foreach at LoadVCF.scala:835, took 0.479111 s
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_3 stored as values in memory (estimated size 272.0 B, free 4.1 GB)
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_3_piece0 stored as bytes in memory (estimated size 231.0 B, free 4.1 GB)
+2018-07-03 13:15:39 BlockManagerInfo: INFO: Added broadcast_3_piece0 in memory on 10.94.104.182:50035 (size: 231.0 B, free: 4.1 GB)
+2018-07-03 13:15:39 SparkContext: INFO: Created broadcast 3 from broadcast at LoadVCF.scala:881
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_4 stored as values in memory (estimated size 40.0 B, free 4.1 GB)
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_4_piece0 stored as bytes in memory (estimated size 85.0 B, free 4.1 GB)
+2018-07-03 13:15:39 BlockManagerInfo: INFO: Added broadcast_4_piece0 in memory on 10.94.104.182:50035 (size: 85.0 B, free: 4.1 GB)
+2018-07-03 13:15:39 SparkContext: INFO: Created broadcast 4 from broadcast at LoadVCF.scala:882
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_5 stored as values in memory (estimated size 11.8 KB, free 4.1 GB)
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_5_piece0 stored as bytes in memory (estimated size 1685.0 B, free 4.1 GB)
+2018-07-03 13:15:39 BlockManagerInfo: INFO: Added broadcast_5_piece0 in memory on 10.94.104.182:50035 (size: 1685.0 B, free: 4.1 GB)
+2018-07-03 13:15:39 SparkContext: INFO: Created broadcast 5 from broadcast at LoadVCF.scala:884
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_6 stored as values in memory (estimated size 237.1 KB, free 4.1 GB)
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_6_piece0 stored as bytes in memory (estimated size 23.0 KB, free 4.1 GB)
+2018-07-03 13:15:39 BlockManagerInfo: INFO: Added broadcast_6_piece0 in memory on 10.94.104.182:50035 (size: 23.0 KB, free: 4.1 GB)
+2018-07-03 13:15:39 SparkContext: INFO: Created broadcast 6 from textFile at RichSparkContext.scala:16
+2018-07-03 13:15:39 FileInputFormat: INFO: Total input paths to process : 1
+2018-07-03 13:15:39 SparkContext: INFO: Starting job: collect at ContextRDD.scala:143
+2018-07-03 13:15:39 DAGScheduler: INFO: Got job 1 (collect at ContextRDD.scala:143) with 2 output partitions
+2018-07-03 13:15:39 DAGScheduler: INFO: Final stage: ResultStage 1 (collect at ContextRDD.scala:143)
+2018-07-03 13:15:39 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-03 13:15:39 DAGScheduler: INFO: Missing parents: List()
+2018-07-03 13:15:39 DAGScheduler: INFO: Submitting ResultStage 1 (MapPartitionsRDD[8] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_7 stored as values in memory (estimated size 25.5 KB, free 4.1 GB)
+2018-07-03 13:15:39 MemoryStore: INFO: Block broadcast_7_piece0 stored as bytes in memory (estimated size 13.0 KB, free 4.1 GB)
+2018-07-03 13:15:39 BlockManagerInfo: INFO: Added broadcast_7_piece0 in memory on 10.94.104.182:50035 (size: 13.0 KB, free: 4.1 GB)
+2018-07-03 13:15:39 SparkContext: INFO: Created broadcast 7 from broadcast at DAGScheduler.scala:1006
+2018-07-03 13:15:39 DAGScheduler: INFO: Submitting 2 missing tasks from ResultStage 1 (MapPartitionsRDD[8] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0, 1))
+2018-07-03 13:15:39 TaskSchedulerImpl: INFO: Adding task set 1.0 with 2 tasks
+2018-07-03 13:15:40 TaskSetManager: INFO: Starting task 0.0 in stage 1.0 (TID 1, localhost, executor driver, partition 0, PROCESS_LOCAL, 4874 bytes)
+2018-07-03 13:15:40 TaskSetManager: INFO: Starting task 1.0 in stage 1.0 (TID 2, localhost, executor driver, partition 1, PROCESS_LOCAL, 4874 bytes)
+2018-07-03 13:15:40 Executor: INFO: Running task 0.0 in stage 1.0 (TID 1)
+2018-07-03 13:15:40 Executor: INFO: Running task 1.0 in stage 1.0 (TID 2)
+2018-07-03 13:15:40 HadoopRDD: INFO: Input split: file:/Users/tpoterba/hail/src/test/resources/mendel.vcf:0+6374
+2018-07-03 13:15:40 HadoopRDD: INFO: Input split: file:/Users/tpoterba/hail/src/test/resources/mendel.vcf:6374+6374
+2018-07-03 13:15:40 Executor: INFO: Finished task 1.0 in stage 1.0 (TID 2). 1295 bytes result sent to driver
+2018-07-03 13:15:40 Executor: INFO: Finished task 0.0 in stage 1.0 (TID 1). 1127 bytes result sent to driver
+2018-07-03 13:15:40 TaskSetManager: INFO: Finished task 1.0 in stage 1.0 (TID 2) in 247 ms on localhost (executor driver) (1/2)
+2018-07-03 13:15:40 TaskSetManager: INFO: Finished task 0.0 in stage 1.0 (TID 1) in 260 ms on localhost (executor driver) (2/2)
+2018-07-03 13:15:40 TaskSchedulerImpl: INFO: Removed TaskSet 1.0, whose tasks have all completed, from pool 
+2018-07-03 13:15:40 DAGScheduler: INFO: ResultStage 1 (collect at ContextRDD.scala:143) finished in 0.262 s
+2018-07-03 13:15:40 DAGScheduler: INFO: Job 1 finished: collect at ContextRDD.scala:143, took 0.297461 s
+2018-07-03 13:15:40 Hail: INFO: Ordering unsorted dataset with network shuffle
+2018-07-03 13:15:40 MemoryStore: INFO: Block broadcast_8 stored as values in memory (estimated size 41.0 KB, free 4.1 GB)
+2018-07-03 13:15:40 MemoryStore: INFO: Block broadcast_8_piece0 stored as bytes in memory (estimated size 4.4 KB, free 4.1 GB)
+2018-07-03 13:15:40 BlockManagerInfo: INFO: Added broadcast_8_piece0 in memory on 10.94.104.182:50035 (size: 4.4 KB, free: 4.1 GB)
+2018-07-03 13:15:40 SparkContext: INFO: Created broadcast 8 from broadcast at OrderedRVDPartitioner.scala:167
+2018-07-03 13:15:40 root: INFO: is/hail/codegen/generated/C0.<init> instruction count: 3
+2018-07-03 13:15:40 root: INFO: is/hail/codegen/generated/C0.apply instruction count: 43
+2018-07-03 13:15:40 root: INFO: is/hail/codegen/generated/C0.apply instruction count: 12
+2018-07-03 13:15:40 root: INFO: is/hail/codegen/generated/C0.method1 instruction count: 713
+2018-07-03 13:15:40 root: INFO: is/hail/codegen/generated/C0.method2 instruction count: 261
+2018-07-03 13:15:40 BlockManagerInfo: INFO: Removed broadcast_2_piece0 on 10.94.104.182:50035 in memory (size: 1755.0 B, free: 4.1 GB)
+2018-07-03 13:15:40 BlockManagerInfo: INFO: Removed broadcast_7_piece0 on 10.94.104.182:50035 in memory (size: 13.0 KB, free: 4.1 GB)
+2018-07-03 13:15:40 BlockManagerInfo: INFO: Removed broadcast_0_piece0 on 10.94.104.182:50035 in memory (size: 23.0 KB, free: 4.1 GB)
+2018-07-03 13:15:40 BlockManagerInfo: INFO: Removed broadcast_1_piece0 on 10.94.104.182:50035 in memory (size: 1350.0 B, free: 4.1 GB)
+2018-07-03 13:15:41 root: INFO: in MatrixTable.value: execute:
+(MatrixMapEntries
+  (MatrixLiteral)
+  (MakeStruct
+    (__GT
+      (GetField GT
+        (Ref Struct{GT:Call,AD:Array[+Int32],DP:Int32,GQ:Int32,PL:Array[+Int32]} g)))))
+2018-07-03 13:15:41 MemoryStore: INFO: Block broadcast_9 stored as values in memory (estimated size 1096.0 B, free 4.1 GB)
+2018-07-03 13:15:41 MemoryStore: INFO: Block broadcast_9_piece0 stored as bytes in memory (estimated size 241.0 B, free 4.1 GB)
+2018-07-03 13:15:41 BlockManagerInfo: INFO: Added broadcast_9_piece0 in memory on 10.94.104.182:50035 (size: 241.0 B, free: 4.1 GB)
+2018-07-03 13:15:41 SparkContext: INFO: Created broadcast 9 from broadcast at BroadcastValue.scala:14
+2018-07-03 13:15:41 MemoryStore: INFO: Block broadcast_10 stored as values in memory (estimated size 56.0 B, free 4.1 GB)
+2018-07-03 13:15:41 MemoryStore: INFO: Block broadcast_10_piece0 stored as bytes in memory (estimated size 120.0 B, free 4.1 GB)
+2018-07-03 13:15:41 BlockManagerInfo: INFO: Added broadcast_10_piece0 in memory on 10.94.104.182:50035 (size: 120.0 B, free: 4.1 GB)
+2018-07-03 13:15:41 SparkContext: INFO: Created broadcast 10 from broadcast at BroadcastValue.scala:14
+2018-07-03 13:15:41 root: INFO: is/hail/codegen/generated/C1.<init> instruction count: 3
+2018-07-03 13:15:41 root: INFO: is/hail/codegen/generated/C1.apply instruction count: 584
+2018-07-03 13:15:41 root: INFO: is/hail/codegen/generated/C1.apply instruction count: 28
+2018-07-03 13:15:41 root: INFO: is/hail/codegen/generated/C1.method1 instruction count: 173
+2018-07-03 13:15:41 root: INFO: in MatrixTable.value: execute:
+(MatrixLiteral)
+2018-07-03 13:15:42 root: INFO: in MatrixTable.value: execute:
+(MatrixFilterEntries
+  (MatrixMapEntries
+    (MatrixLiteral)
+    (MakeStruct
+      (mendel_code
+        (If
+          (ApplySpecial `||`
+            (Apply isAutosomalOrPseudoAutosomal
+              (GetField locus
+                (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},`the entries! [877f12a8827e18f61222c6c8c5fb04a8]`:Array[Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}}]} va)))
+            (GetField is_female
+              (Ref Struct{id:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String} sa)))
+          (If
+            (Let __uid_8
+              (ApplySpecial `&&`
+                (ApplySpecial `&&`
+                  (ApplyComparisonOp (EQ Int32 Int32)
+                    (Apply nNonRefAlleles
+                      (GetField __GT
+                        (GetField father_entry
+                          (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                    (I32 2))
+                  (ApplyComparisonOp (EQ Int32 Int32)
+                    (Apply nNonRefAlleles
+                      (GetField __GT
+                        (GetField mother_entry
+                          (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                    (I32 2)))
+                (ApplyComparisonOp (EQ Int32 Int32)
+                  (Apply nNonRefAlleles
+                    (GetField __GT
+                      (GetField proband_entry
+                        (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                  (I32 1)))
+              (ApplySpecial `&&`
+                (ApplyIR isDefined
+                  (Ref Boolean __uid_8))
+                (Ref Boolean __uid_8)))
+            (I32 1)
+            (If
+              (Let __uid_7
+                (ApplySpecial `&&`
+                  (ApplySpecial `&&`
+                    (ApplyComparisonOp (EQ Int32 Int32)
+                      (Apply nNonRefAlleles
+                        (GetField __GT
+                          (GetField father_entry
+                            (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                      (I32 0))
+                    (ApplyComparisonOp (EQ Int32 Int32)
+                      (Apply nNonRefAlleles
+                        (GetField __GT
+                          (GetField mother_entry
+                            (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                      (I32 0)))
+                  (ApplyComparisonOp (EQ Int32 Int32)
+                    (Apply nNonRefAlleles
+                      (GetField __GT
+                        (GetField proband_entry
+                          (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                    (I32 1)))
+                (ApplySpecial `&&`
+                  (ApplyIR isDefined
+                    (Ref Boolean __uid_7))
+                  (Ref Boolean __uid_7)))
+              (I32 2)
+              (If
+                (Let __uid_6
+                  (ApplySpecial `&&`
+                    (ApplySpecial `&&`
+                      (ApplyComparisonOp (EQ Int32 Int32)
+                        (Apply nNonRefAlleles
+                          (GetField __GT
+                            (GetField father_entry
+                              (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                        (I32 0))
+                      (ApplyComparisonOp (EQ Int32 Int32)
+                        (Apply nNonRefAlleles
+                          (GetField __GT
+                            (GetField mother_entry
+                              (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                        (I32 0)))
+                    (ApplyComparisonOp (EQ Int32 Int32)
+                      (Apply nNonRefAlleles
+                        (GetField __GT
+                          (GetField proband_entry
+                            (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                      (I32 2)))
+                  (ApplySpecial `&&`
+                    (ApplyIR isDefined
+                      (Ref Boolean __uid_6))
+                    (Ref Boolean __uid_6)))
+                (I32 5)
+                (If
+                  (Let __uid_5
+                    (ApplySpecial `&&`
+                      (ApplySpecial `&&`
+                        (ApplyComparisonOp (EQ Int32 Int32)
+                          (Apply nNonRefAlleles
+                            (GetField __GT
+                              (GetField father_entry
+                                (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                          (I32 2))
+                        (ApplyComparisonOp (EQ Int32 Int32)
+                          (Apply nNonRefAlleles
+                            (GetField __GT
+                              (GetField mother_entry
+                                (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                          (I32 2)))
+                      (ApplyComparisonOp (EQ Int32 Int32)
+                        (Apply nNonRefAlleles
+                          (GetField __GT
+                            (GetField proband_entry
+                              (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                        (I32 0)))
+                    (ApplySpecial `&&`
+                      (ApplyIR isDefined
+                        (Ref Boolean __uid_5))
+                      (Ref Boolean __uid_5)))
+                  (I32 8)
+                  (If
+                    (Let __uid_4
+                      (ApplySpecial `&&`
+                        (ApplyComparisonOp (EQ Int32 Int32)
+                          (Apply nNonRefAlleles
+                            (GetField __GT
+                              (GetField father_entry
+                                (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                          (I32 0))
+                        (ApplyComparisonOp (EQ Int32 Int32)
+                          (Apply nNonRefAlleles
+                            (GetField __GT
+                              (GetField proband_entry
+                                (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                          (I32 2)))
+                      (ApplySpecial `&&`
+                        (ApplyIR isDefined
+                          (Ref Boolean __uid_4))
+                        (Ref Boolean __uid_4)))
+                    (I32 3)
+                    (If
+                      (Let __uid_3
+                        (ApplySpecial `&&`
+                          (ApplyComparisonOp (EQ Int32 Int32)
+                            (Apply nNonRefAlleles
+                              (GetField __GT
+                                (GetField mother_entry
+                                  (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                            (I32 0))
+                          (ApplyComparisonOp (EQ Int32 Int32)
+                            (Apply nNonRefAlleles
+                              (GetField __GT
+                                (GetField proband_entry
+                                  (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                            (I32 2)))
+                        (ApplySpecial `&&`
+                          (ApplyIR isDefined
+                            (Ref Boolean __uid_3))
+                          (Ref Boolean __uid_3)))
+                      (I32 4)
+                      (If
+                        (Let __uid_2
+                          (ApplySpecial `&&`
+                            (ApplyComparisonOp (EQ Int32 Int32)
+                              (Apply nNonRefAlleles
+                                (GetField __GT
+                                  (GetField father_entry
+                                    (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                              (I32 2))
+                            (ApplyComparisonOp (EQ Int32 Int32)
+                              (Apply nNonRefAlleles
+                                (GetField __GT
+                                  (GetField proband_entry
+                                    (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                              (I32 0)))
+                          (ApplySpecial `&&`
+                            (ApplyIR isDefined
+                              (Ref Boolean __uid_2))
+                            (Ref Boolean __uid_2)))
+                        (I32 6)
+                        (If
+                          (Let __uid_1
+                            (ApplySpecial `&&`
+                              (ApplyComparisonOp (EQ Int32 Int32)
+                                (Apply nNonRefAlleles
+                                  (GetField __GT
+                                    (GetField mother_entry
+                                      (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                                (I32 2))
+                              (ApplyComparisonOp (EQ Int32 Int32)
+                                (Apply nNonRefAlleles
+                                  (GetField __GT
+                                    (GetField proband_entry
+                                      (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                                (I32 0)))
+                            (ApplySpecial `&&`
+                              (ApplyIR isDefined
+                                (Ref Boolean __uid_1))
+                              (Ref Boolean __uid_1)))
+                          (I32 7)
+                          (NA Int32)))))))))
+          (If
+            (ApplySpecial `&&`
+              (Apply inXNonPar
+                (GetField locus
+                  (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},`the entries! [877f12a8827e18f61222c6c8c5fb04a8]`:Array[Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}}]} va)))
+              (ApplyUnaryPrimOp Bang
+                (GetField is_female
+                  (Ref Struct{id:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String} sa))))
+            (If
+              (Let __uid_10
+                (ApplySpecial `&&`
+                  (ApplyComparisonOp (EQ Int32 Int32)
+                    (Apply nNonRefAlleles
+                      (GetField __GT
+                        (GetField mother_entry
+                          (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                    (I32 2))
+                  (ApplyComparisonOp (EQ Int32 Int32)
+                    (Apply nNonRefAlleles
+                      (GetField __GT
+                        (GetField proband_entry
+                          (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                    (I32 0)))
+                (ApplySpecial `&&`
+                  (ApplyIR isDefined
+                    (Ref Boolean __uid_10))
+                  (Ref Boolean __uid_10)))
+              (I32 9)
+              (If
+                (Let __uid_9
+                  (ApplySpecial `&&`
+                    (ApplyComparisonOp (EQ Int32 Int32)
+                      (Apply nNonRefAlleles
+                        (GetField __GT
+                          (GetField mother_entry
+                            (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                      (I32 0))
+                    (ApplyComparisonOp (GT Int32 Int32)
+                      (Apply nNonRefAlleles
+                        (GetField __GT
+                          (GetField proband_entry
+                            (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                      (I32 0)))
+                  (ApplySpecial `&&`
+                    (ApplyIR isDefined
+                      (Ref Boolean __uid_9))
+                    (Ref Boolean __uid_9)))
+                (I32 10)
+                (NA Int32)))
+            (If
+              (ApplySpecial `&&`
+                (Apply inYNonPar
+                  (GetField locus
+                    (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},`the entries! [877f12a8827e18f61222c6c8c5fb04a8]`:Array[Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}}]} va)))
+                (ApplyUnaryPrimOp Bang
+                  (GetField is_female
+                    (Ref Struct{id:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String} sa))))
+              (If
+                (Let __uid_12
+                  (ApplySpecial `&&`
+                    (ApplyComparisonOp (GT Int32 Int32)
+                      (Apply nNonRefAlleles
+                        (GetField __GT
+                          (GetField father_entry
+                            (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                      (I32 0))
+                    (ApplyComparisonOp (EQ Int32 Int32)
+                      (Apply nNonRefAlleles
+                        (GetField __GT
+                          (GetField proband_entry
+                            (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                      (I32 0)))
+                  (ApplySpecial `&&`
+                    (ApplyIR isDefined
+                      (Ref Boolean __uid_12))
+                    (Ref Boolean __uid_12)))
+                (I32 11)
+                (If
+                  (Let __uid_11
+                    (ApplySpecial `&&`
+                      (ApplyComparisonOp (EQ Int32 Int32)
+                        (Apply nNonRefAlleles
+                          (GetField __GT
+                            (GetField father_entry
+                              (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                        (I32 0))
+                      (ApplyComparisonOp (GT Int32 Int32)
+                        (Apply nNonRefAlleles
+                          (GetField __GT
+                            (GetField proband_entry
+                              (Ref Struct{proband_entry:Struct{__GT:Call},father_entry:Struct{__GT:Call},mother_entry:Struct{__GT:Call}} g))))
+                        (I32 0)))
+                    (ApplySpecial `&&`
+                      (ApplyIR isDefined
+                        (Ref Boolean __uid_11))
+                      (Ref Boolean __uid_11)))
+                  (I32 12)
+                  (NA Int32)))
+              (NA Int32)))))))
+  (Let __iruid_0
+    (ApplyIR isDefined
+      (GetField mendel_code
+        (Ref Struct{mendel_code:Int32} g)))
+    (If
+      (IsNA
+        (Ref Boolean __iruid_0))
+      (False)
+      (Ref Boolean __iruid_0))))
+2018-07-03 13:15:42 MemoryStore: INFO: Block broadcast_11 stored as values in memory (estimated size 1184.0 B, free 4.1 GB)
+2018-07-03 13:15:42 MemoryStore: INFO: Block broadcast_11_piece0 stored as bytes in memory (estimated size 267.0 B, free 4.1 GB)
+2018-07-03 13:15:42 BlockManagerInfo: INFO: Added broadcast_11_piece0 in memory on 10.94.104.182:50035 (size: 267.0 B, free: 4.1 GB)
+2018-07-03 13:15:42 SparkContext: INFO: Created broadcast 11 from broadcast at BroadcastValue.scala:14
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.<init> instruction count: 3
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.apply instruction count: 584
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.apply instruction count: 28
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.method1 instruction count: 12526
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.method1 instruction count > 8000
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.method2 instruction count: 74
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.method3 instruction count: 37
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.method4 instruction count: 6
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.method5 instruction count: 74
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.method6 instruction count: 37
+2018-07-03 13:15:42 root: INFO: is/hail/codegen/generated/C2.method7 instruction count: 74
+2018-07-03 13:15:43 root: INFO: is/hail/codegen/generated/C3.<init> instruction count: 3
+2018-07-03 13:15:43 root: INFO: is/hail/codegen/generated/C3.apply instruction count: 924
+2018-07-03 13:15:43 root: INFO: is/hail/codegen/generated/C3.apply instruction count: 28
+2018-07-03 13:15:43 root: INFO: in Table.value: pre-opt:
+(MatrixEntriesTable
+  (MatrixLiteral))
+2018-07-03 13:15:43 root: INFO: in Table.value: post-opt:
+(MatrixEntriesTable
+  (MatrixLiteral))
+2018-07-03 13:15:43 root: INFO: in Table.value: pre-opt:
+(TableKeyBy (pat_id mat_id) None True
+  (TableMapRows (pat_id mat_id) 2
+    (TableAggregateByKey
+      (TableKeyBy (pat_id mat_id) None True
+        (TableMapRows None None
+          (TableUnkey
+            (MatrixEntriesTable
+              (MatrixLiteral)))
+          (Let __uid_21
+            (MakeStruct
+              (pat_id
+                (GetField s
+                  (GetField father
+                    (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32} row))))
+              (mat_id
+                (GetField s
+                  (GetField mother
+                    (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32} row)))))
+            (ApplyIR annotate
+              (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32} row)
+              (MakeStruct
+                (pat_id
+                  (GetField pat_id
+                    (Ref Struct{pat_id:String,mat_id:String} __uid_21)))
+                (mat_id
+                  (GetField mat_id
+                    (Ref Struct{pat_id:String,mat_id:String} __uid_21))))))))
+      (MakeStruct
+        (children
+          (ApplyIR size
+            (ApplyAggOp (CollectAsSet String () None ())
+              (SeqOp (CollectAsSet String () None ())
+                (I32 0)
+                (                  (Let __uid_14
+                    (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row)
+                    (GetField s
+                      (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row)))))
+              ()
+              None)))
+        (errors
+          (ApplyAggOp (Count Int32 () None ())
+            (Let __iruid_1
+              (Let __uid_15
+                (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row)
+                (I32 0))
+              (If
+                (Let __uid_16
+                  (Ref Int32 __iruid_1)
+                  (ApplyIR isDefined
+                    (GetField mendel_code
+                      (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))))
+                (SeqOp (Count Int32 () None ())
+                  (I32 0)
+                  (                    (I32 0)))
+                (Begin)))
+            ()
+            None))
+        (snp_errors
+          (ApplyAggOp (Count Int32 () None ())
+            (Let __iruid_4
+              (Let __uid_19
+                (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row)
+                (I32 0))
+              (If
+                (Let __uid_20
+                  (Ref Int32 __iruid_4)
+                  (ApplySpecial `&&`
+                    (ApplyComparisonOp (EQ Int32 Int32)
+                      (Let __uid_17
+                        (ApplyIR `[]`
+                          (GetField alleles
+                            (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))
+                          (I32 0))
+                        (Let __uid_18
+                          (ApplyIR `[]`
+                            (GetField alleles
+                              (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))
+                            (I32 1))
+                          (If
+                            (Apply `~`
+                              (Str "^([ACGTNM])+$")
+                              (Ref String __uid_17))
+                            (If
+                              (Apply `~`
+                                (Str "^([ACGTNM])+$")
+                                (Ref String __uid_18))
+                              (If
+                                (ApplyComparisonOp (EQ Int32 Int32)
+                                  (ApplyIR length
+                                    (Ref String __uid_17))
+                                  (ApplyIR length
+                                    (Ref String __uid_18)))
+                                (If
+                                  (ApplyComparisonOp (EQ Int32 Int32)
+                                    (ApplyIR length
+                                      (Ref String __uid_17))
+                                    (I32 1))
+                                  (If
+                                    (ApplyComparisonOp (NEQ String String)
+                                      (Ref String __uid_17)
+                                      (Ref String __uid_18))
+                                    (I32 1)
+                                    (I32 0))
+                                  (If
+                                    (ApplyComparisonOp (EQ Int32 Int32)
+                                      (ApplySpecial hamming
+                                        (Ref String __uid_17)
+                                        (Ref String __uid_18))
+                                      (I32 1))
+                                    (I32 1)
+                                    (I32 2)))
+                                (If
+                                  (ApplySpecial `&&`
+                                    (ApplySpecial `&&`
+                                      (ApplyComparisonOp (LT Int32 Int32)
+                                        (ApplyIR length
+                                          (Ref String __uid_17))
+                                        (ApplyIR length
+                                          (Ref String __uid_18)))
+                                      (ApplyComparisonOp (EQ String String)
+                                        (Apply `[]`
+                                          (Ref String __uid_17)
+                                          (I32 0))
+                                        (Apply `[]`
+                                          (Ref String __uid_18)
+                                          (I32 0))))
+                                    (Apply endswith
+                                      (Ref String __uid_18)
+                                      (ApplyIR `[*:]`
+                                        (Ref String __uid_17)
+                                        (I32 1))))
+                                  (I32 3)
+                                  (If
+                                    (ApplySpecial `&&`
+                                      (ApplyComparisonOp (EQ String String)
+                                        (Apply `[]`
+                                          (Ref String __uid_17)
+                                          (I32 0))
+                                        (Apply `[]`
+                                          (Ref String __uid_18)
+                                          (I32 0)))
+                                      (Apply endswith
+                                        (Ref String __uid_17)
+                                        (ApplyIR `[*:]`
+                                          (Ref String __uid_18)
+                                          (I32 1))))
+                                    (I32 4)
+                                    (I32 5))))
+                              (If
+                                (ApplyComparisonOp (EQ String String)
+                                  (Ref String __uid_18)
+                                  (Str "*"))
+                                (I32 6)
+                                (If
+                                  (Apply `~`
+                                    (Str "(^\\.)|(\\.$)|(^<)|(>$)|(\\[)|(\\])")
+                                    (Ref String __uid_18))
+                                  (I32 7)
+                                  (I32 0))))
+                            (I32 0))))
+                      (I32 1))
+                    (ApplyIR isDefined
+                      (GetField mendel_code
+                        (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row)))))
+                (SeqOp (Count Int32 () None ())
+                  (I32 0)
+                  (                    (I32 0)))
+                (Begin)))
+            ()
+            None))))
+    (Let __uid_27
+      (MakeStruct
+        (__uid_23
+          (Ref Struct{pat_id:String,mat_id:String,children:Int32,errors:Int64,snp_errors:Int64} row)))
+      (ApplyIR annotate
+        (MakeStruct
+          (pat_id
+            (GetField pat_id
+              (Ref Struct{pat_id:String,mat_id:String,children:Int32,errors:Int64,snp_errors:Int64} row)))
+          (mat_id
+            (GetField mat_id
+              (Ref Struct{pat_id:String,mat_id:String,children:Int32,errors:Int64,snp_errors:Int64} row))))
+        (MakeStruct
+          (__uid_23
+            (GetField __uid_23
+              (Ref Struct{__uid_23:Struct{pat_id:String,mat_id:String,children:Int32,errors:Int64,snp_errors:Int64}} __uid_27))))))))
+2018-07-03 13:15:44 root: INFO: in Table.value: post-opt:
+(TableKeyBy (pat_id mat_id) None True
+  (TableMapRows (pat_id mat_id) 2
+    (TableAggregateByKey
+      (TableKeyBy (pat_id mat_id) None True
+        (TableMapRows None None
+          (TableUnkey
+            (MatrixEntriesTable
+              (MatrixLiteral)))
+          (Let __uid_21
+            (MakeStruct
+              (pat_id
+                (GetField s
+                  (GetField father
+                    (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32} row))))
+              (mat_id
+                (GetField s
+                  (GetField mother
+                    (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32} row)))))
+            (ApplyIR annotate
+              (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32} row)
+              (MakeStruct
+                (pat_id
+                  (GetField pat_id
+                    (Ref Struct{pat_id:String,mat_id:String} __uid_21)))
+                (mat_id
+                  (GetField mat_id
+                    (Ref Struct{pat_id:String,mat_id:String} __uid_21))))))))
+      (MakeStruct
+        (children
+          (ApplyIR size
+            (ApplyAggOp (CollectAsSet String () None ())
+              (SeqOp (CollectAsSet String () None ())
+                (I32 0)
+                (                  (GetField s
+                    (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))))
+              ()
+              None)))
+        (errors
+          (ApplyAggOp (Count Int32 () None ())
+            (If
+              (ApplyIR isDefined
+                (GetField mendel_code
+                  (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row)))
+              (SeqOp (Count Int32 () None ())
+                (I32 0)
+                (                  (I32 0)))
+              (Begin))
+            ()
+            None))
+        (snp_errors
+          (ApplyAggOp (Count Int32 () None ())
+            (If
+              (ApplySpecial `&&`
+                (ApplyComparisonOp (EQ Int32 Int32)
+                  (Let __uid_17
+                    (ApplyIR `[]`
+                      (GetField alleles
+                        (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))
+                      (I32 0))
+                    (Let __uid_18
+                      (ApplyIR `[]`
+                        (GetField alleles
+                          (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))
+                        (I32 1))
+                      (If
+                        (Apply `~`
+                          (Str "^([ACGTNM])+$")
+                          (Ref String __uid_17))
+                        (If
+                          (Apply `~`
+                            (Str "^([ACGTNM])+$")
+                            (Ref String __uid_18))
+                          (If
+                            (ApplyComparisonOp (EQ Int32 Int32)
+                              (ApplyIR length
+                                (Ref String __uid_17))
+                              (ApplyIR length
+                                (Ref String __uid_18)))
+                            (If
+                              (ApplyComparisonOp (EQ Int32 Int32)
+                                (ApplyIR length
+                                  (Ref String __uid_17))
+                                (I32 1))
+                              (If
+                                (ApplyComparisonOp (NEQ String String)
+                                  (Ref String __uid_17)
+                                  (Ref String __uid_18))
+                                (I32 1)
+                                (I32 0))
+                              (If
+                                (ApplyComparisonOp (EQ Int32 Int32)
+                                  (ApplySpecial hamming
+                                    (Ref String __uid_17)
+                                    (Ref String __uid_18))
+                                  (I32 1))
+                                (I32 1)
+                                (I32 2)))
+                            (If
+                              (ApplySpecial `&&`
+                                (ApplySpecial `&&`
+                                  (ApplyComparisonOp (LT Int32 Int32)
+                                    (ApplyIR length
+                                      (Ref String __uid_17))
+                                    (ApplyIR length
+                                      (Ref String __uid_18)))
+                                  (ApplyComparisonOp (EQ String String)
+                                    (Apply `[]`
+                                      (Ref String __uid_17)
+                                      (I32 0))
+                                    (Apply `[]`
+                                      (Ref String __uid_18)
+                                      (I32 0))))
+                                (Apply endswith
+                                  (Ref String __uid_18)
+                                  (ApplyIR `[*:]`
+                                    (Ref String __uid_17)
+                                    (I32 1))))
+                              (I32 3)
+                              (If
+                                (ApplySpecial `&&`
+                                  (ApplyComparisonOp (EQ String String)
+                                    (Apply `[]`
+                                      (Ref String __uid_17)
+                                      (I32 0))
+                                    (Apply `[]`
+                                      (Ref String __uid_18)
+                                      (I32 0)))
+                                  (Apply endswith
+                                    (Ref String __uid_17)
+                                    (ApplyIR `[*:]`
+                                      (Ref String __uid_18)
+                                      (I32 1))))
+                                (I32 4)
+                                (I32 5))))
+                          (If
+                            (ApplyComparisonOp (EQ String String)
+                              (Ref String __uid_18)
+                              (Str "*"))
+                            (I32 6)
+                            (If
+                              (Apply `~`
+                                (Str "(^\\.)|(\\.$)|(^<)|(>$)|(\\[)|(\\])")
+                                (Ref String __uid_18))
+                              (I32 7)
+                              (I32 0))))
+                        (I32 0))))
+                  (I32 1))
+                (ApplyIR isDefined
+                  (GetField mendel_code
+                    (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))))
+              (SeqOp (Count Int32 () None ())
+                (I32 0)
+                (                  (I32 0)))
+              (Begin))
+            ()
+            None))))
+    (Let __uid_27
+      (MakeStruct
+        (__uid_23
+          (Ref Struct{pat_id:String,mat_id:String,children:Int32,errors:Int64,snp_errors:Int64} row)))
+      (ApplyIR annotate
+        (MakeStruct
+          (pat_id
+            (GetField pat_id
+              (Ref Struct{pat_id:String,mat_id:String,children:Int32,errors:Int64,snp_errors:Int64} row)))
+          (mat_id
+            (GetField mat_id
+              (Ref Struct{pat_id:String,mat_id:String,children:Int32,errors:Int64,snp_errors:Int64} row))))
+        (MakeStruct
+          (__uid_23
+            (GetField __uid_23
+              (Ref Struct{__uid_23:Struct{pat_id:String,mat_id:String,children:Int32,errors:Int64,snp_errors:Int64}} __uid_27))))))))
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C4.<init> instruction count: 3
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C4.apply instruction count: 630
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C4.apply instruction count: 22
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C4.method1 instruction count: 147
+2018-07-03 13:15:44 SparkContext: INFO: Starting job: collect at ContextRDD.scala:143
+2018-07-03 13:15:44 DAGScheduler: INFO: Registering RDD 10 (mapPartitions at ContextRDD.scala:137)
+2018-07-03 13:15:44 DAGScheduler: INFO: Got job 2 (collect at ContextRDD.scala:143) with 2 output partitions
+2018-07-03 13:15:44 DAGScheduler: INFO: Final stage: ResultStage 3 (collect at ContextRDD.scala:143)
+2018-07-03 13:15:44 DAGScheduler: INFO: Parents of final stage: List(ShuffleMapStage 2)
+2018-07-03 13:15:44 DAGScheduler: INFO: Missing parents: List(ShuffleMapStage 2)
+2018-07-03 13:15:44 DAGScheduler: INFO: Submitting ShuffleMapStage 2 (MapPartitionsRDD[10] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-03 13:15:44 MemoryStore: INFO: Block broadcast_12 stored as values in memory (estimated size 26.7 KB, free 4.1 GB)
+2018-07-03 13:15:44 MemoryStore: INFO: Block broadcast_12_piece0 stored as bytes in memory (estimated size 13.8 KB, free 4.1 GB)
+2018-07-03 13:15:44 BlockManagerInfo: INFO: Added broadcast_12_piece0 in memory on 10.94.104.182:50035 (size: 13.8 KB, free: 4.1 GB)
+2018-07-03 13:15:44 SparkContext: INFO: Created broadcast 12 from broadcast at DAGScheduler.scala:1006
+2018-07-03 13:15:44 DAGScheduler: INFO: Submitting 2 missing tasks from ShuffleMapStage 2 (MapPartitionsRDD[10] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0, 1))
+2018-07-03 13:15:44 TaskSchedulerImpl: INFO: Adding task set 2.0 with 2 tasks
+2018-07-03 13:15:44 TaskSetManager: INFO: Starting task 0.0 in stage 2.0 (TID 3, localhost, executor driver, partition 0, PROCESS_LOCAL, 4863 bytes)
+2018-07-03 13:15:44 TaskSetManager: INFO: Starting task 1.0 in stage 2.0 (TID 4, localhost, executor driver, partition 1, PROCESS_LOCAL, 4863 bytes)
+2018-07-03 13:15:44 Executor: INFO: Running task 1.0 in stage 2.0 (TID 4)
+2018-07-03 13:15:44 Executor: INFO: Running task 0.0 in stage 2.0 (TID 3)
+2018-07-03 13:15:44 HadoopRDD: INFO: Input split: file:/Users/tpoterba/hail/src/test/resources/mendel.vcf:6374+6374
+2018-07-03 13:15:44 HadoopRDD: INFO: Input split: file:/Users/tpoterba/hail/src/test/resources/mendel.vcf:0+6374
+2018-07-03 13:15:44 Executor: INFO: Finished task 0.0 in stage 2.0 (TID 3). 957 bytes result sent to driver
+2018-07-03 13:15:44 Executor: INFO: Finished task 1.0 in stage 2.0 (TID 4). 914 bytes result sent to driver
+2018-07-03 13:15:44 TaskSetManager: INFO: Finished task 1.0 in stage 2.0 (TID 4) in 168 ms on localhost (executor driver) (1/2)
+2018-07-03 13:15:44 TaskSetManager: INFO: Finished task 0.0 in stage 2.0 (TID 3) in 173 ms on localhost (executor driver) (2/2)
+2018-07-03 13:15:44 TaskSchedulerImpl: INFO: Removed TaskSet 2.0, whose tasks have all completed, from pool 
+2018-07-03 13:15:44 DAGScheduler: INFO: ShuffleMapStage 2 (mapPartitions at ContextRDD.scala:137) finished in 0.174 s
+2018-07-03 13:15:44 DAGScheduler: INFO: looking for newly runnable stages
+2018-07-03 13:15:44 DAGScheduler: INFO: running: Set()
+2018-07-03 13:15:44 DAGScheduler: INFO: waiting: Set(ResultStage 3)
+2018-07-03 13:15:44 DAGScheduler: INFO: failed: Set()
+2018-07-03 13:15:44 DAGScheduler: INFO: Submitting ResultStage 3 (MapPartitionsRDD[34] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-03 13:15:44 MemoryStore: INFO: Block broadcast_13 stored as values in memory (estimated size 364.1 KB, free 4.1 GB)
+2018-07-03 13:15:44 MemoryStore: INFO: Block broadcast_13_piece0 stored as bytes in memory (estimated size 64.2 KB, free 4.1 GB)
+2018-07-03 13:15:44 BlockManagerInfo: INFO: Added broadcast_13_piece0 in memory on 10.94.104.182:50035 (size: 64.2 KB, free: 4.1 GB)
+2018-07-03 13:15:44 SparkContext: INFO: Created broadcast 13 from broadcast at DAGScheduler.scala:1006
+2018-07-03 13:15:44 DAGScheduler: INFO: Submitting 2 missing tasks from ResultStage 3 (MapPartitionsRDD[34] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0, 1))
+2018-07-03 13:15:44 TaskSchedulerImpl: INFO: Adding task set 3.0 with 2 tasks
+2018-07-03 13:15:44 TaskSetManager: INFO: Starting task 0.0 in stage 3.0 (TID 5, localhost, executor driver, partition 0, ANY, 4621 bytes)
+2018-07-03 13:15:44 TaskSetManager: INFO: Starting task 1.0 in stage 3.0 (TID 6, localhost, executor driver, partition 1, ANY, 4621 bytes)
+2018-07-03 13:15:44 Executor: INFO: Running task 0.0 in stage 3.0 (TID 5)
+2018-07-03 13:15:44 Executor: INFO: Running task 1.0 in stage 3.0 (TID 6)
+2018-07-03 13:15:44 ShuffleBlockFetcherIterator: INFO: Getting 2 non-empty blocks out of 2 blocks
+2018-07-03 13:15:44 ShuffleBlockFetcherIterator: INFO: Getting 1 non-empty blocks out of 2 blocks
+2018-07-03 13:15:44 ShuffleBlockFetcherIterator: INFO: Started 0 remote fetches in 12 ms
+2018-07-03 13:15:44 ShuffleBlockFetcherIterator: INFO: Started 0 remote fetches in 12 ms
+2018-07-03 13:15:44 Executor: INFO: Finished task 1.0 in stage 3.0 (TID 6). 1576 bytes result sent to driver
+2018-07-03 13:15:44 Executor: INFO: Finished task 0.0 in stage 3.0 (TID 5). 1671 bytes result sent to driver
+2018-07-03 13:15:44 TaskSetManager: INFO: Finished task 0.0 in stage 3.0 (TID 5) in 282 ms on localhost (executor driver) (1/2)
+2018-07-03 13:15:44 TaskSetManager: INFO: Finished task 1.0 in stage 3.0 (TID 6) in 281 ms on localhost (executor driver) (2/2)
+2018-07-03 13:15:44 TaskSchedulerImpl: INFO: Removed TaskSet 3.0, whose tasks have all completed, from pool 
+2018-07-03 13:15:44 DAGScheduler: INFO: ResultStage 3 (collect at ContextRDD.scala:143) finished in 0.285 s
+2018-07-03 13:15:44 DAGScheduler: INFO: Job 2 finished: collect at ContextRDD.scala:143, took 0.584298 s
+2018-07-03 13:15:44 Hail: INFO: Coerced almost-sorted dataset
+2018-07-03 13:15:44 MemoryStore: INFO: Block broadcast_14 stored as values in memory (estimated size 3.8 KB, free 4.1 GB)
+2018-07-03 13:15:44 MemoryStore: INFO: Block broadcast_14_piece0 stored as bytes in memory (estimated size 984.0 B, free 4.1 GB)
+2018-07-03 13:15:44 BlockManagerInfo: INFO: Added broadcast_14_piece0 in memory on 10.94.104.182:50035 (size: 984.0 B, free: 4.1 GB)
+2018-07-03 13:15:44 SparkContext: INFO: Created broadcast 14 from broadcast at OrderedRVDPartitioner.scala:167
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C5.<init> instruction count: 3
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C5.apply instruction count: 38
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C5.apply instruction count: 7
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C6.<init> instruction count: 3
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C6.apply instruction count: 18
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C6.apply instruction count: 7
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C7.<init> instruction count: 3
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C7.apply instruction count: 18
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C7.apply instruction count: 7
+2018-07-03 13:15:44 root: INFO: initop (Begin)
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C8.<init> instruction count: 3
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C8.apply instruction count: 15
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C8.apply instruction count: 16
+2018-07-03 13:15:44 root: INFO: seqop (Begin
+  (SeqOp (CollectAsSet String () None ())
+    (I32 0)
+    (      (GetField s
+        (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))))
+  (If
+    (ApplyIR isDefined
+      (GetField mendel_code
+        (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row)))
+    (SeqOp (Count Int32 () None ())
+      (I32 1)
+      (        (I32 0)))
+    (Begin))
+  (If
+    (ApplySpecial `&&`
+      (ApplyComparisonOp (EQ Int32 Int32)
+        (Let __uid_17
+          (ApplyIR `[]`
+            (GetField alleles
+              (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))
+            (I32 0))
+          (Let __uid_18
+            (ApplyIR `[]`
+              (GetField alleles
+                (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))
+              (I32 1))
+            (If
+              (Apply `~`
+                (Str "^([ACGTNM])+$")
+                (Ref String __uid_17))
+              (If
+                (Apply `~`
+                  (Str "^([ACGTNM])+$")
+                  (Ref String __uid_18))
+                (If
+                  (ApplyComparisonOp (EQ Int32 Int32)
+                    (ApplyIR length
+                      (Ref String __uid_17))
+                    (ApplyIR length
+                      (Ref String __uid_18)))
+                  (If
+                    (ApplyComparisonOp (EQ Int32 Int32)
+                      (ApplyIR length
+                        (Ref String __uid_17))
+                      (I32 1))
+                    (If
+                      (ApplyComparisonOp (NEQ String String)
+                        (Ref String __uid_17)
+                        (Ref String __uid_18))
+                      (I32 1)
+                      (I32 0))
+                    (If
+                      (ApplyComparisonOp (EQ Int32 Int32)
+                        (ApplySpecial hamming
+                          (Ref String __uid_17)
+                          (Ref String __uid_18))
+                        (I32 1))
+                      (I32 1)
+                      (I32 2)))
+                  (If
+                    (ApplySpecial `&&`
+                      (ApplySpecial `&&`
+                        (ApplyComparisonOp (LT Int32 Int32)
+                          (ApplyIR length
+                            (Ref String __uid_17))
+                          (ApplyIR length
+                            (Ref String __uid_18)))
+                        (ApplyComparisonOp (EQ String String)
+                          (Apply `[]`
+                            (Ref String __uid_17)
+                            (I32 0))
+                          (Apply `[]`
+                            (Ref String __uid_18)
+                            (I32 0))))
+                      (Apply endswith
+                        (Ref String __uid_18)
+                        (ApplyIR `[*:]`
+                          (Ref String __uid_17)
+                          (I32 1))))
+                    (I32 3)
+                    (If
+                      (ApplySpecial `&&`
+                        (ApplyComparisonOp (EQ String String)
+                          (Apply `[]`
+                            (Ref String __uid_17)
+                            (I32 0))
+                          (Apply `[]`
+                            (Ref String __uid_18)
+                            (I32 0)))
+                        (Apply endswith
+                          (Ref String __uid_17)
+                          (ApplyIR `[*:]`
+                            (Ref String __uid_18)
+                            (I32 1))))
+                      (I32 4)
+                      (I32 5))))
+                (If
+                  (ApplyComparisonOp (EQ String String)
+                    (Ref String __uid_18)
+                    (Str "*"))
+                  (I32 6)
+                  (If
+                    (Apply `~`
+                      (Str "(^\\.)|(\\.$)|(^<)|(>$)|(\\[)|(\\])")
+                      (Ref String __uid_18))
+                    (I32 7)
+                    (I32 0))))
+              (I32 0))))
+        (I32 1))
+      (ApplyIR isDefined
+        (GetField mendel_code
+          (Ref Struct{locus:Locus(GRCh37),alleles:Array[String],rsid:String,qual:Float64,filters:Set[String],info:Struct{},s:String,proband:Struct{s:String},father:Struct{s:String},mother:Struct{s:String},is_female:Boolean,fam_id:String,mendel_code:Int32,pat_id:String,mat_id:String} row))))
+    (SeqOp (Count Int32 () None ())
+      (I32 2)
+      (        (I32 0)))
+    (Begin)))
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.<init> instruction count: 3
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.apply instruction count: 23
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.apply instruction count: 22
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method1 instruction count: 1443
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method2 instruction count: 37
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method3 instruction count: 253
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method4 instruction count: 45
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method5 instruction count: 253
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method6 instruction count: 13
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method7 instruction count: 111
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method8 instruction count: 103
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method9 instruction count: 12
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method10 instruction count: 13
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method11 instruction count: 331
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method12 instruction count: 37
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C9.method13 instruction count: 331
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C10.<init> instruction count: 3
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C10.apply instruction count: 43
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C10.apply instruction count: 22
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C10.method1 instruction count: 137
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C11.<init> instruction count: 3
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C11.apply instruction count: 318
+2018-07-03 13:15:44 root: INFO: is/hail/codegen/generated/C11.apply instruction count: 22
+2018-07-03 13:15:44 BlockManagerInfo: INFO: Removed broadcast_12_piece0 on 10.94.104.182:50035 in memory (size: 13.8 KB, free: 4.1 GB)
+2018-07-03 13:15:44 BlockManagerInfo: INFO: Removed broadcast_13_piece0 on 10.94.104.182:50035 in memory (size: 64.2 KB, free: 4.1 GB)
+2018-07-03 13:15:45 root: ERROR: IllegalArgumentException: requirement failed
+From java.lang.IllegalArgumentException: requirement failed
+	at scala.Predef$.require(Predef.scala:212)
+	at is.hail.expr.ir.TableMapRows.<init>(TableIR.scala:396)
+	at is.hail.table.Table.select(Table.scala:533)
+	at is.hail.table.Table.select(Table.scala:524)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:497)
+	at py4j.reflection.MethodInvoker.invoke(MethodInvoker.java:244)
+	at py4j.reflection.ReflectionEngine.invoke(ReflectionEngine.java:357)
+	at py4j.Gateway.invoke(Gateway.java:280)
+	at py4j.commands.AbstractCommand.invokeMethod(AbstractCommand.java:132)
+	at py4j.commands.CallCommand.execute(CallCommand.java:79)
+	at py4j.GatewayConnection.run(GatewayConnection.java:214)
+	at java.lang.Thread.run(Thread.java:745)
+
+2018-07-03 13:15:45 AbstractConnector: INFO: Stopped Spark@429cc070{HTTP/1.1,[http/1.1]}{0.0.0.0:4040}
+2018-07-03 13:15:45 SparkUI: INFO: Stopped Spark web UI at http://10.94.104.182:4040
+2018-07-03 13:15:45 MapOutputTrackerMasterEndpoint: INFO: MapOutputTrackerMasterEndpoint stopped!
+2018-07-03 13:15:45 MemoryStore: INFO: MemoryStore cleared
+2018-07-03 13:15:45 BlockManager: INFO: BlockManager stopped
+2018-07-03 13:15:45 BlockManagerMaster: INFO: BlockManagerMaster stopped
+2018-07-03 13:15:45 OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: INFO: OutputCommitCoordinator stopped!
+2018-07-03 13:15:45 SparkContext: INFO: Successfully stopped SparkContext
+2018-07-03 13:15:45 ShutdownHookManager: INFO: Shutdown hook called
+2018-07-03 13:15:45 ShutdownHookManager: INFO: Deleting directory /private/var/folders/05/k7m5y49j4qnc998x4n5mzrqc0p8yhq/T/spark-80dc46e1-88cf-4399-8f02-0902d5ae8b0e/pyspark-b11b1058-d717-4d39-ba47-979dcb253e47
+2018-07-03 13:15:45 ShutdownHookManager: INFO: Deleting directory /private/var/folders/05/k7m5y49j4qnc998x4n5mzrqc0p8yhq/T/spark-80dc46e1-88cf-4399-8f02-0902d5ae8b0e

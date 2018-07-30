@@ -1,0 +1,187 @@
+2018-07-26 16:53:57 SparkContext: INFO: Running Spark version 2.2.0
+2018-07-26 16:53:58 NativeCodeLoader: WARN: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-07-26 16:53:58 Utils: WARN: Your hostname, wm9f1-8cf resolves to a loopback address: 127.0.0.1; using 10.93.104.207 instead (on interface en0)
+2018-07-26 16:53:58 Utils: WARN: Set SPARK_LOCAL_IP if you need to bind to another address
+2018-07-26 16:53:58 SparkContext: INFO: Submitted application: Hail
+2018-07-26 16:53:58 SparkContext: INFO: Spark configuration:
+spark.app.name=Hail
+spark.driver.extraClassPath=/Users/tpoterba/hail/build/libs/hail-all-spark.jar
+spark.driver.memory=8G
+spark.executor.extraClassPath=/Users/tpoterba/hail/build/libs/hail-all-spark.jar
+spark.hadoop.io.compression.codecs=org.apache.hadoop.io.compress.DefaultCodec,is.hail.io.compress.BGzipCodec,org.apache.hadoop.io.compress.GzipCodec
+spark.hadoop.mapreduce.input.fileinputformat.split.minsize=1048576
+spark.kryo.registrator=is.hail.kryo.HailKryoRegistrator
+spark.logConf=true
+spark.master=local[*]
+spark.serializer=org.apache.spark.serializer.KryoSerializer
+spark.submit.deployMode=client
+spark.ui.showConsoleProgress=false
+2018-07-26 16:53:58 SecurityManager: INFO: Changing view acls to: tpoterba
+2018-07-26 16:53:58 SecurityManager: INFO: Changing modify acls to: tpoterba
+2018-07-26 16:53:58 SecurityManager: INFO: Changing view acls groups to: 
+2018-07-26 16:53:58 SecurityManager: INFO: Changing modify acls groups to: 
+2018-07-26 16:53:58 SecurityManager: INFO: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(tpoterba); groups with view permissions: Set(); users  with modify permissions: Set(tpoterba); groups with modify permissions: Set()
+2018-07-26 16:53:58 Utils: INFO: Successfully started service 'sparkDriver' on port 55245.
+2018-07-26 16:53:58 SparkEnv: INFO: Registering MapOutputTracker
+2018-07-26 16:53:58 SparkEnv: INFO: Registering BlockManagerMaster
+2018-07-26 16:53:58 BlockManagerMasterEndpoint: INFO: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+2018-07-26 16:53:58 BlockManagerMasterEndpoint: INFO: BlockManagerMasterEndpoint up
+2018-07-26 16:53:58 DiskBlockManager: INFO: Created local directory at /private/var/folders/05/k7m5y49j4qnc998x4n5mzrqc0p8yhq/T/blockmgr-7fc5b670-3292-4938-bdf3-1feccbc29b04
+2018-07-26 16:53:58 MemoryStore: INFO: MemoryStore started with capacity 4.1 GB
+2018-07-26 16:53:58 SparkEnv: INFO: Registering OutputCommitCoordinator
+2018-07-26 16:53:58 log: INFO: Logging initialized @3067ms
+2018-07-26 16:53:58 Server: INFO: jetty-9.3.z-SNAPSHOT
+2018-07-26 16:53:58 Server: INFO: Started @3156ms
+2018-07-26 16:53:58 AbstractConnector: INFO: Started ServerConnector@55f857f{HTTP/1.1,[http/1.1]}{0.0.0.0:4040}
+2018-07-26 16:53:58 Utils: INFO: Successfully started service 'SparkUI' on port 4040.
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@47ff645e{/jobs,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@46a93dcd{/jobs/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5d9fd554{/jobs/job,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@60ee0758{/jobs/job/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@43e22465{/stages,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@1cbce669{/stages/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@4f8d733b{/stages/stage,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@33404a9c{/stages/stage/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@69e4a85a{/stages/pool,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@481eacf2{/stages/pool/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@15587157{/storage,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@9e9f151{/storage/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@13315fab{/storage/rdd,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@c7091c7{/storage/rdd/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@7a9b424b{/environment,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@14cb636e{/environment/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@239765aa{/executors,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@197c3671{/executors/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@75a0bb7b{/executors/threadDump,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@444321a1{/executors/threadDump/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@48fce7f2{/static,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@81c53e5{/,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@34899832{/api,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@76905fe{/jobs/job/kill,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@7d7858d6{/stages/stage/kill,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 SparkUI: INFO: Bound SparkUI to 0.0.0.0, and started at http://10.93.104.207:4040
+2018-07-26 16:53:59 Executor: INFO: Starting executor ID driver on host localhost
+2018-07-26 16:53:59 Utils: INFO: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 55248.
+2018-07-26 16:53:59 NettyBlockTransferService: INFO: Server created on 10.93.104.207:55248
+2018-07-26 16:53:59 BlockManager: INFO: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+2018-07-26 16:53:59 BlockManagerMaster: INFO: Registering BlockManager BlockManagerId(driver, 10.93.104.207, 55248, None)
+2018-07-26 16:53:59 BlockManagerMasterEndpoint: INFO: Registering block manager 10.93.104.207:55248 with 4.1 GB RAM, BlockManagerId(driver, 10.93.104.207, 55248, None)
+2018-07-26 16:53:59 BlockManagerMaster: INFO: Registered BlockManager BlockManagerId(driver, 10.93.104.207, 55248, None)
+2018-07-26 16:53:59 BlockManager: INFO: Initialized BlockManager: BlockManagerId(driver, 10.93.104.207, 55248, None)
+2018-07-26 16:53:59 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@601eb0f3{/metrics/json,null,AVAILABLE,@Spark}
+2018-07-26 16:53:59 Hail: INFO: SparkUI: http://10.93.104.207:4040
+2018-07-26 16:53:59 Hail: INFO: Running Hail version devel-70944be78674
+2018-07-26 16:54:05 root: INFO: optimize: before:
+(TableMapRows (idx) 1
+  (TableRange 5 5)
+  (Let __uid_1
+    (InsertFields
+      (SelectFields ()
+        (Ref Struct{idx:Int32} row))
+      (x
+        (I32 5)))
+    (InsertFields
+      (MakeStruct
+        (idx
+          (GetField idx
+            (Ref Struct{idx:Int32} row))))
+      (x
+        (GetField x
+          (Ref Struct{x:Int32} __uid_1))))))
+2018-07-26 16:54:05 root: INFO: optimize: after:
+(TableMapRows (idx) 1
+  (TableRange 5 5)
+  (MakeStruct
+    (idx
+      (GetField idx
+        (Ref Struct{idx:Int32} row)))
+    (x
+      (I32 5))))
+2018-07-26 16:54:06 MemoryStore: INFO: Block broadcast_0 stored as values in memory (estimated size 56.0 B, free 4.1 GB)
+2018-07-26 16:54:06 MemoryStore: INFO: Block broadcast_0_piece0 stored as bytes in memory (estimated size 120.0 B, free 4.1 GB)
+2018-07-26 16:54:06 BlockManagerInfo: INFO: Added broadcast_0_piece0 in memory on 10.93.104.207:55248 (size: 120.0 B, free: 4.1 GB)
+2018-07-26 16:54:06 SparkContext: INFO: Created broadcast 0 from broadcast at BroadcastValue.scala:14
+2018-07-26 16:54:06 root: INFO: initop (Begin)
+2018-07-26 16:54:06 root: INFO: optimize: before:
+(Begin)
+2018-07-26 16:54:06 root: INFO: optimize: after:
+(Begin)
+2018-07-26 16:54:06 root: INFO: is/hail/codegen/generated/C0.<init> instruction count: 3
+2018-07-26 16:54:06 root: INFO: is/hail/codegen/generated/C0.apply instruction count: 15
+2018-07-26 16:54:06 root: INFO: is/hail/codegen/generated/C0.apply instruction count: 16
+2018-07-26 16:54:06 root: INFO: seqop (Begin)
+2018-07-26 16:54:06 root: INFO: optimize: before:
+(Begin)
+2018-07-26 16:54:06 root: INFO: optimize: after:
+(Begin)
+2018-07-26 16:54:06 root: INFO: is/hail/codegen/generated/C1.<init> instruction count: 3
+2018-07-26 16:54:06 root: INFO: is/hail/codegen/generated/C1.apply instruction count: 15
+2018-07-26 16:54:06 root: INFO: is/hail/codegen/generated/C1.apply instruction count: 22
+2018-07-26 16:54:06 root: INFO: optimize: before:
+(MakeStruct
+  (idx
+    (GetField idx
+      (Ref Struct{idx:Int32} row)))
+  (x
+    (I32 5)))
+2018-07-26 16:54:06 root: INFO: optimize: after:
+(MakeStruct
+  (idx
+    (GetField idx
+      (Ref Struct{idx:Int32} row)))
+  (x
+    (I32 5)))
+2018-07-26 16:54:06 root: INFO: is/hail/codegen/generated/C2.<init> instruction count: 3
+2018-07-26 16:54:06 root: INFO: is/hail/codegen/generated/C2.apply instruction count: 99
+2018-07-26 16:54:06 root: INFO: is/hail/codegen/generated/C2.apply instruction count: 28
+2018-07-26 16:54:06 MemoryStore: INFO: Block broadcast_1 stored as values in memory (estimated size 2.9 KB, free 4.1 GB)
+2018-07-26 16:54:06 MemoryStore: INFO: Block broadcast_1_piece0 stored as bytes in memory (estimated size 932.0 B, free 4.1 GB)
+2018-07-26 16:54:06 BlockManagerInfo: INFO: Added broadcast_1_piece0 in memory on 10.93.104.207:55248 (size: 932.0 B, free: 4.1 GB)
+2018-07-26 16:54:06 SparkContext: INFO: Created broadcast 1 from broadcast at OrderedRVDPartitioner.scala:167
+2018-07-26 16:54:06 SparkContext: INFO: Starting job: fold at RVD.scala:375
+2018-07-26 16:54:06 DAGScheduler: INFO: Got job 0 (fold at RVD.scala:375) with 5 output partitions
+2018-07-26 16:54:06 DAGScheduler: INFO: Final stage: ResultStage 0 (fold at RVD.scala:375)
+2018-07-26 16:54:06 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-26 16:54:06 DAGScheduler: INFO: Missing parents: List()
+2018-07-26 16:54:06 DAGScheduler: INFO: Submitting ResultStage 0 (MapPartitionsRDD[6] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-26 16:54:06 MemoryStore: INFO: Block broadcast_2 stored as values in memory (estimated size 12.0 KB, free 4.1 GB)
+2018-07-26 16:54:06 MemoryStore: INFO: Block broadcast_2_piece0 stored as bytes in memory (estimated size 6.4 KB, free 4.1 GB)
+2018-07-26 16:54:06 BlockManagerInfo: INFO: Added broadcast_2_piece0 in memory on 10.93.104.207:55248 (size: 6.4 KB, free: 4.1 GB)
+2018-07-26 16:54:06 SparkContext: INFO: Created broadcast 2 from broadcast at DAGScheduler.scala:1006
+2018-07-26 16:54:06 DAGScheduler: INFO: Submitting 5 missing tasks from ResultStage 0 (MapPartitionsRDD[6] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0, 1, 2, 3, 4))
+2018-07-26 16:54:06 TaskSchedulerImpl: INFO: Adding task set 0.0 with 5 tasks
+2018-07-26 16:54:06 TaskSetManager: INFO: Starting task 0.0 in stage 0.0 (TID 0, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-26 16:54:06 TaskSetManager: INFO: Starting task 1.0 in stage 0.0 (TID 1, localhost, executor driver, partition 1, PROCESS_LOCAL, 4713 bytes)
+2018-07-26 16:54:06 TaskSetManager: INFO: Starting task 2.0 in stage 0.0 (TID 2, localhost, executor driver, partition 2, PROCESS_LOCAL, 4713 bytes)
+2018-07-26 16:54:06 TaskSetManager: INFO: Starting task 3.0 in stage 0.0 (TID 3, localhost, executor driver, partition 3, PROCESS_LOCAL, 4713 bytes)
+2018-07-26 16:54:06 TaskSetManager: INFO: Starting task 4.0 in stage 0.0 (TID 4, localhost, executor driver, partition 4, PROCESS_LOCAL, 4713 bytes)
+2018-07-26 16:54:06 Executor: INFO: Running task 2.0 in stage 0.0 (TID 2)
+2018-07-26 16:54:06 Executor: INFO: Running task 1.0 in stage 0.0 (TID 1)
+2018-07-26 16:54:06 Executor: INFO: Running task 0.0 in stage 0.0 (TID 0)
+2018-07-26 16:54:06 Executor: INFO: Running task 3.0 in stage 0.0 (TID 3)
+2018-07-26 16:54:06 Executor: INFO: Running task 4.0 in stage 0.0 (TID 4)
+2018-07-26 16:54:06 Executor: INFO: Finished task 1.0 in stage 0.0 (TID 1). 666 bytes result sent to driver
+2018-07-26 16:54:06 Executor: INFO: Finished task 3.0 in stage 0.0 (TID 3). 666 bytes result sent to driver
+2018-07-26 16:54:06 Executor: INFO: Finished task 2.0 in stage 0.0 (TID 2). 666 bytes result sent to driver
+2018-07-26 16:54:06 Executor: INFO: Finished task 0.0 in stage 0.0 (TID 0). 666 bytes result sent to driver
+2018-07-26 16:54:06 Executor: INFO: Finished task 4.0 in stage 0.0 (TID 4). 666 bytes result sent to driver
+2018-07-26 16:54:06 TaskSetManager: INFO: Finished task 2.0 in stage 0.0 (TID 2) in 148 ms on localhost (executor driver) (1/5)
+2018-07-26 16:54:06 TaskSetManager: INFO: Finished task 1.0 in stage 0.0 (TID 1) in 157 ms on localhost (executor driver) (2/5)
+2018-07-26 16:54:06 TaskSetManager: INFO: Finished task 3.0 in stage 0.0 (TID 3) in 147 ms on localhost (executor driver) (3/5)
+2018-07-26 16:54:06 TaskSetManager: INFO: Finished task 0.0 in stage 0.0 (TID 0) in 172 ms on localhost (executor driver) (4/5)
+2018-07-26 16:54:06 TaskSetManager: INFO: Finished task 4.0 in stage 0.0 (TID 4) in 146 ms on localhost (executor driver) (5/5)
+2018-07-26 16:54:06 TaskSchedulerImpl: INFO: Removed TaskSet 0.0, whose tasks have all completed, from pool 
+2018-07-26 16:54:06 DAGScheduler: INFO: ResultStage 0 (fold at RVD.scala:375) finished in 0.190 s
+2018-07-26 16:54:06 DAGScheduler: INFO: Job 0 finished: fold at RVD.scala:375, took 0.277862 s
+2018-07-26 16:54:07 SparkContext: INFO: Invoking stop() from shutdown hook
+2018-07-26 16:54:07 AbstractConnector: INFO: Stopped Spark@55f857f{HTTP/1.1,[http/1.1]}{0.0.0.0:4040}
+2018-07-26 16:54:07 SparkUI: INFO: Stopped Spark web UI at http://10.93.104.207:4040
+2018-07-26 16:54:07 MapOutputTrackerMasterEndpoint: INFO: MapOutputTrackerMasterEndpoint stopped!
+2018-07-26 16:54:07 MemoryStore: INFO: MemoryStore cleared
+2018-07-26 16:54:07 BlockManager: INFO: BlockManager stopped
+2018-07-26 16:54:07 BlockManagerMaster: INFO: BlockManagerMaster stopped
+2018-07-26 16:54:07 OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: INFO: OutputCommitCoordinator stopped!
+2018-07-26 16:54:07 SparkContext: INFO: Successfully stopped SparkContext
+2018-07-26 16:54:07 ShutdownHookManager: INFO: Shutdown hook called
+2018-07-26 16:54:07 ShutdownHookManager: INFO: Deleting directory /private/var/folders/05/k7m5y49j4qnc998x4n5mzrqc0p8yhq/T/spark-263514b4-c63d-4c3f-bd5c-33b0245ad9e8
+2018-07-26 16:54:07 ShutdownHookManager: INFO: Deleting directory /private/var/folders/05/k7m5y49j4qnc998x4n5mzrqc0p8yhq/T/spark-263514b4-c63d-4c3f-bd5c-33b0245ad9e8/pyspark-ad416f44-e50e-40a2-af32-eea543001dc5

@@ -1,0 +1,1283 @@
+2018-07-24 14:16:17 SparkContext: INFO: Running Spark version 2.2.0
+2018-07-24 14:16:17 NativeCodeLoader: WARN: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+2018-07-24 14:16:18 Utils: WARN: Your hostname, wm9f1-8cf resolves to a loopback address: 127.0.0.1; using 10.1.6.36 instead (on interface en0)
+2018-07-24 14:16:18 Utils: WARN: Set SPARK_LOCAL_IP if you need to bind to another address
+2018-07-24 14:16:18 SparkContext: INFO: Submitted application: Hail
+2018-07-24 14:16:18 SparkContext: INFO: Spark configuration:
+spark.app.name=Hail
+spark.driver.extraClassPath=/Users/tpoterba/hail/build/libs/hail-all-spark.jar
+spark.driver.memory=8G
+spark.executor.extraClassPath=/Users/tpoterba/hail/build/libs/hail-all-spark.jar
+spark.hadoop.io.compression.codecs=org.apache.hadoop.io.compress.DefaultCodec,is.hail.io.compress.BGzipCodec,org.apache.hadoop.io.compress.GzipCodec
+spark.hadoop.mapreduce.input.fileinputformat.split.minsize=0
+spark.kryo.registrator=is.hail.kryo.HailKryoRegistrator
+spark.logConf=true
+spark.master=local[2]
+spark.serializer=org.apache.spark.serializer.KryoSerializer
+spark.submit.deployMode=client
+spark.ui.showConsoleProgress=false
+2018-07-24 14:16:18 SecurityManager: INFO: Changing view acls to: tpoterba
+2018-07-24 14:16:18 SecurityManager: INFO: Changing modify acls to: tpoterba
+2018-07-24 14:16:18 SecurityManager: INFO: Changing view acls groups to: 
+2018-07-24 14:16:18 SecurityManager: INFO: Changing modify acls groups to: 
+2018-07-24 14:16:18 SecurityManager: INFO: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(tpoterba); groups with view permissions: Set(); users  with modify permissions: Set(tpoterba); groups with modify permissions: Set()
+2018-07-24 14:16:18 Utils: INFO: Successfully started service 'sparkDriver' on port 51369.
+2018-07-24 14:16:18 SparkEnv: INFO: Registering MapOutputTracker
+2018-07-24 14:16:18 SparkEnv: INFO: Registering BlockManagerMaster
+2018-07-24 14:16:18 BlockManagerMasterEndpoint: INFO: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+2018-07-24 14:16:18 BlockManagerMasterEndpoint: INFO: BlockManagerMasterEndpoint up
+2018-07-24 14:16:18 DiskBlockManager: INFO: Created local directory at /private/var/folders/05/k7m5y49j4qnc998x4n5mzrqc0p8yhq/T/blockmgr-e0cfb34a-e2f3-4430-99cb-ffac5559b863
+2018-07-24 14:16:18 MemoryStore: INFO: MemoryStore started with capacity 4.1 GB
+2018-07-24 14:16:18 SparkEnv: INFO: Registering OutputCommitCoordinator
+2018-07-24 14:16:18 log: INFO: Logging initialized @2349ms
+2018-07-24 14:16:18 Server: INFO: jetty-9.3.z-SNAPSHOT
+2018-07-24 14:16:18 Server: INFO: Started @2436ms
+2018-07-24 14:16:18 AbstractConnector: INFO: Started ServerConnector@27391ab4{HTTP/1.1,[http/1.1]}{0.0.0.0:4040}
+2018-07-24 14:16:18 Utils: INFO: Successfully started service 'SparkUI' on port 4040.
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@60b57f70{/jobs,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5f9e953a{/jobs/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@1a2e36e4{/jobs/job,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@485927c{/jobs/job/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@3b3e3667{/stages,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@f58fe92{/stages/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@125715e1{/stages/stage,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@3fc7112c{/stages/stage/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@515b002f{/stages/pool,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@6c8e6835{/stages/pool/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@1f732caf{/storage,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@51656428{/storage/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@412209d9{/storage/rdd,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5e5cea4c{/storage/rdd/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@5a18925c{/environment,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@538beabc{/environment/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@6f69fc52{/executors,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@6a171777{/executors/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@538a5e3e{/executors/threadDump,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@4901eee6{/executors/threadDump/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@361fb949{/static,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@209533f9{/,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@40e1ebc7{/api,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@4d1cda49{/jobs/job/kill,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@1d47572{/stages/stage/kill,null,AVAILABLE,@Spark}
+2018-07-24 14:16:18 SparkUI: INFO: Bound SparkUI to 0.0.0.0, and started at http://10.1.6.36:4040
+2018-07-24 14:16:18 Executor: INFO: Starting executor ID driver on host localhost
+2018-07-24 14:16:19 Utils: INFO: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 51370.
+2018-07-24 14:16:19 NettyBlockTransferService: INFO: Server created on 10.1.6.36:51370
+2018-07-24 14:16:19 BlockManager: INFO: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+2018-07-24 14:16:19 BlockManagerMaster: INFO: Registering BlockManager BlockManagerId(driver, 10.1.6.36, 51370, None)
+2018-07-24 14:16:19 BlockManagerMasterEndpoint: INFO: Registering block manager 10.1.6.36:51370 with 4.1 GB RAM, BlockManagerId(driver, 10.1.6.36, 51370, None)
+2018-07-24 14:16:19 BlockManagerMaster: INFO: Registered BlockManager BlockManagerId(driver, 10.1.6.36, 51370, None)
+2018-07-24 14:16:19 BlockManager: INFO: Initialized BlockManager: BlockManagerId(driver, 10.1.6.36, 51370, None)
+2018-07-24 14:16:19 ContextHandler: INFO: Started o.s.j.s.ServletContextHandler@92d0a8a{/metrics/json,null,AVAILABLE,@Spark}
+2018-07-24 14:16:19 Hail: INFO: SparkUI: http://10.1.6.36:4040
+2018-07-24 14:16:19 Hail: INFO: Running Hail version devel-53c80c59bb40
+2018-07-24 14:16:20 root: INFO: optimize: before:
+(TableUnkey
+  (TableRange 1 1))
+2018-07-24 14:16:20 root: INFO: optimize: after:
+(TableUnkey
+  (TableRange 1 1))
+2018-07-24 14:16:20 root: INFO: is/hail/codegen/generated/C0.<init> instruction count: 3
+2018-07-24 14:16:20 root: INFO: is/hail/codegen/generated/C0.apply instruction count: 61
+2018-07-24 14:16:20 root: INFO: is/hail/codegen/generated/C0.apply instruction count: 12
+2018-07-24 14:16:20 root: INFO: optimize: before:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_2
+        (ApplyIR min
+          (ArrayFilter __uid_1
+            (MakeArray Array[Int32]
+              (I32 1)
+              (NA Int32))
+            (ApplyIR isDefined
+              (Ref Int32 __uid_1)))))))
+  (MakeStruct
+    (__uid_2
+      (GetField __uid_2
+        (Ref Struct{__uid_2:Int32} row)))))
+2018-07-24 14:16:20 root: INFO: optimize: after:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_2
+        (ApplyIR min
+          (ArrayFilter __uid_1
+            (MakeArray Array[Int32]
+              (I32 1)
+              (NA Int32))
+            (ApplyIR isDefined
+              (Ref Int32 __uid_1)))))))
+  (MakeStruct
+    (__uid_2
+      (GetField __uid_2
+        (Ref Struct{__uid_2:Int32} row)))))
+2018-07-24 14:16:21 MemoryStore: INFO: Block broadcast_0 stored as values in memory (estimated size 56.0 B, free 4.1 GB)
+2018-07-24 14:16:21 MemoryStore: INFO: Block broadcast_0_piece0 stored as bytes in memory (estimated size 120.0 B, free 4.1 GB)
+2018-07-24 14:16:21 BlockManagerInfo: INFO: Added broadcast_0_piece0 in memory on 10.1.6.36:51370 (size: 120.0 B, free: 4.1 GB)
+2018-07-24 14:16:21 SparkContext: INFO: Created broadcast 0 from broadcast at BroadcastValue.scala:14
+2018-07-24 14:16:21 root: INFO: initop (Begin)
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C1.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C1.apply instruction count: 15
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C1.apply instruction count: 16
+2018-07-24 14:16:21 root: INFO: seqop (Begin)
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C2.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C2.apply instruction count: 15
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C2.apply instruction count: 22
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_2
+    (ApplyIR min
+      (ArrayFilter __uid_1
+        (MakeArray Array[Int32]
+          (I32 1)
+          (NA Int32))
+        (ApplyIR isDefined
+          (Ref Int32 __uid_1))))))
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_2
+    (ApplyIR min
+      (ArrayFilter __uid_1
+        (MakeArray Array[Int32]
+          (I32 1)
+          (NA Int32))
+        (ApplyIR isDefined
+          (Ref Int32 __uid_1))))))
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C3.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C3.apply instruction count: 45
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C3.apply instruction count: 28
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C3.method1 instruction count: 31
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C3.method2 instruction count: 1117
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C3.method3 instruction count: 37
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C3.method4 instruction count: 45
+2018-07-24 14:16:21 root: INFO: initop (Begin)
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C4.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C4.apply instruction count: 15
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C4.apply instruction count: 16
+2018-07-24 14:16:21 root: INFO: seqop (Begin)
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C5.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C5.apply instruction count: 15
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C5.apply instruction count: 22
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_2
+    (GetField __uid_2
+      (Ref Struct{__uid_2:Int32} row))))
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_2
+    (GetField __uid_2
+      (Ref Struct{__uid_2:Int32} row))))
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C6.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C6.apply instruction count: 76
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C6.apply instruction count: 28
+2018-07-24 14:16:21 SparkContext: INFO: Starting job: collect at Table.scala:631
+2018-07-24 14:16:21 DAGScheduler: INFO: Got job 0 (collect at Table.scala:631) with 1 output partitions
+2018-07-24 14:16:21 DAGScheduler: INFO: Final stage: ResultStage 0 (collect at Table.scala:631)
+2018-07-24 14:16:21 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-24 14:16:21 DAGScheduler: INFO: Missing parents: List()
+2018-07-24 14:16:21 DAGScheduler: INFO: Submitting ResultStage 0 (MapPartitionsRDD[11] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-24 14:16:21 MemoryStore: INFO: Block broadcast_1 stored as values in memory (estimated size 21.3 KB, free 4.1 GB)
+2018-07-24 14:16:21 MemoryStore: INFO: Block broadcast_1_piece0 stored as bytes in memory (estimated size 10.0 KB, free 4.1 GB)
+2018-07-24 14:16:21 BlockManagerInfo: INFO: Added broadcast_1_piece0 in memory on 10.1.6.36:51370 (size: 10.0 KB, free: 4.1 GB)
+2018-07-24 14:16:21 SparkContext: INFO: Created broadcast 1 from broadcast at DAGScheduler.scala:1006
+2018-07-24 14:16:21 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 0 (MapPartitionsRDD[11] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0))
+2018-07-24 14:16:21 TaskSchedulerImpl: INFO: Adding task set 0.0 with 1 tasks
+2018-07-24 14:16:21 TaskSetManager: INFO: Starting task 0.0 in stage 0.0 (TID 0, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-24 14:16:21 Executor: INFO: Running task 0.0 in stage 0.0 (TID 0)
+2018-07-24 14:16:21 MemoryStore: INFO: Block rdd_4_0 stored as values in memory (estimated size 56.0 B, free 4.1 GB)
+2018-07-24 14:16:21 BlockManagerInfo: INFO: Added rdd_4_0 in memory on 10.1.6.36:51370 (size: 56.0 B, free: 4.1 GB)
+2018-07-24 14:16:21 Executor: INFO: Finished task 0.0 in stage 0.0 (TID 0). 1472 bytes result sent to driver
+2018-07-24 14:16:21 TaskSetManager: INFO: Finished task 0.0 in stage 0.0 (TID 0) in 190 ms on localhost (executor driver) (1/1)
+2018-07-24 14:16:21 TaskSchedulerImpl: INFO: Removed TaskSet 0.0, whose tasks have all completed, from pool 
+2018-07-24 14:16:21 DAGScheduler: INFO: ResultStage 0 (collect at Table.scala:631) finished in 0.213 s
+2018-07-24 14:16:21 DAGScheduler: INFO: Job 0 finished: collect at Table.scala:631, took 0.322576 s
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_3
+        (ApplyIR min
+          (MakeArray Array[Int32]
+            (I32 1)
+            (NA Int32))))))
+  (MakeStruct
+    (__uid_3
+      (GetField __uid_3
+        (Ref Struct{__uid_3:Int32} row)))))
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_3
+        (ApplyIR min
+          (MakeArray Array[Int32]
+            (I32 1)
+            (NA Int32))))))
+  (MakeStruct
+    (__uid_3
+      (GetField __uid_3
+        (Ref Struct{__uid_3:Int32} row)))))
+2018-07-24 14:16:21 root: INFO: initop (Begin)
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C7.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C7.apply instruction count: 15
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C7.apply instruction count: 16
+2018-07-24 14:16:21 root: INFO: seqop (Begin)
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C8.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C8.apply instruction count: 15
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C8.apply instruction count: 22
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_3
+    (ApplyIR min
+      (MakeArray Array[Int32]
+        (I32 1)
+        (NA Int32)))))
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_3
+    (ApplyIR min
+      (MakeArray Array[Int32]
+        (I32 1)
+        (NA Int32)))))
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C9.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C9.apply instruction count: 64
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C9.apply instruction count: 28
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C9.method1 instruction count: 685
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C9.method2 instruction count: 37
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C9.method3 instruction count: 45
+2018-07-24 14:16:21 root: INFO: initop (Begin)
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C10.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C10.apply instruction count: 15
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C10.apply instruction count: 16
+2018-07-24 14:16:21 root: INFO: seqop (Begin)
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C11.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C11.apply instruction count: 15
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C11.apply instruction count: 22
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_3
+    (GetField __uid_3
+      (Ref Struct{__uid_3:Int32} row))))
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_3
+    (GetField __uid_3
+      (Ref Struct{__uid_3:Int32} row))))
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C12.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C12.apply instruction count: 76
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C12.apply instruction count: 28
+2018-07-24 14:16:21 SparkContext: INFO: Starting job: collect at Table.scala:631
+2018-07-24 14:16:21 DAGScheduler: INFO: Got job 1 (collect at Table.scala:631) with 1 output partitions
+2018-07-24 14:16:21 DAGScheduler: INFO: Final stage: ResultStage 1 (collect at Table.scala:631)
+2018-07-24 14:16:21 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-24 14:16:21 DAGScheduler: INFO: Missing parents: List()
+2018-07-24 14:16:21 DAGScheduler: INFO: Submitting ResultStage 1 (MapPartitionsRDD[16] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-24 14:16:21 MemoryStore: INFO: Block broadcast_2 stored as values in memory (estimated size 18.9 KB, free 4.1 GB)
+2018-07-24 14:16:21 BlockManagerInfo: INFO: Removed broadcast_1_piece0 on 10.1.6.36:51370 in memory (size: 10.0 KB, free: 4.1 GB)
+2018-07-24 14:16:21 MemoryStore: INFO: Block broadcast_2_piece0 stored as bytes in memory (estimated size 9.1 KB, free 4.1 GB)
+2018-07-24 14:16:21 BlockManagerInfo: INFO: Added broadcast_2_piece0 in memory on 10.1.6.36:51370 (size: 9.1 KB, free: 4.1 GB)
+2018-07-24 14:16:21 SparkContext: INFO: Created broadcast 2 from broadcast at DAGScheduler.scala:1006
+2018-07-24 14:16:21 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 1 (MapPartitionsRDD[16] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0))
+2018-07-24 14:16:21 TaskSchedulerImpl: INFO: Adding task set 1.0 with 1 tasks
+2018-07-24 14:16:21 TaskSetManager: INFO: Starting task 0.0 in stage 1.0 (TID 1, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-24 14:16:21 Executor: INFO: Running task 0.0 in stage 1.0 (TID 1)
+2018-07-24 14:16:21 BlockManager: INFO: Found block rdd_4_0 locally
+2018-07-24 14:16:21 Executor: INFO: Finished task 0.0 in stage 1.0 (TID 1). 860 bytes result sent to driver
+2018-07-24 14:16:21 TaskSetManager: INFO: Finished task 0.0 in stage 1.0 (TID 1) in 25 ms on localhost (executor driver) (1/1)
+2018-07-24 14:16:21 TaskSchedulerImpl: INFO: Removed TaskSet 1.0, whose tasks have all completed, from pool 
+2018-07-24 14:16:21 DAGScheduler: INFO: ResultStage 1 (collect at Table.scala:631) finished in 0.026 s
+2018-07-24 14:16:21 DAGScheduler: INFO: Job 1 finished: collect at Table.scala:631, took 0.049382 s
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_5
+        (ApplyIR max
+          (ArrayFilter __uid_4
+            (MakeArray Array[Int32]
+              (I32 1)
+              (NA Int32))
+            (ApplyIR isDefined
+              (Ref Int32 __uid_4)))))))
+  (MakeStruct
+    (__uid_5
+      (GetField __uid_5
+        (Ref Struct{__uid_5:Int32} row)))))
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_5
+        (ApplyIR max
+          (ArrayFilter __uid_4
+            (MakeArray Array[Int32]
+              (I32 1)
+              (NA Int32))
+            (ApplyIR isDefined
+              (Ref Int32 __uid_4)))))))
+  (MakeStruct
+    (__uid_5
+      (GetField __uid_5
+        (Ref Struct{__uid_5:Int32} row)))))
+2018-07-24 14:16:21 root: INFO: initop (Begin)
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C13.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C13.apply instruction count: 15
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C13.apply instruction count: 16
+2018-07-24 14:16:21 root: INFO: seqop (Begin)
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C14.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C14.apply instruction count: 15
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C14.apply instruction count: 22
+2018-07-24 14:16:21 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_5
+    (ApplyIR max
+      (ArrayFilter __uid_4
+        (MakeArray Array[Int32]
+          (I32 1)
+          (NA Int32))
+        (ApplyIR isDefined
+          (Ref Int32 __uid_4))))))
+2018-07-24 14:16:21 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_5
+    (ApplyIR max
+      (ArrayFilter __uid_4
+        (MakeArray Array[Int32]
+          (I32 1)
+          (NA Int32))
+        (ApplyIR isDefined
+          (Ref Int32 __uid_4))))))
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C15.<init> instruction count: 3
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C15.apply instruction count: 45
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C15.apply instruction count: 28
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C15.method1 instruction count: 31
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C15.method2 instruction count: 1117
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C15.method3 instruction count: 37
+2018-07-24 14:16:21 root: INFO: is/hail/codegen/generated/C15.method4 instruction count: 37
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C16.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C16.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C16.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C17.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C17.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C17.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_5
+    (GetField __uid_5
+      (Ref Struct{__uid_5:Int32} row))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_5
+    (GetField __uid_5
+      (Ref Struct{__uid_5:Int32} row))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C18.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C18.apply instruction count: 76
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C18.apply instruction count: 28
+2018-07-24 14:16:22 SparkContext: INFO: Starting job: collect at Table.scala:631
+2018-07-24 14:16:22 DAGScheduler: INFO: Got job 2 (collect at Table.scala:631) with 1 output partitions
+2018-07-24 14:16:22 DAGScheduler: INFO: Final stage: ResultStage 2 (collect at Table.scala:631)
+2018-07-24 14:16:22 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Missing parents: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting ResultStage 2 (MapPartitionsRDD[21] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_3 stored as values in memory (estimated size 21.3 KB, free 4.1 GB)
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_3_piece0 stored as bytes in memory (estimated size 10.0 KB, free 4.1 GB)
+2018-07-24 14:16:22 BlockManagerInfo: INFO: Added broadcast_3_piece0 in memory on 10.1.6.36:51370 (size: 10.0 KB, free: 4.1 GB)
+2018-07-24 14:16:22 SparkContext: INFO: Created broadcast 3 from broadcast at DAGScheduler.scala:1006
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 2 (MapPartitionsRDD[21] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0))
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Adding task set 2.0 with 1 tasks
+2018-07-24 14:16:22 TaskSetManager: INFO: Starting task 0.0 in stage 2.0 (TID 2, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-24 14:16:22 Executor: INFO: Running task 0.0 in stage 2.0 (TID 2)
+2018-07-24 14:16:22 BlockManager: INFO: Found block rdd_4_0 locally
+2018-07-24 14:16:22 Executor: INFO: Finished task 0.0 in stage 2.0 (TID 2). 861 bytes result sent to driver
+2018-07-24 14:16:22 TaskSetManager: INFO: Finished task 0.0 in stage 2.0 (TID 2) in 23 ms on localhost (executor driver) (1/1)
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Removed TaskSet 2.0, whose tasks have all completed, from pool 
+2018-07-24 14:16:22 DAGScheduler: INFO: ResultStage 2 (collect at Table.scala:631) finished in 0.024 s
+2018-07-24 14:16:22 DAGScheduler: INFO: Job 2 finished: collect at Table.scala:631, took 0.034208 s
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_6
+        (ApplyIR max
+          (MakeArray Array[Int32]
+            (I32 1)
+            (NA Int32))))))
+  (MakeStruct
+    (__uid_6
+      (GetField __uid_6
+        (Ref Struct{__uid_6:Int32} row)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_6
+        (ApplyIR max
+          (MakeArray Array[Int32]
+            (I32 1)
+            (NA Int32))))))
+  (MakeStruct
+    (__uid_6
+      (GetField __uid_6
+        (Ref Struct{__uid_6:Int32} row)))))
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C19.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C19.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C19.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C20.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C20.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C20.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_6
+    (ApplyIR max
+      (MakeArray Array[Int32]
+        (I32 1)
+        (NA Int32)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_6
+    (ApplyIR max
+      (MakeArray Array[Int32]
+        (I32 1)
+        (NA Int32)))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C21.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C21.apply instruction count: 64
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C21.apply instruction count: 28
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C21.method1 instruction count: 685
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C21.method2 instruction count: 37
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C21.method3 instruction count: 37
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C22.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C22.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C22.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C23.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C23.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C23.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_6
+    (GetField __uid_6
+      (Ref Struct{__uid_6:Int32} row))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_6
+    (GetField __uid_6
+      (Ref Struct{__uid_6:Int32} row))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C24.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C24.apply instruction count: 76
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C24.apply instruction count: 28
+2018-07-24 14:16:22 SparkContext: INFO: Starting job: collect at Table.scala:631
+2018-07-24 14:16:22 DAGScheduler: INFO: Got job 3 (collect at Table.scala:631) with 1 output partitions
+2018-07-24 14:16:22 DAGScheduler: INFO: Final stage: ResultStage 3 (collect at Table.scala:631)
+2018-07-24 14:16:22 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Missing parents: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting ResultStage 3 (MapPartitionsRDD[26] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_4 stored as values in memory (estimated size 18.8 KB, free 4.1 GB)
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_4_piece0 stored as bytes in memory (estimated size 9.1 KB, free 4.1 GB)
+2018-07-24 14:16:22 BlockManagerInfo: INFO: Added broadcast_4_piece0 in memory on 10.1.6.36:51370 (size: 9.1 KB, free: 4.1 GB)
+2018-07-24 14:16:22 SparkContext: INFO: Created broadcast 4 from broadcast at DAGScheduler.scala:1006
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 3 (MapPartitionsRDD[26] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0))
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Adding task set 3.0 with 1 tasks
+2018-07-24 14:16:22 TaskSetManager: INFO: Starting task 0.0 in stage 3.0 (TID 3, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-24 14:16:22 Executor: INFO: Running task 0.0 in stage 3.0 (TID 3)
+2018-07-24 14:16:22 BlockManager: INFO: Found block rdd_4_0 locally
+2018-07-24 14:16:22 Executor: INFO: Finished task 0.0 in stage 3.0 (TID 3). 860 bytes result sent to driver
+2018-07-24 14:16:22 TaskSetManager: INFO: Finished task 0.0 in stage 3.0 (TID 3) in 23 ms on localhost (executor driver) (1/1)
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Removed TaskSet 3.0, whose tasks have all completed, from pool 
+2018-07-24 14:16:22 DAGScheduler: INFO: ResultStage 3 (collect at Table.scala:631) finished in 0.024 s
+2018-07-24 14:16:22 DAGScheduler: INFO: Job 3 finished: collect at Table.scala:631, took 0.033304 s
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_8
+        (ApplyIR mean
+          (ArrayFilter __uid_7
+            (MakeArray Array[Int32]
+              (I32 1)
+              (NA Int32))
+            (ApplyIR isDefined
+              (Ref Int32 __uid_7)))))))
+  (MakeStruct
+    (__uid_8
+      (GetField __uid_8
+        (Ref Struct{__uid_8:Float64} row)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_8
+        (ApplyIR mean
+          (ArrayFilter __uid_7
+            (MakeArray Array[Int32]
+              (I32 1)
+              (NA Int32))
+            (ApplyIR isDefined
+              (Ref Int32 __uid_7)))))))
+  (MakeStruct
+    (__uid_8
+      (GetField __uid_8
+        (Ref Struct{__uid_8:Float64} row)))))
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C25.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C25.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C25.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C26.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C26.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C26.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_8
+    (ApplyIR mean
+      (ArrayFilter __uid_7
+        (MakeArray Array[Int32]
+          (I32 1)
+          (NA Int32))
+        (ApplyIR isDefined
+          (Ref Int32 __uid_7))))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_8
+    (ApplyIR mean
+      (ArrayFilter __uid_7
+        (MakeArray Array[Int32]
+          (I32 1)
+          (NA Int32))
+        (ApplyIR isDefined
+          (Ref Int32 __uid_7))))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C27.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C27.apply instruction count: 45
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C27.apply instruction count: 28
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C27.method1 instruction count: 31
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C27.method2 instruction count: 384
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C27.method3 instruction count: 108
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C28.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C28.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C28.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C29.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C29.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C29.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_8
+    (GetField __uid_8
+      (Ref Struct{__uid_8:Float64} row))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_8
+    (GetField __uid_8
+      (Ref Struct{__uid_8:Float64} row))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C30.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C30.apply instruction count: 76
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C30.apply instruction count: 28
+2018-07-24 14:16:22 SparkContext: INFO: Starting job: collect at Table.scala:631
+2018-07-24 14:16:22 DAGScheduler: INFO: Got job 4 (collect at Table.scala:631) with 1 output partitions
+2018-07-24 14:16:22 DAGScheduler: INFO: Final stage: ResultStage 4 (collect at Table.scala:631)
+2018-07-24 14:16:22 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Missing parents: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting ResultStage 4 (MapPartitionsRDD[31] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_5 stored as values in memory (estimated size 17.5 KB, free 4.1 GB)
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_5_piece0 stored as bytes in memory (estimated size 8.3 KB, free 4.1 GB)
+2018-07-24 14:16:22 BlockManagerInfo: INFO: Added broadcast_5_piece0 in memory on 10.1.6.36:51370 (size: 8.3 KB, free: 4.1 GB)
+2018-07-24 14:16:22 SparkContext: INFO: Created broadcast 5 from broadcast at DAGScheduler.scala:1006
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 4 (MapPartitionsRDD[31] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0))
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Adding task set 4.0 with 1 tasks
+2018-07-24 14:16:22 TaskSetManager: INFO: Starting task 0.0 in stage 4.0 (TID 4, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-24 14:16:22 Executor: INFO: Running task 0.0 in stage 4.0 (TID 4)
+2018-07-24 14:16:22 BlockManager: INFO: Found block rdd_4_0 locally
+2018-07-24 14:16:22 Executor: INFO: Finished task 0.0 in stage 4.0 (TID 4). 868 bytes result sent to driver
+2018-07-24 14:16:22 TaskSetManager: INFO: Finished task 0.0 in stage 4.0 (TID 4) in 17 ms on localhost (executor driver) (1/1)
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Removed TaskSet 4.0, whose tasks have all completed, from pool 
+2018-07-24 14:16:22 DAGScheduler: INFO: ResultStage 4 (collect at Table.scala:631) finished in 0.018 s
+2018-07-24 14:16:22 DAGScheduler: INFO: Job 4 finished: collect at Table.scala:631, took 0.026796 s
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_9
+        (ApplyIR mean
+          (MakeArray Array[Int32]
+            (I32 1)
+            (NA Int32))))))
+  (MakeStruct
+    (__uid_9
+      (GetField __uid_9
+        (Ref Struct{__uid_9:Float64} row)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_9
+        (ApplyIR mean
+          (MakeArray Array[Int32]
+            (I32 1)
+            (NA Int32))))))
+  (MakeStruct
+    (__uid_9
+      (GetField __uid_9
+        (Ref Struct{__uid_9:Float64} row)))))
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C31.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C31.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C31.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C32.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C32.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C32.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_9
+    (ApplyIR mean
+      (MakeArray Array[Int32]
+        (I32 1)
+        (NA Int32)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_9
+    (ApplyIR mean
+      (MakeArray Array[Int32]
+        (I32 1)
+        (NA Int32)))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C33.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C33.apply instruction count: 64
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C33.apply instruction count: 28
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C33.method1 instruction count: 326
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C33.method2 instruction count: 108
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C34.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C34.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C34.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C35.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C35.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C35.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_9
+    (GetField __uid_9
+      (Ref Struct{__uid_9:Float64} row))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_9
+    (GetField __uid_9
+      (Ref Struct{__uid_9:Float64} row))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C36.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C36.apply instruction count: 76
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C36.apply instruction count: 28
+2018-07-24 14:16:22 SparkContext: INFO: Starting job: collect at Table.scala:631
+2018-07-24 14:16:22 DAGScheduler: INFO: Got job 5 (collect at Table.scala:631) with 1 output partitions
+2018-07-24 14:16:22 DAGScheduler: INFO: Final stage: ResultStage 5 (collect at Table.scala:631)
+2018-07-24 14:16:22 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Missing parents: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting ResultStage 5 (MapPartitionsRDD[36] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_6 stored as values in memory (estimated size 17.1 KB, free 4.1 GB)
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_6_piece0 stored as bytes in memory (estimated size 8.2 KB, free 4.1 GB)
+2018-07-24 14:16:22 BlockManagerInfo: INFO: Added broadcast_6_piece0 in memory on 10.1.6.36:51370 (size: 8.2 KB, free: 4.1 GB)
+2018-07-24 14:16:22 SparkContext: INFO: Created broadcast 6 from broadcast at DAGScheduler.scala:1006
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 5 (MapPartitionsRDD[36] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0))
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Adding task set 5.0 with 1 tasks
+2018-07-24 14:16:22 TaskSetManager: INFO: Starting task 0.0 in stage 5.0 (TID 5, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-24 14:16:22 Executor: INFO: Running task 0.0 in stage 5.0 (TID 5)
+2018-07-24 14:16:22 BlockManager: INFO: Found block rdd_4_0 locally
+2018-07-24 14:16:22 Executor: INFO: Finished task 0.0 in stage 5.0 (TID 5). 860 bytes result sent to driver
+2018-07-24 14:16:22 TaskSetManager: INFO: Finished task 0.0 in stage 5.0 (TID 5) in 19 ms on localhost (executor driver) (1/1)
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Removed TaskSet 5.0, whose tasks have all completed, from pool 
+2018-07-24 14:16:22 DAGScheduler: INFO: ResultStage 5 (collect at Table.scala:631) finished in 0.019 s
+2018-07-24 14:16:22 DAGScheduler: INFO: Job 5 finished: collect at Table.scala:631, took 0.029167 s
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_11
+        (ApplyIR product
+          (ArrayFilter __uid_10
+            (MakeArray Array[Int32]
+              (I32 1)
+              (NA Int32))
+            (ApplyIR isDefined
+              (Ref Int32 __uid_10)))))))
+  (MakeStruct
+    (__uid_11
+      (GetField __uid_11
+        (Ref Struct{__uid_11:Int32} row)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_11
+        (ApplyIR product
+          (ArrayFilter __uid_10
+            (MakeArray Array[Int32]
+              (I32 1)
+              (NA Int32))
+            (ApplyIR isDefined
+              (Ref Int32 __uid_10)))))))
+  (MakeStruct
+    (__uid_11
+      (GetField __uid_11
+        (Ref Struct{__uid_11:Int32} row)))))
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C37.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C37.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C37.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C38.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C38.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C38.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_11
+    (ApplyIR product
+      (ArrayFilter __uid_10
+        (MakeArray Array[Int32]
+          (I32 1)
+          (NA Int32))
+        (ApplyIR isDefined
+          (Ref Int32 __uid_10))))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_11
+    (ApplyIR product
+      (ArrayFilter __uid_10
+        (MakeArray Array[Int32]
+          (I32 1)
+          (NA Int32))
+        (ApplyIR isDefined
+          (Ref Int32 __uid_10))))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C39.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C39.apply instruction count: 45
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C39.apply instruction count: 28
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C39.method1 instruction count: 31
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C39.method2 instruction count: 223
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C40.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C40.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C40.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C41.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C41.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C41.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_11
+    (GetField __uid_11
+      (Ref Struct{__uid_11:Int32} row))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_11
+    (GetField __uid_11
+      (Ref Struct{__uid_11:Int32} row))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C42.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C42.apply instruction count: 76
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C42.apply instruction count: 28
+2018-07-24 14:16:22 SparkContext: INFO: Starting job: collect at Table.scala:631
+2018-07-24 14:16:22 DAGScheduler: INFO: Got job 6 (collect at Table.scala:631) with 1 output partitions
+2018-07-24 14:16:22 DAGScheduler: INFO: Final stage: ResultStage 6 (collect at Table.scala:631)
+2018-07-24 14:16:22 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Missing parents: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting ResultStage 6 (MapPartitionsRDD[41] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_7 stored as values in memory (estimated size 16.2 KB, free 4.1 GB)
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_7_piece0 stored as bytes in memory (estimated size 7.5 KB, free 4.1 GB)
+2018-07-24 14:16:22 BlockManagerInfo: INFO: Added broadcast_7_piece0 in memory on 10.1.6.36:51370 (size: 7.5 KB, free: 4.1 GB)
+2018-07-24 14:16:22 SparkContext: INFO: Created broadcast 7 from broadcast at DAGScheduler.scala:1006
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 6 (MapPartitionsRDD[41] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0))
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Adding task set 6.0 with 1 tasks
+2018-07-24 14:16:22 TaskSetManager: INFO: Starting task 0.0 in stage 6.0 (TID 6, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-24 14:16:22 Executor: INFO: Running task 0.0 in stage 6.0 (TID 6)
+2018-07-24 14:16:22 BlockManager: INFO: Found block rdd_4_0 locally
+2018-07-24 14:16:22 Executor: INFO: Finished task 0.0 in stage 6.0 (TID 6). 861 bytes result sent to driver
+2018-07-24 14:16:22 TaskSetManager: INFO: Finished task 0.0 in stage 6.0 (TID 6) in 14 ms on localhost (executor driver) (1/1)
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Removed TaskSet 6.0, whose tasks have all completed, from pool 
+2018-07-24 14:16:22 DAGScheduler: INFO: ResultStage 6 (collect at Table.scala:631) finished in 0.014 s
+2018-07-24 14:16:22 DAGScheduler: INFO: Job 6 finished: collect at Table.scala:631, took 0.023641 s
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_12
+        (ApplyIR product
+          (MakeArray Array[Int32]
+            (I32 1)
+            (NA Int32))))))
+  (MakeStruct
+    (__uid_12
+      (GetField __uid_12
+        (Ref Struct{__uid_12:Int32} row)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_12
+        (ApplyIR product
+          (MakeArray Array[Int32]
+            (I32 1)
+            (NA Int32))))))
+  (MakeStruct
+    (__uid_12
+      (GetField __uid_12
+        (Ref Struct{__uid_12:Int32} row)))))
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C43.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C43.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C43.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C44.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C44.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C44.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_12
+    (ApplyIR product
+      (MakeArray Array[Int32]
+        (I32 1)
+        (NA Int32)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_12
+    (ApplyIR product
+      (MakeArray Array[Int32]
+        (I32 1)
+        (NA Int32)))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C45.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C45.apply instruction count: 198
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C45.apply instruction count: 28
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C46.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C46.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C46.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C47.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C47.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C47.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_12
+    (GetField __uid_12
+      (Ref Struct{__uid_12:Int32} row))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_12
+    (GetField __uid_12
+      (Ref Struct{__uid_12:Int32} row))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C48.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C48.apply instruction count: 76
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C48.apply instruction count: 28
+2018-07-24 14:16:22 SparkContext: INFO: Starting job: collect at Table.scala:631
+2018-07-24 14:16:22 DAGScheduler: INFO: Got job 7 (collect at Table.scala:631) with 1 output partitions
+2018-07-24 14:16:22 DAGScheduler: INFO: Final stage: ResultStage 7 (collect at Table.scala:631)
+2018-07-24 14:16:22 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Missing parents: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting ResultStage 7 (MapPartitionsRDD[46] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_8 stored as values in memory (estimated size 15.6 KB, free 4.1 GB)
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_8_piece0 stored as bytes in memory (estimated size 7.2 KB, free 4.1 GB)
+2018-07-24 14:16:22 BlockManagerInfo: INFO: Added broadcast_8_piece0 in memory on 10.1.6.36:51370 (size: 7.2 KB, free: 4.1 GB)
+2018-07-24 14:16:22 SparkContext: INFO: Created broadcast 8 from broadcast at DAGScheduler.scala:1006
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 7 (MapPartitionsRDD[46] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0))
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Adding task set 7.0 with 1 tasks
+2018-07-24 14:16:22 TaskSetManager: INFO: Starting task 0.0 in stage 7.0 (TID 7, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-24 14:16:22 Executor: INFO: Running task 0.0 in stage 7.0 (TID 7)
+2018-07-24 14:16:22 BlockManager: INFO: Found block rdd_4_0 locally
+2018-07-24 14:16:22 Executor: INFO: Finished task 0.0 in stage 7.0 (TID 7). 860 bytes result sent to driver
+2018-07-24 14:16:22 TaskSetManager: INFO: Finished task 0.0 in stage 7.0 (TID 7) in 15 ms on localhost (executor driver) (1/1)
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Removed TaskSet 7.0, whose tasks have all completed, from pool 
+2018-07-24 14:16:22 DAGScheduler: INFO: ResultStage 7 (collect at Table.scala:631) finished in 0.015 s
+2018-07-24 14:16:22 DAGScheduler: INFO: Job 7 finished: collect at Table.scala:631, took 0.025291 s
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_14
+        (ApplyIR sum
+          (ArrayFilter __uid_13
+            (MakeArray Array[Int32]
+              (I32 1)
+              (NA Int32))
+            (ApplyIR isDefined
+              (Ref Int32 __uid_13)))))))
+  (MakeStruct
+    (__uid_14
+      (GetField __uid_14
+        (Ref Struct{__uid_14:Int32} row)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_14
+        (ApplyIR sum
+          (ArrayFilter __uid_13
+            (MakeArray Array[Int32]
+              (I32 1)
+              (NA Int32))
+            (ApplyIR isDefined
+              (Ref Int32 __uid_13)))))))
+  (MakeStruct
+    (__uid_14
+      (GetField __uid_14
+        (Ref Struct{__uid_14:Int32} row)))))
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C49.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C49.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C49.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C50.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C50.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C50.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_14
+    (ApplyIR sum
+      (ArrayFilter __uid_13
+        (MakeArray Array[Int32]
+          (I32 1)
+          (NA Int32))
+        (ApplyIR isDefined
+          (Ref Int32 __uid_13))))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_14
+    (ApplyIR sum
+      (ArrayFilter __uid_13
+        (MakeArray Array[Int32]
+          (I32 1)
+          (NA Int32))
+        (ApplyIR isDefined
+          (Ref Int32 __uid_13))))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C51.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C51.apply instruction count: 45
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C51.apply instruction count: 28
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C51.method1 instruction count: 31
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C51.method2 instruction count: 223
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C52.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C52.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C52.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C53.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C53.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C53.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_14
+    (GetField __uid_14
+      (Ref Struct{__uid_14:Int32} row))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_14
+    (GetField __uid_14
+      (Ref Struct{__uid_14:Int32} row))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C54.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C54.apply instruction count: 76
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C54.apply instruction count: 28
+2018-07-24 14:16:22 SparkContext: INFO: Starting job: collect at Table.scala:631
+2018-07-24 14:16:22 DAGScheduler: INFO: Got job 8 (collect at Table.scala:631) with 1 output partitions
+2018-07-24 14:16:22 DAGScheduler: INFO: Final stage: ResultStage 8 (collect at Table.scala:631)
+2018-07-24 14:16:22 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Missing parents: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting ResultStage 8 (MapPartitionsRDD[51] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_9 stored as values in memory (estimated size 16.2 KB, free 4.1 GB)
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_9_piece0 stored as bytes in memory (estimated size 7.5 KB, free 4.1 GB)
+2018-07-24 14:16:22 BlockManagerInfo: INFO: Added broadcast_9_piece0 in memory on 10.1.6.36:51370 (size: 7.5 KB, free: 4.1 GB)
+2018-07-24 14:16:22 SparkContext: INFO: Created broadcast 9 from broadcast at DAGScheduler.scala:1006
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 8 (MapPartitionsRDD[51] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0))
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Adding task set 8.0 with 1 tasks
+2018-07-24 14:16:22 TaskSetManager: INFO: Starting task 0.0 in stage 8.0 (TID 8, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-24 14:16:22 Executor: INFO: Running task 0.0 in stage 8.0 (TID 8)
+2018-07-24 14:16:22 BlockManager: INFO: Found block rdd_4_0 locally
+2018-07-24 14:16:22 Executor: INFO: Finished task 0.0 in stage 8.0 (TID 8). 861 bytes result sent to driver
+2018-07-24 14:16:22 TaskSetManager: INFO: Finished task 0.0 in stage 8.0 (TID 8) in 15 ms on localhost (executor driver) (1/1)
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Removed TaskSet 8.0, whose tasks have all completed, from pool 
+2018-07-24 14:16:22 DAGScheduler: INFO: ResultStage 8 (collect at Table.scala:631) finished in 0.015 s
+2018-07-24 14:16:22 DAGScheduler: INFO: Job 8 finished: collect at Table.scala:631, took 0.024076 s
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_15
+        (ApplyIR sum
+          (MakeArray Array[Int32]
+            (I32 1)
+            (NA Int32))))))
+  (MakeStruct
+    (__uid_15
+      (GetField __uid_15
+        (Ref Struct{__uid_15:Int32} row)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(TableMapRows None None
+  (TableMapRows None None
+    (TableLiteral)
+    (MakeStruct
+      (__uid_15
+        (ApplyIR sum
+          (MakeArray Array[Int32]
+            (I32 1)
+            (NA Int32))))))
+  (MakeStruct
+    (__uid_15
+      (GetField __uid_15
+        (Ref Struct{__uid_15:Int32} row)))))
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C55.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C55.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C55.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C56.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C56.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C56.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_15
+    (ApplyIR sum
+      (MakeArray Array[Int32]
+        (I32 1)
+        (NA Int32)))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_15
+    (ApplyIR sum
+      (MakeArray Array[Int32]
+        (I32 1)
+        (NA Int32)))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C57.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C57.apply instruction count: 198
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C57.apply instruction count: 28
+2018-07-24 14:16:22 root: INFO: initop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C58.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C58.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C58.apply instruction count: 16
+2018-07-24 14:16:22 root: INFO: seqop (Begin)
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(Begin)
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(Begin)
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C59.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C59.apply instruction count: 15
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C59.apply instruction count: 22
+2018-07-24 14:16:22 root: INFO: optimize: before:
+(MakeStruct
+  (__uid_15
+    (GetField __uid_15
+      (Ref Struct{__uid_15:Int32} row))))
+2018-07-24 14:16:22 root: INFO: optimize: after:
+(MakeStruct
+  (__uid_15
+    (GetField __uid_15
+      (Ref Struct{__uid_15:Int32} row))))
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C60.<init> instruction count: 3
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C60.apply instruction count: 76
+2018-07-24 14:16:22 root: INFO: is/hail/codegen/generated/C60.apply instruction count: 28
+2018-07-24 14:16:22 SparkContext: INFO: Starting job: collect at Table.scala:631
+2018-07-24 14:16:22 DAGScheduler: INFO: Got job 9 (collect at Table.scala:631) with 1 output partitions
+2018-07-24 14:16:22 DAGScheduler: INFO: Final stage: ResultStage 9 (collect at Table.scala:631)
+2018-07-24 14:16:22 DAGScheduler: INFO: Parents of final stage: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Missing parents: List()
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting ResultStage 9 (MapPartitionsRDD[56] at mapPartitions at ContextRDD.scala:137), which has no missing parents
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_10 stored as values in memory (estimated size 15.6 KB, free 4.1 GB)
+2018-07-24 14:16:22 MemoryStore: INFO: Block broadcast_10_piece0 stored as bytes in memory (estimated size 7.2 KB, free 4.1 GB)
+2018-07-24 14:16:22 BlockManagerInfo: INFO: Added broadcast_10_piece0 in memory on 10.1.6.36:51370 (size: 7.2 KB, free: 4.1 GB)
+2018-07-24 14:16:22 SparkContext: INFO: Created broadcast 10 from broadcast at DAGScheduler.scala:1006
+2018-07-24 14:16:22 DAGScheduler: INFO: Submitting 1 missing tasks from ResultStage 9 (MapPartitionsRDD[56] at mapPartitions at ContextRDD.scala:137) (first 15 tasks are for partitions Vector(0))
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Adding task set 9.0 with 1 tasks
+2018-07-24 14:16:22 TaskSetManager: INFO: Starting task 0.0 in stage 9.0 (TID 9, localhost, executor driver, partition 0, PROCESS_LOCAL, 4713 bytes)
+2018-07-24 14:16:22 Executor: INFO: Running task 0.0 in stage 9.0 (TID 9)
+2018-07-24 14:16:22 BlockManager: INFO: Found block rdd_4_0 locally
+2018-07-24 14:16:22 Executor: INFO: Finished task 0.0 in stage 9.0 (TID 9). 860 bytes result sent to driver
+2018-07-24 14:16:22 TaskSetManager: INFO: Finished task 0.0 in stage 9.0 (TID 9) in 14 ms on localhost (executor driver) (1/1)
+2018-07-24 14:16:22 TaskSchedulerImpl: INFO: Removed TaskSet 9.0, whose tasks have all completed, from pool 
+2018-07-24 14:16:22 DAGScheduler: INFO: ResultStage 9 (collect at Table.scala:631) finished in 0.014 s
+2018-07-24 14:16:22 DAGScheduler: INFO: Job 9 finished: collect at Table.scala:631, took 0.022688 s
+2018-07-24 14:16:22 SparkContext: INFO: Invoking stop() from shutdown hook
+2018-07-24 14:16:22 AbstractConnector: INFO: Stopped Spark@27391ab4{HTTP/1.1,[http/1.1]}{0.0.0.0:4040}
+2018-07-24 14:16:22 SparkUI: INFO: Stopped Spark web UI at http://10.1.6.36:4040
+2018-07-24 14:16:22 MapOutputTrackerMasterEndpoint: INFO: MapOutputTrackerMasterEndpoint stopped!
+2018-07-24 14:16:22 MemoryStore: INFO: MemoryStore cleared
+2018-07-24 14:16:22 BlockManager: INFO: BlockManager stopped
+2018-07-24 14:16:22 BlockManagerMaster: INFO: BlockManagerMaster stopped
+2018-07-24 14:16:22 OutputCommitCoordinator$OutputCommitCoordinatorEndpoint: INFO: OutputCommitCoordinator stopped!
+2018-07-24 14:16:22 SparkContext: INFO: Successfully stopped SparkContext
+2018-07-24 14:16:22 ShutdownHookManager: INFO: Shutdown hook called
+2018-07-24 14:16:22 ShutdownHookManager: INFO: Deleting directory /private/var/folders/05/k7m5y49j4qnc998x4n5mzrqc0p8yhq/T/spark-1faedf6b-5afe-46ad-a36b-f5ca6db3a2ab/pyspark-15cf802f-0bc9-4761-9440-c7fafb997361
+2018-07-24 14:16:22 ShutdownHookManager: INFO: Deleting directory /private/var/folders/05/k7m5y49j4qnc998x4n5mzrqc0p8yhq/T/spark-1faedf6b-5afe-46ad-a36b-f5ca6db3a2ab
