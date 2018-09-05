@@ -1,9 +1,8 @@
 package is.hail.expr.types
 
 import is.hail.annotations._
-import is.hail.asm4s.{Code, _}
 import is.hail.check.Gen
-import is.hail.expr.ir.EmitMethodBuilder
+import is.hail.expr.ordering.ExtendedOrdering
 import is.hail.utils._
 import org.apache.spark.sql.Row
 import org.json4s.jackson.JsonMethods
@@ -136,118 +135,4 @@ abstract class TBaseStruct extends Type {
       })
 
   override def scalaClassTag: ClassTag[Row] = classTag[Row]
-
-  override def unsafeOrdering(missingGreatest: Boolean): UnsafeOrdering =
-    unsafeOrdering(this, missingGreatest)
-
-  override def unsafeOrdering(rightType: Type, missingGreatest: Boolean): UnsafeOrdering = {
-    require(this.isOfType(rightType))
-
-    val right = rightType.asInstanceOf[TBaseStruct]
-    val fieldOrderings: Array[UnsafeOrdering] =
-      types.zip(right.types).map { case (l, r) => l.unsafeOrdering(r, missingGreatest)}
-
-    new UnsafeOrdering {
-      def compare(r1: Region, o1: Long, r2: Region, o2: Long): Int = {
-        var i = 0
-        while (i < types.length) {
-          val leftDefined = isFieldDefined(r1, o1, i)
-          val rightDefined = right.isFieldDefined(r2, o2, i)
-
-          if (leftDefined && rightDefined) {
-            val c = fieldOrderings(i).compare(r1, loadField(r1, o1, i), r2, right.loadField(r2, o2, i))
-            if (c != 0)
-              return c
-          } else if (leftDefined != rightDefined) {
-            val c = if (leftDefined) -1 else 1
-            if (missingGreatest)
-              return c
-            else
-              return -c
-          }
-          i += 1
-        }
-        0
-      }
-    }
-  }
-
-  def nMissingBytes: Int
-
-  def missingIdx: Array[Int]
-
-  def byteOffsets: Array[Long]
-
-  def allocate(region: Region): Long = {
-    region.allocate(alignment, byteSize)
-  }
-
-  def clearMissingBits(region: Region, off: Long) {
-    var i = 0
-    while (i < nMissingBytes) {
-      region.storeByte(off + i, 0)
-      i += 1
-    }
-  }
-
-  def clearMissingBits(region: Code[Region], off: Code[Long]): Code[Unit] = {
-    var c: Code[Unit] = Code._empty
-    var i = 0
-    while (i < nMissingBytes) {
-      c = Code(c, region.storeByte(off + i.toLong, const(0)))
-      i += 1
-    }
-    c
-  }
-
-  def isFieldDefined(rv: RegionValue, fieldIdx: Int): Boolean =
-    isFieldDefined(rv.region, rv.offset, fieldIdx)
-
-  def isFieldDefined(region: Region, offset: Long, fieldIdx: Int): Boolean =
-    fieldRequired(fieldIdx) || !region.loadBit(offset, missingIdx(fieldIdx))
-
-  def isFieldMissing(region: Code[Region], offset: Code[Long], fieldIdx: Int): Code[Boolean] =
-    if (fieldRequired(fieldIdx))
-      false
-    else
-      region.loadBit(offset, missingIdx(fieldIdx))
-
-  def isFieldDefined(region: Code[Region], offset: Code[Long], fieldIdx: Int): Code[Boolean] =
-    !isFieldMissing(region, offset, fieldIdx)
-
-  def setFieldMissing(region: Region, offset: Long, fieldIdx: Int) {
-    assert(!fieldRequired(fieldIdx))
-    region.setBit(offset, missingIdx(fieldIdx))
-  }
-
-  def setFieldMissing(region: Code[Region], offset: Code[Long], fieldIdx: Int): Code[Unit] = {
-    assert(!fieldRequired(fieldIdx))
-    region.setBit(offset, missingIdx(fieldIdx))
-  }
-
-  def fieldOffset(offset: Long, fieldIdx: Int): Long =
-    offset + byteOffsets(fieldIdx)
-
-  def fieldOffset(offset: Code[Long], fieldIdx: Int): Code[Long] =
-    offset + byteOffsets(fieldIdx)
-
-  def loadField(rv: RegionValue, fieldIdx: Int): Long = loadField(rv.region, rv.offset, fieldIdx)
-
-  def loadField(region: Region, offset: Long, fieldIdx: Int): Long = {
-    val off = fieldOffset(offset, fieldIdx)
-    types(fieldIdx).fundamentalType match {
-      case _: TArray | _: TBinary => region.loadAddress(off)
-      case _ => off
-    }
-  }
-
-  def loadField(region: Code[Region], offset: Code[Long], fieldIdx: Int): Code[Long] =
-    loadField(region, fieldOffset(offset, fieldIdx), types(fieldIdx))
-
-  private def loadField(region: Code[Region], fieldOffset: Code[Long], fieldType: Type): Code[Long] = {
-    fieldType.fundamentalType match {
-      case _: TArray | _: TBinary => region.loadAddress(fieldOffset)
-      case _ => fieldOffset
-    }
-  }
 }

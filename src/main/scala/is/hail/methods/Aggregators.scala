@@ -2,6 +2,7 @@ package is.hail.methods
 
 import is.hail.annotations._
 import is.hail.expr._
+import is.hail.expr.ordering.ExtendedOrdering
 import is.hail.expr.types._
 import is.hail.stats._
 import is.hail.utils._

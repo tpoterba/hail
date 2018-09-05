@@ -1,8 +1,10 @@
 package is.hail.expr.ir.functions
 
-import is.hail.annotations.{CodeOrdering, Region, StagedRegionValueBuilder}
+import is.hail.annotations.{Region, StagedRegionValueBuilder}
 import is.hail.asm4s.{Code, _}
 import is.hail.expr.ir._
+import is.hail.expr.ordering.CodeOrdering
+import is.hail.expr.types.physical.PInterval
 import is.hail.expr.types.{TBoolean, TBooleanOptional, TInterval}
 import is.hail.utils._
 
@@ -127,7 +129,7 @@ object IntervalFunctions extends RegistryFunctions {
   }
 }
 
-class IRInterval(mb: EmitMethodBuilder, typ: TInterval, value: Code[Long]) {
+class IRInterval(mb: EmitMethodBuilder, typ: PInterval, value: Code[Long]) {
   val ref: LocalRef[Long] = mb.newLocal[Long]
   val region: Code[Region] = IntervalFunctions.getRegion(mb)
 

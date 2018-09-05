@@ -1,8 +1,9 @@
 package is.hail.expr.types
 
-import is.hail.annotations.{UnsafeUtils, _}
+import is.hail.annotations.{_}
 import is.hail.check.Gen
 import is.hail.expr.ir.EmitMethodBuilder
+import is.hail.expr.ordering.{CodeOrdering, ExtendedOrdering}
 import is.hail.utils._
 import org.apache.spark.sql.Row
 import org.json4s.jackson.JsonMethods
@@ -11,10 +12,6 @@ import scala.reflect.{ClassTag, _}
 
 final case class TDict(keyType: Type, valueType: Type, override val required: Boolean = false) extends TContainer {
   val elementType: Type = +TStruct("key" -> keyType, "value" -> valueType)
-
-  val elementByteSize: Long = UnsafeUtils.arrayElementSize(elementType)
-
-  val contentsAlignment: Long = elementType.alignment.max(4)
 
   override val fundamentalType: TArray = TArray(elementType.fundamentalType, required)
 
@@ -71,9 +68,6 @@ final case class TDict(keyType: Type, valueType: Type, override val required: Bo
         })
 
   override def scalaClassTag: ClassTag[Map[_, _]] = classTag[Map[_, _]]
-
-  val ordering: ExtendedOrdering =
-    ExtendedOrdering.mapOrdering(elementType.ordering)
 
   def codeOrdering(mb: EmitMethodBuilder, other: Type): CodeOrdering = {
     assert(other isOfType this)

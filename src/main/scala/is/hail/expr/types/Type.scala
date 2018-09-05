@@ -3,6 +3,7 @@ package is.hail.expr.types
 import is.hail.annotations._
 import is.hail.check.{Arbitrary, Gen}
 import is.hail.expr.ir.EmitMethodBuilder
+import is.hail.expr.ordering.{CodeOrdering, ExtendedOrdering}
 import is.hail.expr.{JSONAnnotationImpex, Parser, SparkAnnotationImpex}
 import is.hail.utils
 import is.hail.utils._
@@ -141,17 +142,6 @@ abstract class Type extends BaseType with Serializable {
 
   def subst(): Type = this.setRequired(false)
 
-  def unsafeOrdering(missingGreatest: Boolean): UnsafeOrdering = ???
-
-  def unsafeOrdering(): UnsafeOrdering = unsafeOrdering(false)
-
-  def unsafeOrdering(rightType: Type, missingGreatest: Boolean): UnsafeOrdering = {
-    require(this.isOfType(rightType))
-    unsafeOrdering(missingGreatest)
-  }
-
-  def unsafeOrdering(rightType: Type): UnsafeOrdering = unsafeOrdering(rightType, false)
-
   def unsafeInsert(typeToInsert: Type, path: List[String]): (Type, UnsafeInserter) =
     TStruct.empty().unsafeInsert(typeToInsert, path)
 
@@ -220,12 +210,6 @@ abstract class Type extends BaseType with Serializable {
 
   def canCompare(other: Type): Boolean = this == other
 
-  val ordering: ExtendedOrdering
-
-  def codeOrdering(mb: EmitMethodBuilder): CodeOrdering = codeOrdering(mb, this)
-
-  def codeOrdering(mb: EmitMethodBuilder, other: Type): CodeOrdering
-
   def jsonReader: JSONReader[Annotation] = new JSONReader[Annotation] {
     def fromJSON(a: JValue): Annotation = JSONAnnotationImpex.importAnnotation(a, self)
   }
@@ -233,10 +217,6 @@ abstract class Type extends BaseType with Serializable {
   def jsonWriter: JSONWriter[Annotation] = new JSONWriter[Annotation] {
     def toJSON(pk: Annotation): JValue = JSONAnnotationImpex.exportAnnotation(pk, self)
   }
-
-  def byteSize: Long = 1
-
-  def alignment: Long = byteSize
 
   /*  Fundamental types are types that can be handled natively by RegionValueBuilder: primitive
       types, Array and Struct. */
@@ -318,4 +298,6 @@ abstract class Type extends BaseType with Serializable {
       case t =>
         t.setRequired(false)
     }
+
+  def ordering: ExtendedOrdering = ExtendedOrdering(this)
 }

@@ -1,9 +1,28 @@
-package is.hail.annotations
+package is.hail.expr.ordering
 
+import is.hail.expr.types._
 import is.hail.utils._
 import org.apache.spark.sql.Row
 
 object ExtendedOrdering {
+  def apply(virtualType: Type): ExtendedOrdering = {
+    virtualType match {
+      case TInt32(_) => ExtendedOrdering.extendToNull(implicitly[Ordering[Int]])
+      case TInt64(_) => ExtendedOrdering.extendToNull(implicitly[Ordering[Long]])
+      case TFloat32(_) => ExtendedOrdering.extendToNull(implicitly[Ordering[Float]])
+      case TFloat64(_) => ExtendedOrdering.extendToNull(implicitly[Ordering[Long]])
+      case TBoolean(_) => ExtendedOrdering.extendToNull(implicitly[Ordering[Boolean]])
+      case TString(_) => ExtendedOrdering.extendToNull(implicitly[Ordering[String]])
+      case t: TArray => ExtendedOrdering.iterableOrdering(ExtendedOrdering(t.elementType))
+      case t: TSet => ExtendedOrdering.setOrdering(ExtendedOrdering(t.elementType))
+      case t: TDict => ExtendedOrdering.mapOrdering(ExtendedOrdering(t.elementType))
+      case t: TBaseStruct => rowOrdering(t.types.map(ExtendedOrdering(_)))
+      case t: TInterval => Interval.ordering(ExtendedOrdering(t.pointType), startPrimary=true)
+      case TCall(_) => ExtendedOrdering.extendToNull(implicitly[Ordering[Int]])
+      case t: TLocus => ExtendedOrdering.extendToNull(t.rg.locusOrdering)
+    }
+  }
+
   def extendToNull[S](ord: Ordering[S]): ExtendedOrdering = {
     new ExtendedOrdering {
       def compareNonnull(x: T, y: T, missingGreatest: Boolean): Int = ord.compare(x.asInstanceOf[S], y.asInstanceOf[S])
@@ -21,26 +40,6 @@ object ExtendedOrdering {
       override def minNonnull(x: T, y: T, missingGreatest: Boolean): T = ord.min(x.asInstanceOf[S], y.asInstanceOf[S])
 
       override def maxNonnull(x: T, y: T, missingGreatest: Boolean): T = ord.max(x.asInstanceOf[S], y.asInstanceOf[S])
-    }
-  }
-
-  def extendToNull(ord: ExtendedOrdering): ExtendedOrdering = {
-    new ExtendedOrdering {
-      def compareNonnull(x: T, y: T, missingGreatest: Boolean): Int = ord.compare(x, y, missingGreatest)
-
-      override def ltNonnull(x: T, y: T, missingGreatest: Boolean): Boolean = ord.lt(x, y, missingGreatest)
-
-      override def lteqNonnull(x: T, y: T, missingGreatest: Boolean): Boolean = ord.lteq(x, y, missingGreatest)
-
-      override def gtNonnull(x: T, y: T, missingGreatest: Boolean): Boolean = ord.gt(x, y, missingGreatest)
-
-      override def gteqNonnull(x: T, y: T, missingGreatest: Boolean): Boolean = ord.gteq(x, y, missingGreatest)
-
-      override def equivNonnull(x: T, y: T, missingGreatest: Boolean): Boolean = ord.equiv(x, y, missingGreatest)
-
-      override def minNonnull(x: T, y: T, missingGreatest: Boolean): T = ord.min(x, y, missingGreatest)
-
-      override def maxNonnull(x: T, y: T, missingGreatest: Boolean): T = ord.max(x, y, missingGreatest)
     }
   }
 
@@ -63,7 +62,7 @@ object ExtendedOrdering {
   def sortArrayOrdering(ord: ExtendedOrdering): ExtendedOrdering =
     new ExtendedOrdering {
       private val itOrd = iterableOrdering(ord)
-      
+
       def compareNonnull(x: T, y: T, missingGreatest: Boolean): Int = {
         val ax = x.asInstanceOf[Array[T]]
         val ay = y.asInstanceOf[Array[T]]
@@ -90,7 +89,7 @@ object ExtendedOrdering {
       def compareNonnull(x: T, y: T, missingGreatest: Boolean): Int = {
         val mx = x.asInstanceOf[Map[T, T]]
         val my = y.asInstanceOf[Map[T, T]]
-        
+
         saOrd.compareNonnull(
           mx.toArray.map { case (k, v) => Row(k, v): T },
           my.toArray.map { case (k, v) => Row(k, v): T },
@@ -99,7 +98,8 @@ object ExtendedOrdering {
     }
 
   def rowOrdering(fieldOrd: Array[ExtendedOrdering]): ExtendedOrdering =
-    new ExtendedOrdering { outer =>
+    new ExtendedOrdering {
+      outer =>
       override def compareNonnull(x: T, y: T, missingGreatest: Boolean): Int = {
         val rx = x.asInstanceOf[Row]
         val ry = y.asInstanceOf[Row]

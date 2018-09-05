@@ -1,6 +1,6 @@
 package is.hail.utils
 
-import is.hail.annotations.ExtendedOrdering
+import is.hail.expr.ordering.ExtendedOrdering
 import is.hail.expr.types.TInt32
 import org.scalatest.testng.TestNGSuite
 import org.testng.annotations.Test

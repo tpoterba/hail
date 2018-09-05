@@ -1,7 +1,7 @@
 package is.hail.expr.ir
 
-import is.hail.annotations.CodeOrdering
 import is.hail.asm4s.Code
+import is.hail.expr.ordering.CodeOrdering
 import is.hail.expr.types._
 import is.hail.utils.lift
 

@@ -2,12 +2,14 @@ package is.hail.expr.ir
 
 import java.io.PrintWriter
 
-import is.hail.annotations.{CodeOrdering, Region}
+import is.hail.annotations.Region
 import is.hail.asm4s
 import is.hail.asm4s._
 import is.hail.expr.Parser
 import is.hail.expr.ir.functions.IRRandomness
+import is.hail.expr.ordering.CodeOrdering
 import is.hail.expr.types.Type
+import is.hail.expr.types.physical.PType
 import is.hail.utils._
 import is.hail.variant.ReferenceGenome
 import org.apache.spark.TaskContext
@@ -65,18 +67,11 @@ class EmitMethodBuilder(
 
   def numTypes: Int = fb.numTypes
 
-  def getType(t: Type): Code[Type] = fb.getType(t)
+  def getType(t: PType): Code[PType] = {
+    fb.getType(t)
+  }
 
-  def getCodeOrdering[T](t: Type, op: CodeOrdering.Op, missingGreatest: Boolean): CodeOrdering.F[T] =
-    getCodeOrdering[T](t, op, missingGreatest, ignoreMissingness = false)
-
-  def getCodeOrdering[T](t: Type, op: CodeOrdering.Op, missingGreatest: Boolean, ignoreMissingness: Boolean): CodeOrdering.F[T] =
-    fb.getCodeOrdering[T](t, op, missingGreatest, ignoreMissingness)
-
-  def getCodeOrdering[T](t1: Type, t2: Type, op: CodeOrdering.Op, missingGreatest: Boolean): CodeOrdering.F[T] =
-    fb.getCodeOrdering[T](t1, t2, op, missingGreatest, ignoreMissingness = false)
-
-  def getCodeOrdering[T](t1: Type, t2: Type, op: CodeOrdering.Op, missingGreatest: Boolean, ignoreMissingness: Boolean): CodeOrdering.F[T] =
+  def getCodeOrdering[T](t1: PType, t2: PType, op: CodeOrdering.Op, missingGreatest: Boolean, ignoreMissingness: Boolean = false): CodeOrdering.F[T] =
     fb.getCodeOrdering[T](t1, t2, op, missingGreatest, ignoreMissingness)
 
   def newRNG(seed: Long): Code[IRRandomness] = fb.newRNG(seed)
@@ -92,8 +87,8 @@ class DependentEmitFunction[F >: Null <: AnyRef : TypeInfo : ClassTag](
   private[this] val rgMap: mutable.Map[ReferenceGenome, Code[ReferenceGenome]] =
     mutable.Map[ReferenceGenome, Code[ReferenceGenome]]()
 
-  private[this] val typMap: mutable.Map[Type, Code[Type]] =
-    mutable.Map[Type, Code[Type]]()
+  private[this] val typMap: mutable.Map[PType, Code[PType]] =
+    mutable.Map[PType, Code[PType]]()
 
   override def getReferenceGenome(rg: ReferenceGenome): Code[ReferenceGenome] =
     rgMap.getOrElse(rg, {
@@ -102,10 +97,10 @@ class DependentEmitFunction[F >: Null <: AnyRef : TypeInfo : ClassTag](
       field.load()
     })
 
-  override def getType(t: Type): Code[Type] =
+  override def getType(t: PType): Code[PType] =
     typMap.getOrElse(t, {
       val fromParent = parentfb.getType(t)
-      val field = addField[Type](fromParent)
+      val field = addField[PType](fromParent)
       field.load()
     })
 
@@ -120,11 +115,11 @@ class EmitFunctionBuilder[F >: Null](
   private[this] val rgMap: mutable.Map[ReferenceGenome, Code[ReferenceGenome]] =
     mutable.Map[ReferenceGenome, Code[ReferenceGenome]]()
 
-  private[this] val typMap: mutable.Map[Type, Code[Type]] =
-    mutable.Map[Type, Code[Type]]()
+  private[this] val typMap: mutable.Map[PType, Code[PType]] =
+    mutable.Map[PType, Code[PType]]()
 
-  private[this] val compareMap: mutable.Map[(Type, Type, CodeOrdering.Op, Boolean, Boolean), CodeOrdering.F[_]] =
-    mutable.Map[(Type, Type, CodeOrdering.Op, Boolean, Boolean), CodeOrdering.F[_]]()
+  private[this] val compareMap: mutable.Map[(PType, PType, CodeOrdering.Op, Boolean, Boolean), CodeOrdering.F[_]] =
+    mutable.Map[(PType, PType, CodeOrdering.Op, Boolean, Boolean), CodeOrdering.F[_]]()
 
   def numReferenceGenomes: Int = rgMap.size
 
@@ -161,23 +156,25 @@ class EmitFunctionBuilder[F >: Null](
     _hfield.load()
   }
 
-  def getType(t: Type): Code[Type] = {
-    val references = ReferenceGenome.getReferences(t).toArray
+  def getType(t: PType): Code[PType] = {
+    PType.assertCanonical(t)
+    val references = ReferenceGenome.getReferences(t.virtualType).toArray
     val setup = Code(Code(references.map(addReferenceGenome): _*),
-      Code.invokeScalaObject[String, Type](
-        Parser.getClass, "parseType", const(t.parsableString())))
+      Code.invokeScalaObject[String, PType](
+        PType.getClass, "parseCanonical", const(t.virtualType.parsableString())))
     typMap.getOrElseUpdate(t,
-      newLazyField[Type](setup))
+      newLazyField[PType](setup))
   }
 
-  def getCodeOrdering[T](t1: Type, t2: Type, op: CodeOrdering.Op, missingGreatest: Boolean, ignoreMissingness: Boolean): CodeOrdering.F[T] = {
+  def getCodeOrdering[T](t1: PType, t2: PType, op: CodeOrdering.Op, missingGreatest: Boolean, ignoreMissingness: Boolean): CodeOrdering.F[T] = {
+    require(t1.virtualType == t2.virtualType)
     val f = compareMap.getOrElseUpdate((t1, t2, op, missingGreatest, ignoreMissingness), {
-      val ti = typeToTypeInfo(t1)
+      val ti = typeToTypeInfo(t1.virtualType)
       val rt = if (op == CodeOrdering.compare) typeInfo[Int] else typeInfo[Boolean]
 
       val newMB = if (ignoreMissingness) {
         val newMB = newMethod(Array[TypeInfo[_]](typeInfo[Region], ti, typeInfo[Region], ti), rt)
-        val ord = t1.codeOrdering(newMB, t2)
+        val ord = CodeOrdering(newMB, t1.virtualType, t1, t2)
         val r1 = newMB.getArg[Region](1)
         val r2 = newMB.getArg[Region](3)
         val v1 = newMB.getArg(2)(ti)
@@ -195,7 +192,7 @@ class EmitFunctionBuilder[F >: Null](
         newMB
       } else {
         val newMB = newMethod(Array[TypeInfo[_]](typeInfo[Region], typeInfo[Boolean], ti, typeInfo[Region], typeInfo[Boolean], ti), rt)
-        val ord = t1.codeOrdering(newMB, t2)
+        val ord = CodeOrdering(newMB, t1.virtualType, t1, t2)
         val r1 = newMB.getArg[Region](1)
         val r2 = newMB.getArg[Region](4)
         val m1 = newMB.getArg[Boolean](2)
@@ -224,9 +221,6 @@ class EmitFunctionBuilder[F >: Null](
     })
     (r1: Code[Region], v1: (Code[Boolean], Code[_]), r2: Code[Region], v2: (Code[Boolean], Code[_])) => coerce[T](f(r1, v1, r2, v2))
   }
-
-  def getCodeOrdering[T](t: Type, op: CodeOrdering.Op, missingGreatest: Boolean, ignoreMissingness: Boolean): CodeOrdering.F[T] =
-    getCodeOrdering[T](t, t, op, missingGreatest, ignoreMissingness)
 
   override val apply_method: EmitMethodBuilder = {
     val m = new EmitMethodBuilder(this, "apply", parameterTypeInfo.map(_.base), returnTypeInfo.base)

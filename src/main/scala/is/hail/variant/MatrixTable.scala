@@ -1559,7 +1559,8 @@ class MatrixTable(val hc: HailContext, val ast: MatrixIR) {
         val rv2 = RegionValue()
         val rvb = new RegionValueBuilder()
         rvIterator.flatMap { rv =>
-          val locus = UnsafeRow.readLocus(rv.region, localRVRowType.loadField(rv, locusIndex), rg)
+          val locus = UnsafeRow.readLocus(rv.region,
+            localRVRowType.loadField(rv, locusIndex), rg)
 
           val result = if (inAdjustment) {
             None

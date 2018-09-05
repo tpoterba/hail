@@ -1,9 +1,9 @@
 package is.hail.expr.types
 
 import is.hail.annotations.{Annotation, AnnotationPathException, _}
-import is.hail.asm4s.Code
 import is.hail.expr.Parser
 import is.hail.expr.ir.EmitMethodBuilder
+import is.hail.expr.ordering.{CodeOrdering, ExtendedOrdering}
 import is.hail.utils._
 import org.apache.spark.sql.Row
 import org.json4s.CustomSerializer
@@ -68,17 +68,6 @@ final case class TStruct(fields: IndexedSeq[Field], override val required: Boole
 
   val missingIdx = new Array[Int](size)
   val nMissing: Int = TBaseStruct.getMissingness(types, missingIdx)
-  val nMissingBytes = (nMissing + 7) >>> 3
-  val byteOffsets = new Array[Long](size)
-  override val byteSize: Long = TBaseStruct.getByteSizeAndOffsets(types, nMissingBytes, byteOffsets)
-  override val alignment: Long = TBaseStruct.alignment(types)
-
-  val ordering: ExtendedOrdering = TBaseStruct.getOrdering(types)
-
-  def codeOrdering(mb: EmitMethodBuilder, other: Type): CodeOrdering = {
-    assert(other isOfType this)
-    CodeOrdering.rowOrdering(this, other.asInstanceOf[TStruct], mb)
-  }
 
   def fieldByName(name: String): Field = fields(fieldIdx(name))
 
@@ -448,10 +437,5 @@ final case class TStruct(fields: IndexedSeq[Field], override val required: Boole
       val t = TStruct((fields, fundamentalFieldTypes).zipped.map { case (f, ft) => (f.name, ft) }: _*)
       t.setRequired(required).asInstanceOf[TStruct]
     }
-  }
-
-  def loadField(region: Code[Region], offset: Code[Long], fieldName: String): Code[Long] = {
-    val f = field(fieldName)
-    loadField(region, fieldOffset(offset, f.index), f.index)
   }
 }

@@ -2,12 +2,13 @@ package is.hail.expr.ir
 
 import is.hail.asm4s._
 import is.hail.expr.types.Type
+import is.hail.expr.types.physical.PType
 
 import scala.reflect.ClassTag
 
-class StagedArrayBuilder(val elt: Type, mb: MethodBuilder, len: Code[Int]) {
+class StagedArrayBuilder(val elt: PType, mb: MethodBuilder, len: Code[Int]) {
 
-  val ti = typeToTypeInfo(elt)
+  val ti = typeToTypeInfo(elt.virtualType)
 
   val ref: Settable[Any] = coerce[Any](ti match {
     case BooleanInfo => mb.newLazyField[BooleanArrayBuilder]("zab")(Code.newInstance[BooleanArrayBuilder, Int](len))

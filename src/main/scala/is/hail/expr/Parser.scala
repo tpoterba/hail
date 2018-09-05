@@ -3,6 +3,8 @@ package is.hail.expr
 import is.hail.HailContext
 import is.hail.expr.ir.{AggSignature, BaseIR, IR, MatrixIR, TableIR}
 import is.hail.expr.types._
+import is.hail.expr.types.encoded.{EDefault, EType}
+import is.hail.expr.types.physical.{CanonicalPType, PType}
 import is.hail.rvd.OrderedRVDType
 import is.hail.table.{Ascending, Descending, SortField}
 import is.hail.utils.StringEscapeUtils._
@@ -329,12 +331,12 @@ object Parser extends JavaTokenParsers {
   def parsePhysicalType(code: String): PType = parse(physical_type, code)
 
   def physical_type: Parser[PType] =
-    ("Default" ~ "[") ~> type_expr <~ "]" ^^ { t => PDefault(t) }
+    ("Default" ~ "[") ~> type_expr <~ "]" ^^ { t => CanonicalPType(t) }
 
   def parseEncodedType(code: String): PType = parse(physical_type, code)
 
-  def encoded_type: Parser[EncodedType] =
-    ("Default" ~ "[") ~> type_expr <~ "]" ^^ { t => EDefault(t) }
+  def encoded_type: Parser[EType] =
+    ("Default" ~ "[") ~> type_expr <~ "]" ^^ { t => EDefault(CanonicalPType(t)) }
 
   def call: Parser[Call] = {
     wholeNumber ~ "/" ~ rep1sep(wholeNumber, "/") ^^ { case a0 ~ _ ~ arest =>

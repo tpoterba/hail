@@ -5,6 +5,7 @@ import is.hail.annotations._
 import is.hail.annotations.aggregators._
 import is.hail.expr.ir.functions.MathFunctions
 import is.hail.expr.types._
+import is.hail.expr.types.physical._
 import is.hail.utils._
 
 import scala.collection.mutable
@@ -315,9 +316,9 @@ private class Emit(
               region, (rm, rm.mux(defaultValue(r.typ), codeR.v)))))
         }
 
-      case MakeArray(args, typ) =>
-        val srvb = new StagedRegionValueBuilder(mb, typ)
-        val addElement = srvb.addIRIntermediate(typ.elementType)
+      case x@MakeArray(args, typ) =>
+        val srvb = new StagedRegionValueBuilder(mb, x.pType)
+        val addElement = srvb.addIRIntermediate(x.pType.elementType)
         val addElts = { (newMB: EmitMethodBuilder, t: Type, v: EmitTriplet) =>
           Code(
             v.setup,
@@ -328,8 +329,8 @@ private class Emit(
       case x@ArrayRef(a, i) =>
         val typ = x.typ
         val ti = typeToTypeInfo(typ)
-        val tarray = coerce[TArray](a.typ)
-        val ati = coerce[Long](typeToTypeInfo(tarray))
+        val tarray = coerce[PArray](a.pType)
+        val ati = coerce[Long](typeToTypeInfo(typ))
         val codeA = emit(a)
         val codeI = emit(i)
         val xma = mb.newLocal[Boolean]()
@@ -367,10 +368,10 @@ private class Emit(
                     .concat(irString))))))
 
         EmitTriplet(setup, xmv, Code(
-          region.loadIRIntermediate(typ)(tarray.elementOffset(xa, len, xi))))
+          tarray.elementType.load(region)(tarray.elementOffset(xa, len, xi))))
       case ArrayLen(a) =>
         val codeA = emit(a)
-        strict(TContainer.loadLength(region, coerce[Long](codeA.v)), codeA)
+        strict(coerce[PArray](a.typ).loadLength(region, coerce[Long](codeA.v)), codeA)
 
       case x@(_: ArraySort | _: ToSet | _: ToDict) =>
         val (a, ascending: IR, keyOnly) = x match {
@@ -420,11 +421,11 @@ private class Emit(
 
       case GroupByKey(collection) =>
         //sort collection by group
-        val atyp = coerce[TArray](collection.typ)
-        val etyp = coerce[TBaseStruct](atyp.elementType)
+        val atyp = coerce[PArray](collection.typ)
+        val etyp = coerce[PStruct](atyp.elementType)
         val ktyp = etyp.types(0)
         val vtyp = etyp.types(1)
-        val eltOut = coerce[TBaseStruct](coerce[TDict](ir.typ).elementType)
+        val eltOut = coerce[PCanonicalStruct](coerce[PArray](ir.typ).elementType)
 
         val aout = emitArrayIterator(collection)
         val eab = new StagedArrayBuilder(etyp, mb, 16)
@@ -434,19 +435,19 @@ private class Emit(
           m.mux(eab.addMissing(), eab.add(v))
         }
 
-        val nab = new StagedArrayBuilder(TInt32(), mb, 16)
+        val nab = new StagedArrayBuilder(PCanonicalInt32, mb, 16)
         val i = mb.newLocal[Int]
 
         def loadKey(n: Code[Int]): Code[_] =
-          region.loadIRIntermediate(ktyp)(etyp.fieldOffset(coerce[Long](eab(n)), 0))
+          ktyp.load(region)(etyp.fieldOffset(coerce[Long](eab(n)), 0))
 
         def loadValue(n: Code[Int]): Code[_] =
-          region.loadIRIntermediate(vtyp)(etyp.fieldOffset(coerce[Long](eab(n)), 1))
+          vtyp.load(region)(etyp.fieldOffset(coerce[Long](eab(n)), 1))
 
         val isSame =
           sorter.equiv(region, (eab.isMissing(i - 1), eab(i - 1)), region, (eab.isMissing(i), eab(i)))
 
-        val srvb = new StagedRegionValueBuilder(mb, ir.typ)
+        val srvb = new StagedRegionValueBuilder(mb, ir.pType)
 
         val processArrayElts = aout.arrayEmitter(cont)
         EmitTriplet(processArrayElts.setup, processArrayElts.m.getOrElse(const(false)), Code(
@@ -476,7 +477,7 @@ private class Emit(
                     structbuilder.start(),
                     structbuilder.addIRIntermediate(ktyp)(loadKey(i)),
                     structbuilder.advance(),
-                    structbuilder.addArray(coerce[TArray](eltOut.types(1)), { arraybuilder =>
+                    structbuilder.addArray(coerce[PCanonicalArray](eltOut.types(1)), { arraybuilder =>
                       Code(
                         arraybuilder.start(coerce[Int](nab(srvb.arrayIdx))),
                         Code.whileLoop(arraybuilder.arrayIdx < coerce[Int](nab(srvb.arrayIdx)),

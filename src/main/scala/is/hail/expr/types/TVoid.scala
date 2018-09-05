@@ -1,7 +1,8 @@
 package is.hail.expr.types
 
-import is.hail.annotations.{CodeOrdering, ExtendedOrdering}
+import is.hail.annotations.ExtendedOrdering
 import is.hail.expr.ir.EmitMethodBuilder
+import is.hail.expr.ordering.{CodeOrdering, ExtendedOrdering}
 
 case object TVoid extends Type {
   override val required = true

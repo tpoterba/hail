@@ -1,11 +1,11 @@
 package is.hail.expr.types
 
 import is.hail.asm4s._
-import is.hail.annotations.CodeOrdering
-import is.hail.annotations.{UnsafeOrdering, _}
+import is.hail.annotations.{_}
 import is.hail.check.Arbitrary._
 import is.hail.check.Gen
 import is.hail.expr.ir.EmitMethodBuilder
+import is.hail.expr.ordering.{CodeOrdering, ExtendedOrdering}
 import is.hail.utils._
 
 import scala.reflect.{ClassTag, _}
@@ -27,10 +27,7 @@ class TString(override val required: Boolean) extends Type {
 
   override def unsafeOrdering(missingGreatest: Boolean): UnsafeOrdering = TBinary(required).unsafeOrdering(missingGreatest)
 
-  val ordering: ExtendedOrdering =
     ExtendedOrdering.extendToNull(implicitly[Ordering[String]])
-
-  override def byteSize: Long = 8
 
   override def fundamentalType: Type = TBinary(required)
 
@@ -55,10 +52,4 @@ object TString {
     Code.newInstance[String, Array[Byte]](
       region.loadBytes(TBinary.bytesOffset(boff), length))
   }
-
-  def loadLength(region: Region, boff: Long): Int =
-    TBinary.loadLength(region, boff)
-
-  def loadLength(region: Code[Region], boff: Code[Long]): Code[Int] =
-    TBinary.loadLength(region, boff)
 }

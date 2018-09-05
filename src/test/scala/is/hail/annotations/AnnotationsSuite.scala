@@ -1,6 +1,7 @@
 package is.hail.annotations
 
 import is.hail.SparkSuite
+import is.hail.expr.ordering.ExtendedOrdering
 import is.hail.expr.types._
 import is.hail.utils._
 import is.hail.testUtils._

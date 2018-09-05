@@ -2,7 +2,7 @@ package is.hail.variant
 
 import java.util.zip.DataFormatException
 
-import is.hail.annotations.{Region, RegionValue, UnsafeRow, UnsafeUtils}
+import is.hail.annotations.{Region, RegionValue, UnsafeRow}
 import is.hail.expr.types._
 import is.hail.utils._
 

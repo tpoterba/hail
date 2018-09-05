@@ -2,6 +2,7 @@ package is.hail.expr.types
 
 import is.hail.annotations._
 import is.hail.expr.ir.EmitMethodBuilder
+import is.hail.expr.ordering.{CodeOrdering, ExtendedOrdering}
 
 import scala.reflect.ClassTag
 

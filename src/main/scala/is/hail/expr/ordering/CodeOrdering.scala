@@ -1,10 +1,11 @@
-package is.hail.annotations
+package is.hail.expr.ordering
 
-import is.hail.asm4s._
+import is.hail.annotations.Region
+import is.hail.asm4s.{coerce, _}
 import is.hail.expr.ir
 import is.hail.expr.ir.EmitMethodBuilder
 import is.hail.expr.types._
-import is.hail.asm4s.coerce
+import is.hail.expr.types.physical._
 import is.hail.utils._
 
 object CodeOrdering {
@@ -20,7 +21,7 @@ object CodeOrdering {
 
   type F[R] = (Code[Region], (Code[Boolean], Code[_]), Code[Region], (Code[Boolean], Code[_])) => Code[R]
 
-  def rowOrdering(t1: TBaseStruct, t2: TBaseStruct, mb: EmitMethodBuilder): CodeOrdering = new CodeOrdering {
+  def rowOrdering(t1: PStruct, t2: PStruct, mb: EmitMethodBuilder): CodeOrdering = new CodeOrdering {
     type T = Long
 
     val m1: LocalRef[Boolean] = mb.newLocal[Boolean]
@@ -96,112 +97,6 @@ object CodeOrdering {
     }
   }
 
-  def iterableOrdering(t1: TArray, t2: TArray, mb: EmitMethodBuilder): CodeOrdering = new CodeOrdering {
-    type T = Long
-    val lord: CodeOrdering = TInt32().codeOrdering(mb)
-    val ord: CodeOrdering = t1.elementType.codeOrdering(mb, t2.elementType)
-    val len1: LocalRef[Int] = mb.newLocal[Int]
-    val len2: LocalRef[Int] = mb.newLocal[Int]
-    val lim: LocalRef[Int] = mb.newLocal[Int]
-    val i: LocalRef[Int] = mb.newLocal[Int]
-    val m1: LocalRef[Boolean] = mb.newLocal[Boolean]
-    val v1: LocalRef[ord.T] = mb.newLocal(ir.typeToTypeInfo(t1.elementType)).asInstanceOf[LocalRef[ord.T]]
-    val m2: LocalRef[Boolean] = mb.newLocal[Boolean]
-    val v2: LocalRef[ord.T] = mb.newLocal(ir.typeToTypeInfo(t2.elementType)).asInstanceOf[LocalRef[ord.T]]
-    val eq: LocalRef[Boolean] = mb.newLocal[Boolean]
-
-    def loop(cmp: Code[Unit], loopCond: Code[Boolean])
-      (rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long]): Code[Unit] = {
-      Code(
-        i := 0,
-        len1 := t1.loadLength(rx, x),
-        len2 := t2.loadLength(ry, y),
-        lim := (len1 < len2).mux(len1, len2),
-        Code.whileLoop(loopCond && i < lim,
-          m1 := t1.isElementMissing(rx, x, i),
-          v1.storeAny(rx.loadIRIntermediate(t1.elementType)(t1.elementOffset(x, len1, i))),
-          m2 := t2.isElementMissing(ry, y, i),
-          v2.storeAny(ry.loadIRIntermediate(t2.elementType)(t2.elementOffset(y, len2, i))),
-          cmp, i += 1))
-    }
-
-    override def compareNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Int] = {
-      val mbcmp = mb.getCodeOrdering[Int](t1.elementType, t2.elementType, CodeOrdering.compare, missingGreatest)
-      val cmp = mb.newLocal[Int]
-
-      Code(cmp := 0,
-        loop(cmp := mbcmp(rx, (m1, v1), ry, (m2, v2)), cmp.ceq(0))(rx, x, ry, y),
-        cmp.ceq(0).mux(
-          lord.compareNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest),
-          cmp))
-    }
-
-    override def ltNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Boolean] = {
-      val mblt = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.lt, missingGreatest)
-      val mbequiv = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.equiv, missingGreatest)
-      val lt = mb.newLocal[Boolean]
-      val lcmp = Code(
-        lt := mblt(rx, (m1, v1), ry, (m2, v2)),
-        eq := mbequiv(rx, (m1, v1), ry, (m2, v2)))
-
-      Code(lt := false, eq := true,
-        loop(lcmp, !lt && eq)(rx, x, ry, y),
-        lt || eq && lord.ltNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest))
-    }
-
-    override def lteqNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Boolean] = {
-      val mblteq = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.lteq, missingGreatest)
-      val mbequiv = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.equiv, missingGreatest)
-
-      val lteq = mb.newLocal[Boolean]
-      val lcmp = Code(
-        lteq := mblteq(rx, (m1, v1), ry, (m2, v2)),
-        eq := mbequiv(rx, (m1, v1), ry, (m2, v2)))
-
-      Code(lteq := true, eq := true,
-        loop(lcmp, eq)(rx, x, ry, y),
-        lteq && (!eq || lord.lteqNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest)))
-    }
-
-    override def gtNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Boolean] = {
-      val mbgt = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.gt, missingGreatest)
-      val mbequiv = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.equiv, missingGreatest)
-      val gt = mb.newLocal[Boolean]
-      val lcmp = Code(
-        gt := mbgt(rx, (m1, v1), ry, (m2, v2)),
-        eq := !gt && mbequiv(rx, (m1, v1), ry, (m2, v2)))
-
-      Code(gt := false,
-        eq := true,
-        loop(lcmp, eq)(rx, x, ry, y),
-        gt || (eq &&
-            lord.gtNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest)))
-    }
-
-    override def gteqNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Boolean] = {
-      val mbgteq = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.gteq, missingGreatest)
-      val mbequiv = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.equiv, missingGreatest)
-
-      val gteq = mb.newLocal[Boolean]
-      val lcmp = Code(
-        gteq := mbgteq(rx, (m1, v1), ry, (m2, v2)),
-        eq := mbequiv(rx, (m1, v1), ry, (m2, v2)))
-
-      Code(gteq := true,
-        eq := true,
-        loop(lcmp, eq)(rx, x, ry, y),
-        gteq && (!eq || lord.gteqNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest)))
-    }
-
-    override def equivNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Boolean] = {
-      val mbequiv = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.equiv, missingGreatest)
-      val lcmp = eq := mbequiv(rx, (m1, v1), ry, (m2, v2))
-      Code(eq := true,
-        loop(lcmp, eq)(rx, x, ry, y),
-        eq && lord.equivNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest))
-    }
-  }
-
   def intervalOrdering(t1: TInterval, t2: TInterval, mb: EmitMethodBuilder): CodeOrdering = new CodeOrdering {
     type T = Long
     val pti = ir.typeToTypeInfo(t1.pointType)
@@ -272,7 +167,7 @@ object CodeOrdering {
       val mbeq = mb.getCodeOrdering[Boolean](t1.pointType, t2.pointType, CodeOrdering.equiv, missingGreatest)
 
       Code(loadStart(rx, x, ry, y), mblteq(rx, (mp1, p1), ry, (mp2, p2))) && (
-        !mbeq(rx, (mp1, p1), ry, (mp2, p2)) || ( // if not equal, then lt
+        !mbeq(rx, (mp1, p1), ry, (mp2, p2)) || (// if not equal, then lt
           Code(mp1 := t1.includeStart(rx, x), mp2 := t2.includeStart(ry, y), mp1 && !mp2) || (mp1.ceq(mp2) && (
             Code(loadEnd(rx, x, ry, y), mblteq(rx, (mp1, p1), ry, (mp2, p2))) && (
               !mbeq(rx, (mp1, p1), ry, (mp2, p2)) ||
@@ -296,7 +191,7 @@ object CodeOrdering {
       val mbeq = mb.getCodeOrdering[Boolean](t1.pointType, t2.pointType, CodeOrdering.equiv, missingGreatest)
 
       Code(loadStart(rx, x, ry, y), mbgteq(rx, (mp1, p1), ry, (mp2, p2))) && (
-        !mbeq(rx, (mp1, p1), ry, (mp2, p2)) || ( // if not equal, then lt
+        !mbeq(rx, (mp1, p1), ry, (mp2, p2)) || (// if not equal, then lt
           Code(mp1 := t1.includeStart(rx, x), mp2 := t2.includeStart(ry, y), !mp1 && mp2) || (mp1.ceq(mp2) && (
             Code(loadEnd(rx, x, ry, y), mbgteq(rx, (mp1, p1), ry, (mp2, p2))) && (
               !mbeq(rx, (mp1, p1), ry, (mp2, p2)) ||
@@ -310,6 +205,243 @@ object CodeOrdering {
   def setOrdering(t1: TSet, t2: TSet, mb: EmitMethodBuilder): CodeOrdering =
     iterableOrdering(TArray(t1.elementType, t1.required), TArray(t2.elementType, t2.required), mb)
 
+  def apply(mb: MethodBuilder, virtualType: Type, left: PType, right: PType): CodeOrdering = {
+    (virtualType, left, right) match {
+      case (TInt32(_), l: PInt32, r: PInt32) =>
+        new CodeOrdering {
+          type T = Int
+
+          def compareNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Int] =
+            Code.invokeStatic[java.lang.Integer, Int, Int, Int]("compare", x, y)
+
+          override def ltNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x < y
+
+          override def lteqNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x <= y
+
+          override def gtNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x > y
+
+          override def gteqNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x >= y
+
+          override def equivNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x.ceq(y)
+        }
+      case (TInt64(_), l: PInt64, r: PInt64) =>
+        new CodeOrdering {
+          type T = Long
+
+          def compareNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Int] =
+            Code.invokeStatic[java.lang.Long, Long, Long, Int]("compare", x, y)
+
+          override def ltNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x < y
+
+          override def lteqNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x <= y
+
+          override def gtNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x > y
+
+          override def gteqNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x >= y
+
+          override def equivNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x.ceq(y)
+        }
+      case (TFloat32(_), l: PFloat32, r: PFloat32) =>
+        new CodeOrdering {
+          type T = Float
+
+          def compareNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Int] =
+            Code.invokeStatic[java.lang.Float, Float, Float, Int]("compare", x, y)
+
+          override def ltNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x < y
+
+          override def lteqNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x <= y
+
+          override def gtNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x > y
+
+          override def gteqNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x >= y
+
+          override def equivNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x.ceq(y)
+        }
+      case (TFloat64(_), l: PFloat64, r: PFloat64) =>
+        new CodeOrdering {
+          type T = Double
+
+          def compareNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Int] =
+            Code.invokeStatic[java.lang.Double, Double, Double, Int]("compare", x, y)
+
+          override def ltNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x < y
+
+          override def lteqNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x <= y
+
+          override def gtNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x > y
+
+          override def gteqNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x >= y
+
+          override def equivNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Boolean] =
+            x.ceq(y)
+        }
+      case (TBoolean(_), l: PBoolean, r: PBoolean) =>
+        new CodeOrdering {
+          type T = Boolean
+
+          def compareNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Int] =
+            Code.invokeStatic[java.lang.Boolean, Boolean, Boolean, Int]("compare", x, y)
+        }
+      case (TBinary(_) | TString(_), l: PBinary, r: PBinary) =>
+        new CodeOrdering {
+          type T = Long
+
+          def compareNonnull(rx: Code[Region], x: Code[T], ry: Code[Region], y: Code[T], missingGreatest: Boolean): Code[Int] = {
+            val l1 = mb.newLocal[Int]
+            val l2 = mb.newLocal[Int]
+            val lim = mb.newLocal[Int]
+            val i = mb.newLocal[Int]
+            val cmp = mb.newLocal[Int]
+
+            Code(
+              l1 := l.loadLength(rx, x),
+              l2 := r.loadLength(ry, y),
+              lim := (l1 < l2).mux(l1, l2),
+              i := 0,
+              cmp := 0,
+              Code.whileLoop(cmp.ceq(0) && i < lim,
+                cmp := Code.invokeStatic[java.lang.Byte, Byte, Byte, Int]("compare",
+                  rx.loadByte(l.bytesOffset(x) + i.toL),
+                  ry.loadByte(r.bytesOffset(y) + i.toL)),
+                i += 1),
+              cmp.ceq(0).mux(Code.invokeStatic[java.lang.Integer, Int, Int, Int]("compare", l1, l2), cmp))
+          }
+        }
+      case (TArray(elementType, _), l: PArray, r: PArray) =>
+        new CodeOrdering {
+          type T = Long
+          val lord: CodeOrdering = CodeOrdering(mb, TInt32(), PCanonicalInt32, PCanonicalInt32)
+          val ord: CodeOrdering = CodeOrdering(mb, elementType, l.elementType, r.elementType)
+          val len1: LocalRef[Int] = mb.newLocal[Int]
+          val len2: LocalRef[Int] = mb.newLocal[Int]
+          val lim: LocalRef[Int] = mb.newLocal[Int]
+          val i: LocalRef[Int] = mb.newLocal[Int]
+          val m1: LocalRef[Boolean] = mb.newLocal[Boolean]
+          val v1: LocalRef[ord.T] = mb.newLocal(ir.typeToTypeInfo(elementType)).asInstanceOf[LocalRef[ord.T]]
+          val m2: LocalRef[Boolean] = mb.newLocal[Boolean]
+          val v2: LocalRef[ord.T] = mb.newLocal(ir.typeToTypeInfo(elementType)).asInstanceOf[LocalRef[ord.T]]
+          val eq: LocalRef[Boolean] = mb.newLocal[Boolean]
+
+          def loop(cmp: Code[Unit], loopCond: Code[Boolean])
+            (rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long]): Code[Unit] = {
+            Code(
+              i := 0,
+              len1 := l.loadLength(rx, x),
+              len2 := r.loadLength(ry, y),
+              lim := (len1 < len2).mux(len1, len2),
+              Code.whileLoop(loopCond && i < lim,
+                m1 := l.isElementMissing(rx, x, i),
+                v1.storeAny(rx.loadIRIntermediate(t1.elementType)(t1.elementOffset(x, len1, i))),
+                m2 := r.isElementMissing(ry, y, i),
+                v2.storeAny(ry.loadIRIntermediate(t2.elementType)(t2.elementOffset(y, len2, i))),
+                cmp, i += 1))
+          }
+
+          override def compareNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Int] = {
+            val mbcmp = mb.getCodeOrdering[Int](t1.elementType, t2.elementType, CodeOrdering.compare, missingGreatest)
+            val cmp = mb.newLocal[Int]
+
+            Code(cmp := 0,
+              loop(cmp := mbcmp(rx, (m1, v1), ry, (m2, v2)), cmp.ceq(0))(rx, x, ry, y),
+              cmp.ceq(0).mux(
+                lord.compareNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest),
+                cmp))
+          }
+
+          override def ltNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Boolean] = {
+            val mblt = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.lt, missingGreatest)
+            val mbequiv = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.equiv, missingGreatest)
+            val lt = mb.newLocal[Boolean]
+            val lcmp = Code(
+              lt := mblt(rx, (m1, v1), ry, (m2, v2)),
+              eq := mbequiv(rx, (m1, v1), ry, (m2, v2)))
+
+            Code(lt := false, eq := true,
+              loop(lcmp, !lt && eq)(rx, x, ry, y),
+              lt || eq && lord.ltNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest))
+          }
+
+          override def lteqNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Boolean] = {
+            val mblteq = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.lteq, missingGreatest)
+            val mbequiv = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.equiv, missingGreatest)
+
+            val lteq = mb.newLocal[Boolean]
+            val lcmp = Code(
+              lteq := mblteq(rx, (m1, v1), ry, (m2, v2)),
+              eq := mbequiv(rx, (m1, v1), ry, (m2, v2)))
+
+            Code(lteq := true, eq := true,
+              loop(lcmp, eq)(rx, x, ry, y),
+              lteq && (!eq || lord.lteqNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest)))
+          }
+
+          override def gtNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Boolean] = {
+            val mbgt = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.gt, missingGreatest)
+            val mbequiv = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.equiv, missingGreatest)
+            val gt = mb.newLocal[Boolean]
+            val lcmp = Code(
+              gt := mbgt(rx, (m1, v1), ry, (m2, v2)),
+              eq := !gt && mbequiv(rx, (m1, v1), ry, (m2, v2)))
+
+            Code(gt := false,
+              eq := true,
+              loop(lcmp, eq)(rx, x, ry, y),
+              gt || (eq &&
+                lord.gtNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest)))
+          }
+
+          override def gteqNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Boolean] = {
+            val mbgteq = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.gteq, missingGreatest)
+            val mbequiv = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.equiv, missingGreatest)
+
+            val gteq = mb.newLocal[Boolean]
+            val lcmp = Code(
+              gteq := mbgteq(rx, (m1, v1), ry, (m2, v2)),
+              eq := mbequiv(rx, (m1, v1), ry, (m2, v2)))
+
+            Code(gteq := true,
+              eq := true,
+              loop(lcmp, eq)(rx, x, ry, y),
+              gteq && (!eq || lord.gteqNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest)))
+          }
+
+          override def equivNonnull(rx: Code[Region], x: Code[Long], ry: Code[Region], y: Code[Long], missingGreatest: Boolean): Code[Boolean] = {
+            val mbequiv = mb.getCodeOrdering[Boolean](t1.elementType, t2.elementType, CodeOrdering.equiv, missingGreatest)
+            val lcmp = eq := mbequiv(rx, (m1, v1), ry, (m2, v2))
+            Code(eq := true,
+              loop(lcmp, eq)(rx, x, ry, y),
+              eq && lord.equivNonnull(rx, coerce[lord.T](len1.load()), ry, coerce[lord.T](len2.load()), missingGreatest))
+          }
+        }
+      case (ts: TStruct, l: PStruct, r: PStruct) =>
+      case (ti: TInterval, l: PInterval, r: PInterval) =>
+      case (TCall(_), l: PCall, r: PCall) =>
+      case (TLocus(rg, _), l: PLocus, r: PLocus) =>
+
+
+
+    }
+  }
 }
 
 abstract class CodeOrdering {

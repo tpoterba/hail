@@ -78,26 +78,6 @@ class RichCodeRegion(val region: Code[Region]) extends AnyVal {
     region.invoke[Long, Int, Array[Byte]]("loadBytes", off, n)
   }
 
-  def loadIRIntermediate(typ: Type): Code[Long] => Code[_] = typ.fundamentalType match {
-    case _: TBoolean => loadBoolean
-    case _: TInt32 => loadInt
-    case _: TInt64 => loadLong
-    case _: TFloat32 => loadFloat
-    case _: TFloat64 => loadDouble
-    case _: TArray => loadAddress
-    case _: TBinary => loadAddress
-    case _: TBaseStruct => off => off
-  }
-
-  def getIRIntermediate(typ: Type): Code[Long] => Code[_] = typ.fundamentalType match {
-    case _: TBoolean => loadBoolean
-    case _: TInt32 => loadInt
-    case _: TInt64 => loadLong
-    case _: TFloat32 => loadFloat
-    case _: TFloat64 => loadDouble
-    case _ => off => off
-  }
-
   def setBit(byteOff: Code[Long], bitOff: Code[Long]): Code[Unit] = {
     region.invoke[Long, Long, Unit]("setBit", byteOff, bitOff)
   }

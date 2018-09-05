@@ -2,8 +2,6 @@ package is.hail.expr.types
 
 import is.hail.annotations._
 import is.hail.check.Gen
-import is.hail.expr.ir.EmitMethodBuilder
-import is.hail.utils._
 import is.hail.variant.Call
 
 import scala.reflect.{ClassTag, _}
@@ -26,14 +24,6 @@ class TCall(override val required: Boolean) extends ComplexType {
   override def scalaClassTag: ClassTag[java.lang.Integer] = classTag[java.lang.Integer]
 
   override def str(a: Annotation): String = if (a == null) "NA" else Call.toString(a.asInstanceOf[Call])
-
-  val ordering: ExtendedOrdering =
-    ExtendedOrdering.extendToNull(implicitly[Ordering[Int]])
-
-  def codeOrdering(mb: EmitMethodBuilder, other: Type): CodeOrdering = {
-    assert(other isOfType this)
-    TInt32().codeOrdering(mb)
-  }
 }
 
 object TCall {

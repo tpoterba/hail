@@ -3,6 +3,7 @@ package is.hail.rvd
 import is.hail.annotations._
 import is.hail.expr.Parser
 import is.hail.expr.types._
+import is.hail.expr.ordering.UnsafeOrdering
 import is.hail.utils._
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import org.json4s.CustomSerializer

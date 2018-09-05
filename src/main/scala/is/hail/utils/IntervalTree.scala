@@ -2,6 +2,7 @@ package is.hail.utils
 
 import is.hail.annotations._
 import is.hail.check._
+import is.hail.expr.ordering.ExtendedOrdering
 import is.hail.expr.types.{TBoolean, TInterval, TStruct}
 import org.apache.spark.sql.Row
 import org.json4s.JValue
