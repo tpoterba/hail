@@ -2946,6 +2946,9 @@ class MatrixTable(ExprContainer):
     def _same(self, other, tolerance=1e-6, absolute=False):
         return self._jmt.same(other._jmt, tolerance, absolute)
 
+    def _unfilter_entries(self):
+        return MatrixTable(MatrixMapEntries(self._mir, hl.struct(**self.entry)._ir))
+
     @typecheck_method(caller=str, s=expr_struct())
     def _select_entries(self, caller, s) -> 'MatrixTable':
         base, cleanup = self._process_joins(s)
