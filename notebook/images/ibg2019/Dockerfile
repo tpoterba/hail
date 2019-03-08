@@ -27,4 +27,4 @@ ENV PATH $PATH:/home/jovyan/google-cloud-sdk/bin
 
 RUN rm -r work/
 
-RUN gsutil -m cp -r "gs://hail-tutorial/ibg2019/*" /home/jovyan/.
+RUN gsutil -m cp -r "gs://hail-tutorial/ibg2019/*" '/home/jovyan/'
