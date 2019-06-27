@@ -10,12 +10,13 @@ fields), a matrix table consists of four components:
 
 1. a two-dimensional matrix of **entry fields** where each entry is indexed by
    row key(s) and column key(s)
-2. a corresponding rows table that stores all of the **row fields** that are
-   constant for every column in the dataset
+2. a corresponding rows table that stores all of the **row fields** that vary
+   across rows, but not columns. These may include row-wise summaries of entry
+   data, like the per-row mean of an entry field.
 3. a corresponding columns table that stores all of the **column fields** that
-   are constant for
-   every row in the dataset
-4. a set of **global fields** that are constant for every entry in the dataset
+   vary across columns, but not rows. These may include column-wise summaries
+   of entry data, like the per-column mean of an entry field.
+4. a set of constant **global fields**, like metadata about the entire dataset.
 
 There are different operations on the matrix for each field group.
 For instance, :class:`.Table` has :meth:`.Table.select` and
