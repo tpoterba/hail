@@ -71,6 +71,11 @@ final class ArrayBuilder[@specialized T](initialCapacity: Int)(implicit tct: Cla
     b(size_ - 1)
   }
 
+  def pop(): T = {
+    size_ -= 1
+    b(size)
+  }
+
   override def clone(): ArrayBuilder[T] = {
     val ab = new ArrayBuilder[T]()
     ab.b = b.clone()

@@ -64,13 +64,13 @@ class Region {
     std::vector<std::unique_ptr<char[]>> used_blocks_{};
     std::vector<std::unique_ptr<char[]>> big_chunks_{};
     std::vector<SharedPtr> parents_{};
-    char * allocate_new_block(size_t n);
-    char * allocate_big_chunk(size_t size);
     explicit Region(RegionPool * pool, size_t block_size);
   public:
     Region(Region &pool) = delete;
     Region(Region &&pool) = delete;
     Region& operator=(Region pool) = delete;
+    char * allocate_new_block(size_t n);
+    char * allocate_big_chunk(size_t size);
     void set_block_size(size_t block_size) {
       if (current_block_ == nullptr) {
         block_size_ = block_size;
@@ -120,6 +120,7 @@ class Region {
     int get_num_used_blocks() { return used_blocks_.size(); }
     int get_current_offset() { return block_offset_; }
     long get_block_address() { return reinterpret_cast<long>(current_block_.get()); }
+    size_t get_block_threshold() { return block_threshold_; }
 };
 
 using RegionPtr = Region::SharedPtr;

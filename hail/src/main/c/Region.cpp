@@ -336,6 +336,32 @@ REGIONMETHOD(jlong, Region, nativeGetBlockAddress)(
   return (jlong) r->region_->get_block_address();
 }
 
+REGIONMETHOD(jlong, Region, nativeGetBlockThreshold)(
+  JNIEnv* env,
+  jobject thisJ
+) {
+  auto r = static_cast<ScalaRegion*>(get_from_NativePtr(env, thisJ));
+  return (jlong) r->region_->get_block_threshold();
+}
+
+REGIONMETHOD(jlong, Region, nativeAllocateNewBlock)(
+  JNIEnv* env,
+  jobject thisJ,
+  jlong n
+) {
+  auto r = static_cast<ScalaRegion*>(get_from_NativePtr(env, thisJ));
+  return (jlong) r->region_->allocate_new_block(n);
+}
+
+REGIONMETHOD(jlong, Region, nativeAllocateBigChunk)(
+  JNIEnv* env,
+  jobject thisJ,
+  jlong n
+) {
+  auto r = static_cast<ScalaRegion*>(get_from_NativePtr(env, thisJ));
+  return (jlong) r->region_->allocate_big_chunk(n);
+}
+
 REGIONMETHOD(void, Region, setNull)(
   JNIEnv*,
   jobject,

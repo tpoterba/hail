@@ -8,10 +8,12 @@ import is.hail.nativecode._
 
 object Region {
   type Size = Int
-  val REGULAR: Size = 64 * 1024
-  val SMALL: Size = 8 * 1024
-  val TINY: Size = 1024
-  val TINIER: Size = 256
+  val REGULAR: Size = 0
+  val SMALL: Size = 1
+  val TINY: Size = 2
+  val TINIER: Size = 3
+
+  val SIZES: Array[Long] = Array(64 * 1024, 8 * 1024, 1024, 256)
 
   def apply(): Region = new Region(REGULAR)
 
@@ -177,6 +179,8 @@ object Region {
 //    those operations have to know the RegionValue's Type to convert
 //    within-Region references to/from absolute addresses.
 
+//final class Region(blockSize: Region.Size) extends AutoCloseable
+
 final class Region private (blockSize: Region.Size) extends NativeBase() {
   def this() { this(Region.REGULAR) }
   @native def nativeCtor(p: RegionPool, blockSize: Int): Unit
@@ -202,15 +206,80 @@ final class Region private (blockSize: Region.Size) extends NativeBase() {
   @native def nativeGetNumUsedBlocks(): Int
   @native def nativeGetCurrentOffset(): Int
   @native def nativeGetBlockAddress(): Long
+  @native def nativeGetBlockThreshold(): Int
 
+  @native def nativeAllocateNewBlock(n: Long): Long
+  @native def nativeAllocateBigChunk(n: Long): Long
 
   private var _isValid: Boolean = true
   private var _numParents: Int = 0
+
+
+  private var offsetWithinBlock: Int = _
+  private var currentBlockOffset: Long = _
+  private var blockThreshold: Int = _
+
+  private def initFromCpp() {
+    offsetWithinBlock = nativeGetCurrentOffset()
+    currentBlockOffset = nativeGetBlockAddress()
+    blockThreshold = nativeGetBlockThreshold()
+    assert(currentBlockOffset != 0)
+//    println(s"** REGION ** offsetWithinBlock=$offsetWithinBlock")
+//    println(s"** REGION ** currentBlockOffset=$currentBlockOffset")
+//    println(s"** REGION ** blockThreshold=$blockThreshold")
+  }
+
+  initFromCpp()
+
+  def jallocate(n: Long): Long = {
+//    println(s"** REGION ** trying to jallocate $n")
+    val r = if (offsetWithinBlock + n <= blockSize) {
+      val o = currentBlockOffset + offsetWithinBlock
+      currentBlockOffset += n
+      o
+    } else {
+      if (n <= blockThreshold) {
+        // allocate new block
+        currentBlockOffset = nativeAllocateNewBlock(n)
+        offsetWithinBlock = n.toInt
+        currentBlockOffset
+      } else {
+        // allocate new chunk
+        nativeAllocateBigChunk(n)
+      }
+    }
+//    println(s"** REGION ** allocated $n bytes at $r")
+    r
+  }
+
+  def jallocate(a: Long,  n: Long): Long = {
+    val alignedOff = (offsetWithinBlock + a - 1) & ~(a - 1);
+    val r = if (alignedOff + n <= blockSize) {
+      val o = currentBlockOffset + alignedOff
+      currentBlockOffset = currentBlockOffset + alignedOff + n
+      o
+    } else {
+//      println(s"** REGION ** need new block!")
+      if (n <= blockThreshold) {
+        // allocate new block
+        currentBlockOffset = nativeAllocateNewBlock(n)
+        offsetWithinBlock = n.toInt
+        currentBlockOffset
+      } else {
+        // allocate new chunk
+        nativeAllocateBigChunk(n)
+      }
+    }
+//    println(s"** REGION ** allocated $n bytes with alignment $a at $r")
+
+    r
+  }
 
   def getNewRegion(blockSize: Int): Unit = {
     nativeGetNewRegion(this.addrA, RegionPool.get.getAddr, blockSize)
     _isValid = true
     _numParents = 0
+    initFromCpp()
   }
 
   def isValid: Boolean = _isValid
@@ -220,24 +289,30 @@ final class Region private (blockSize: Region.Size) extends NativeBase() {
       setNull(this.addrA)
     }
   }
-  
+
   def this(b: Region) {
     this()
     copyAssign(b)
-  }  
+  }
 
   // FIXME: not sure what this should mean ...
   // def setFrom(b: Region) { }
 
   final def copyAssign(b: Region) = super.copyAssign(b)
   final def moveAssign(b: Region) = super.moveAssign(b)
-  
 
-  final def clear(): Unit = clearButKeepMem(this.addrA)
 
-  final def align(a: Long) = nativeAlign(this.addrA, a)
-  final def allocate(a: Long, n: Long): Long = nativeAlignAllocate(this.addrA, a, n)
-  final def allocate(n: Long): Long = nativeAllocate(this.addrA, n)
+  final def clear(): Unit = {
+//    offsetWithinBlock = 0
+    clearButKeepMem(this.addrA)
+    initFromCpp()
+  }
+
+//  final def align(a: Long) = nativeAlign(this.addrA, a)
+//  final def allocate(a: Long, n: Long): Long = nativeAlignAllocate(this.addrA, a, n)
+//  final def allocate(n: Long): Long = nativeAllocate(this.addrA, n)
+  final def allocate(a: Long, n: Long): Long = jallocate(a, n)
+  final def allocate(n: Long): Long = jallocate(n)
 
   // FIXME: `reference` can't be used with explicitly setting number of parents
   final def reference(other: Region): Unit = {
@@ -276,21 +351,21 @@ final class Region private (blockSize: Region.Size) extends NativeBase() {
     assert(i < _numParents)
     nativeClearParentReference(this.addrA, i)
   }
-  
+
   final def loadInt(addr: Long): Int = Region.loadInt(addr)
   final def loadLong(addr: Long): Long = Region.loadLong(addr)
   final def loadFloat(addr: Long): Float = Region.loadFloat(addr)
   final def loadDouble(addr: Long): Double = Region.loadDouble(addr)
   final def loadAddress(addr: Long): Long = Region.loadLong(addr)
   final def loadByte(addr: Long): Byte = Region.loadByte(addr)
-  
+
   final def storeInt(addr: Long, v: Int): Unit = Region.storeInt(addr, v)
   final def storeLong(addr: Long, v: Long): Unit = Region.storeLong(addr, v)
   final def storeFloat(addr: Long, v: Float): Unit = Region.storeFloat(addr, v)
   final def storeDouble(addr: Long, v: Double): Unit = Region.storeDouble(addr, v)
   final def storeAddress(addr: Long, v: Long): Unit = Region.storeAddress(addr, v)
   final def storeByte(addr: Long, v: Byte): Unit = Region.storeByte(addr, v)
-  
+
   final def loadBoolean(addr: Long): Boolean = Region.loadBoolean(addr)
   final def storeBoolean(addr: Long, v: Boolean): Unit = Region.storeBoolean(addr, v)
 
@@ -415,7 +490,7 @@ final class Region private (blockSize: Region.Size) extends NativeBase() {
     visit(t, off, v)
     v.result()
   }
-  
+
   def prettyBits(): String = {
     "FIXME: implement prettyBits on Region"
   }
@@ -431,6 +506,40 @@ object RegionPool {
     pools.computeIfAbsent(Thread.currentThread().getId(), makePool)
   }
 }
+
+//final class RegionPool extends AutoCloseable {
+//  private val freeBlocks = Array.fill[ArrayBuilder[Long]](4)(new ArrayBuilder[Long])
+//  private val regions = new ArrayBuilder[Region]()
+//
+//  def getBlock(size: Int): Long = {
+//    val pool = freeBlocks(size)
+//    if (pool.size > 0)
+//      pool.pop()
+//    else
+//      Memory.malloc(Region.SIZES(size))
+//  }
+//
+//  def getBlock(): Long = getBlock(0)
+//  def getRegion(size: Int): Region = ???
+//
+//  def numRegions(): Int = ???
+//  def numFreeRegions(): Int = ???
+//  def numFreeBlocks(): Int = ???
+//
+//  def logStats(context: String): Unit = {
+//    val pool = RegionPool.get
+//    val nFree = pool.numFreeRegions()
+//    val nRegions = pool.numRegions()
+//    val nBlocks = pool.numFreeBlocks()
+//
+//    info(
+//      s"""Region count for $context
+//         |    regions: $nRegions
+//         |     blocks: $nBlocks
+//         |       free: $nFree
+//         |       used: ${ nRegions - nFree }""".stripMargin)
+//  }
+//}
 
 class RegionPool private() extends NativeBase() {
   @native def nativeCtor(): Unit
