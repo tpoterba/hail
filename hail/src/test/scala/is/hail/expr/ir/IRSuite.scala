@@ -1280,14 +1280,6 @@ class IRSuite extends HailSuite {
     assertEvalsTo(makeNDArrayRef(scalarSlice, FastIndexedSeq()), 3.0)
   }
 
-  @Test def testNDArrayWrite() {
-    implicit val execStrats: Set[ExecStrategy] = Set()
-
-    val path = tmpDir.createLocalTempFile()
-    val write = NDArrayWrite(threeTensorRowMajor, Str(path))
-    assertEvalsTo(write, ())
-  }
-
   @Test def testLeftJoinRightDistinct() {
     implicit val execStrats = ExecStrategy.javaOnly
 
