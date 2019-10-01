@@ -21,5 +21,6 @@ AUTHORIZED_USERS = {
     'ahiduchick',
     'GreatBrando',
     'johnc1231',
-    'iitalics'
+    'iitalics',
+    'gsarma',
 }
