@@ -25,7 +25,7 @@ object Interpret {
     else
       tir
 
-    val lowered = LowerMatrixIR(LiftNonCompilable(EvaluateRelationalLets(tiropt)).asInstanceOf[TableIR])
+    val lowered = LowerMatrixIR(EvaluateRelationalLets(tiropt).asInstanceOf[TableIR])
 
     val lowopt = if (optimize)
       Optimize(lowered, noisy = true)
@@ -41,7 +41,7 @@ object Interpret {
     else
       mir
 
-    val lowered = LowerMatrixIR(LiftNonCompilable(EvaluateRelationalLets(miropt)).asInstanceOf[MatrixIR])
+    val lowered = LowerMatrixIR(EvaluateRelationalLets(miropt).asInstanceOf[MatrixIR])
     val lowopt = if (optimize)
       Optimize(lowered, noisy = true)
     else
@@ -84,7 +84,6 @@ object Interpret {
     ir = LowerMatrixIR(ir)
     if (optimize) optimizeIR("Interpret, after lowering MatrixIR")
     ir = EvaluateRelationalLets(ir).asInstanceOf[IR]
-    ir = LiftNonCompilable(ir).asInstanceOf[IR]
 
 
     val result = apply(ctx, ir, valueEnv, args, aggArgs, None, Memo.empty[AsmFunction3[Region, Long, Boolean, Long]]).asInstanceOf[T]
