@@ -28,7 +28,7 @@ object Interpret {
     val lowered = LowerMatrixIR(LiftNonCompilable(EvaluateRelationalLets(tiropt)).asInstanceOf[TableIR])
 
     val lowopt = if (optimize)
-      Optimize(lowered, noisy = true, canGenerateLiterals = false)
+      Optimize(lowered, noisy = true)
     else
       lowered
 
@@ -43,7 +43,7 @@ object Interpret {
 
     val lowered = LowerMatrixIR(LiftNonCompilable(EvaluateRelationalLets(miropt)).asInstanceOf[MatrixIR])
     val lowopt = if (optimize)
-      Optimize(lowered, noisy = true, canGenerateLiterals = false)
+      Optimize(lowered, noisy = true)
     else
       lowered
 
@@ -71,8 +71,8 @@ object Interpret {
 
     var ir = ir0.unwrap
 
-    def optimizeIR(canGenerateLiterals: Boolean, context: String) {
-      ir = Optimize(ir, noisy = true, canGenerateLiterals, context = Some(context))
+    def optimizeIR(context: String) {
+      ir = Optimize(ir, noisy = true, context = Some(context))
       TypeCheck(ir, BindingEnv(typeEnv, agg = aggArgs.map { agg =>
         agg._2.fields.foldLeft(Env.empty[Type]) { case (env, f) =>
           env.bind(f.name, f.typ)
@@ -80,9 +80,9 @@ object Interpret {
       }))
     }
 
-    if (optimize) optimizeIR(true, "Interpret, first pass")
+    if (optimize) optimizeIR("Interpret, first pass")
     ir = LowerMatrixIR(ir)
-    if (optimize) optimizeIR(false, "Interpret, after lowering MatrixIR")
+    if (optimize) optimizeIR("Interpret, after lowering MatrixIR")
     ir = EvaluateRelationalLets(ir).asInstanceOf[IR]
     ir = LiftNonCompilable(ir).asInstanceOf[IR]
 
