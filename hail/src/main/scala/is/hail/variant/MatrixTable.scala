@@ -468,12 +468,7 @@ class MatrixTable(val hc: HailContext, val ast: MatrixIR) {
     colValues.map(querier(_).asInstanceOf[String])
   }
 
-  def stringSampleIdSet: Set[String] = stringSampleIds.toSet
-
   def countRows(): Long = ExecuteContext.scoped { ctx => Interpret[Long](ctx, TableCount(MatrixRowsTable(ast))) }
-
-  def countCols(): Long = ast.columnCount.map(_.toLong)
-    .getOrElse(ExecuteContext.scoped { ctx => Interpret[Long](ctx, TableCount(MatrixColsTable(ast))) })
 
   def distinctByRow(): MatrixTable =
     copyAST(ast = MatrixDistinctByRow(ast))
