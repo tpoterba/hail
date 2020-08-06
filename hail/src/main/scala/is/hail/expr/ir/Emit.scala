@@ -680,22 +680,18 @@ class Emit[C](
         }
 
       case x@ArrayRef(a, i, s) =>
-        val errorTransformer: Code[String] => Code[String] = s match {
+        def errorTransformer(c: Code[String]): Code[String] = s match {
           case Str("") =>
-            val prettied = Pretty.short(x)
-            (c: Code[String]) =>
-              c.concat("\n----------\nIR:\n").concat(prettied)
-          case Str(s) => (c: Code[String]) => c.concat("\n----------\nPython traceback:\n").concat(s)
+            c.concat("\n----------\nIR:\n").concat(Pretty.short(x))
+          case Str(s) =>
+            c.concat("\n----------\nPython traceback:\n").concat(s)
           case s =>
-            (_c: Code[String]) => {
-              val ies = emitI(s)
-              val c = cb.newLocal("array_ref_c", _c)
-              ies.consume(cb, {}, { pc =>
-                cb.assign(c, c.concat("\n----------\nPython traceback:\n")
-                        .concat(pc.asString.loadString()))
-              })
-              c.load()
-            }
+            val cvar = cb.newLocal("array_ref_c", c)
+            emitI(s).consume(cb, {}, { pc =>
+              cb.assign(cvar, cvar.concat("\n----------\nPython traceback:\n")
+                .concat(pc.asString.loadString()))
+            })
+            cvar.load()
         }
 
         emitI(a).flatMap(cb) { (ac) =>

@@ -2372,6 +2372,12 @@ class Tests(unittest.TestCase):
     def test_array_neg(self):
         self.assertEqual(hl.eval(-(hl.literal([1, 2, 3]))), [-1, -2, -3])
 
+    def test_array_ref_error(self):
+        t = hl.array([1,2,3])
+        elem = t[5]
+        with pytest.raises(hl.utils.FatalError, match=r'elem = t\[5\]'):
+            hl.eval(elem)
+
     def test_max(self):
         exprs_and_results = [
             (hl.max(1, 2), 2),
