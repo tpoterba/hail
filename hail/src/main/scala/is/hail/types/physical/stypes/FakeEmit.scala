@@ -55,6 +55,11 @@ class FakeEmit[C](
 
         // this is a fun one
 
+        // I haven't implemented the Constructable interfaces, or MSubsetStruct or anything
+        // MSubsetStruct would be a MConstructableStruct that takes a MConstructableStruct with a superset of fields,
+        //   as well as a field mapping, and calls through to methods on the parent superstruct.
+        //   This can be used to let us emit the old struct in place, and then put the new fields in afterwards.
+
         val slotType: MConstructableStruct = slot.typ.asInstanceOf[MConstructableStruct]
         val oldUMV: UninitializedMValue = new UninitializedMValue(slot.addr,
           MSubSetStruct(slotType, old.typ.asInstanceOf[TStruct].fieldNames))
@@ -69,12 +74,6 @@ class FakeEmit[C](
             emitInPlace(value, fieldSlot, doIfMissing = (cb: EmitCodeBuilder) => { slotType.setFieldMissing(cb, slot, field) })
           }
         })
-
-      /**
-        * Really what I want to do here is
-        *
-        *
-        */
 
 
       case _ =>
