@@ -91,7 +91,9 @@ class FakeEmit[C](
     loopEnv: Option[Env[LoopRef]]
   ): IEmitSCode = {
 
-    def emit(ir: IR, region: StagedRegion = region, env: E = env, container: Option[AggContainer] = container, loopEnv: Option[Env[LoopRef]] = loopEnv): IEmitSCode =
+    def emit(ir: IR, region: StagedRegion = region, env: E = env,
+      container: Option[AggContainer] = container,
+      loopEnv: Option[Env[LoopRef]] = loopEnv): IEmitSCode =
       this.emit(ir, cb, region, env, container, loopEnv)
 
     ir match {
