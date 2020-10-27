@@ -1,42 +1,82 @@
 package is.hail.types.physical.stypes
 import is.hail.annotations.{CodeOrdering, Region}
-import is.hail.asm4s.Value
-import is.hail.expr.ir.{EmitCodeBuilder, EmitMethodBuilder, SortOrder}
-import is.hail.types.physical.mtypes.{MType, MValue}
+import is.hail.asm4s.{Code, IntInfo, LongInfo, Settable, SettableBuilder, TypeInfo, Value}
+import is.hail.expr.ir.{EmitCodeBuilder, EmitMethodBuilder, IEmitCode, SortOrder}
+import is.hail.types.physical.{PBaseStruct, PBaseStructCode, PBaseStructValue, PCanonicalBaseStruct, PCode, PSettable, PStruct, PType}
+import is.hail.utils.FastIndexedSeq
 
-trait SStruct extends SType {
-  def baseToMCanonicalValue(cb: EmitCodeBuilder, region: Value[Region], value: SCode): MValue = {
-    val mt = MType.canonical(value.typ)
-    val umv = mt.allocate(cb, region)
-    umv.store(cb, region, value.memoize(cb))
+trait SStruct extends SType
+
+trait SStructSettable extends PBaseStructValue with PSettable
+
+case class SBaseStructPointer(pType: PBaseStruct) extends SStruct {
+  def codeOrdering(mb: EmitMethodBuilder[_], other: SType, so: SortOrder): CodeOrdering = pType.codeOrdering(mb, other.pType, so)
+
+  def coerceOrCopy(cb: EmitCodeBuilder, region: Value[Region], value: PCode, deepCopy: Boolean): PCode = {
+    value.st match {
+      case SBaseStructPointer(pt2) if pt2.equalModuloRequired(pType) && !deepCopy =>
+        value
+      case _ =>
+        new SBaseStructPointerCode(this, pType.store(cb, region, value, deepCopy))
+    }
   }
 
-  def baseCoerceOrCopy(cb: EmitCodeBuilder, region: Value[Region], value: SCode, deep: Boolean): SCode = {
-    // this should work on any mtype/stype combination, but in practice will rarely get called
-    // instead, we'll write match statements on types to generate efficient code for specific coerce
+  def codeTupleTypes(): IndexedSeq[TypeInfo[_]] = FastIndexedSeq(LongInfo, IntInfo, LongInfo)
 
-    // FIXME: currently doesn't do deep copy correctly
-
-    loadFrom(cb, region, baseToMCanonicalValue(cb, region, value))
-  }
-
-  def codeOrdering(mb: EmitMethodBuilder[_], other: SType, so: SortOrder): CodeOrdering = {
-    //
-    ???
+  def loadFrom(cb: EmitCodeBuilder, region: Value[Region], pt: PType, addr: Code[Long]): PCode = {
+    if (pt == this.pType)
+      new SBaseStructPointerCode(this, addr)
+    else
+      coerceOrCopy(cb, region, pt.getPointerTo(cb, addr), deepCopy = false)
   }
 }
 
-trait SStructCode extends SCode {
-  def structType: SStruct
 
-  override def typ: SType = structType
-  override def memoize(cb: EmitCodeBuilder): SStructValue
+object SBaseStructPointerSettable {
+  def apply(sb: SettableBuilder, st: SBaseStructPointer, name: String): SBaseStructPointerSettable = {
+    new SBaseStructPointerSettable(st, sb.newSettable(name))
+  }
 }
 
-trait SStructValue extends SValue {
-  def structType: SStruct
+class SBaseStructPointerSettable(
+  val st: SBaseStructPointer,
+  val a: Settable[Long]
+) extends SStructSettable {
+  val pt: PBaseStruct = st.pType
 
-  final def typ: SType = structType
+  def get: PBaseStructCode = new SBaseStructPointerCode(st, a)
 
-  def loadField(cb: EmitCodeBuilder, region: Value[Region], idx: Int): IEmitSCode
+  def settableTuple(): IndexedSeq[Settable[_]] = FastIndexedSeq(a)
+
+  def loadField(cb: EmitCodeBuilder, fieldIdx: Int): IEmitCode = {
+    IEmitCode(cb,
+      pt.isFieldMissing(a, fieldIdx),
+      pt.fields(fieldIdx).typ.getPointerTo(cb, pt.loadField(a, fieldIdx)))
+  }
+
+  def store(cb: EmitCodeBuilder, pv: PCode): Unit = {
+    cb.assign(a, pv.asInstanceOf[SBaseStructPointerCode].a)
+  }
+
+  def isFieldMissing(fieldIdx: Int): Code[Boolean] = {
+    pt.isFieldMissing(a, fieldIdx)
+  }
+}
+
+class SBaseStructPointerCode(val st: SBaseStructPointer, val a: Code[Long]) extends PBaseStructCode {
+  val pt: PBaseStruct = st.pType
+
+  def code: Code[_] = a
+
+  def codeTuple(): IndexedSeq[Code[_]] = FastIndexedSeq(a)
+
+  def memoize(cb: EmitCodeBuilder, name: String, sb: SettableBuilder): PBaseStructValue = {
+    val s = SBaseStructPointerSettable(sb, st, name)
+    cb.assign(s, this)
+    s
+  }
+
+  def memoize(cb: EmitCodeBuilder, name: String): PBaseStructValue = memoize(cb, name, cb.localBuilder)
+
+  def memoizeField(cb: EmitCodeBuilder, name: String): PBaseStructValue = memoize(cb, name, cb.fieldBuilder)
 }

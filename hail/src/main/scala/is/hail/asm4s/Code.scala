@@ -1020,12 +1020,6 @@ class CodeArray[T](val lhs: Code[Array[T]])(implicit tti: TypeInfo[T]) {
     Code(lhs, lir.insn1(ARRAYLENGTH))
 }
 
-class CodeByteArray(val lhs: Code[Array[Byte]]) {
-  def storeToAddress(cb: EmitCodeBuilder, addr: Code[Long]): Unit = {
-    cb.append(Memory.)
-  }
-}
-
 object CodeLabel {
   def apply(): CodeLabel = {
     val L = new lir.Block()
