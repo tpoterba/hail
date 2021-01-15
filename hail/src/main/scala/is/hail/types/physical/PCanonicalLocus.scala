@@ -141,4 +141,8 @@ final case class PCanonicalLocus(rgBc: BroadcastRG, required: Boolean = false) e
         representation.storeAtAddress(cb, addr, region, pt.representation.loadCheapPCode(cb, value.asInstanceOf[SCanonicalLocusPointerCode].a), deepCopy)
     }
   }
+
+  override def unstagedStoreJavaObjectAtAddress(addr: Long, annotation: Annotation): Unit = {
+    representation.unstagedStoreJavaObjectAtAddress(addr, annotation)
+  }
 }
