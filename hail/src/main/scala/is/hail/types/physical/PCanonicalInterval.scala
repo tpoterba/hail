@@ -6,6 +6,8 @@ import is.hail.expr.ir.EmitCodeBuilder
 import is.hail.types.physical.stypes.SCode
 import is.hail.types.physical.stypes.concrete.{SIntervalPointer, SIntervalPointerCode}
 import is.hail.types.virtual.{TInterval, Type}
+import is.hail.utils.Interval
+import org.apache.spark.sql.Row
 
 final case class PCanonicalInterval(pointType: PType, override val required: Boolean = false) extends PInterval {
 
@@ -98,5 +100,14 @@ final case class PCanonicalInterval(pointType: PType, override val required: Boo
       case t: PCanonicalInterval =>
         representation._copyFromAddress(region, t.representation, srcAddress, deepCopy)
     }
+  }
+
+  override def unstagedStoreJavaObjectAtAddress(addr: Long, annotation: Annotation, region: Region): Unit = {
+    val jInterval = annotation.asInstanceOf[Interval]
+    representation.unstagedStoreJavaObjectAtAddress(
+      addr,
+      Row(jInterval.start, jInterval.end, jInterval.includesStart, jInterval.includesEnd),
+      region
+    )
   }
 }
