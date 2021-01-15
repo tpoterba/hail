@@ -249,7 +249,7 @@ final case class PCanonicalNDArray(elementType: PType, nDims: Int, required: Boo
 
   override def dataPArrayPointer(ndAddr: Code[Long]): Code[Long] = data.load(ndAddr)
 
-  override def unstagedStoreJavaObjectAtAddress(addr: Long, a: Annotation): Unit = {
+  override def unstagedStoreJavaObjectAtAddress(addr: Long, a: Annotation, region: Region): Unit = {
     val aNDArray = a.asInstanceOf[NDArray]
     val shapeRow = Annotation.fromSeq(aNDArray.shape)
     var runningProduct = this.representation.fieldType("data").asInstanceOf[PArray].elementType.byteSize
@@ -260,9 +260,9 @@ final case class PCanonicalNDArray(elementType: PType, nDims: Int, required: Boo
     }
     var curAddr = addr
     val stridesRow = Row(stridesArray:_*)
-    shape.pType.unstagedStoreJavaObjectAtAddress(curAddr, shapeRow)
+    shape.pType.unstagedStoreJavaObjectAtAddress(curAddr, shapeRow, region)
     curAddr += shape.pType.byteSize
-    strides.pType.unstagedStoreJavaObjectAtAddress(curAddr, stridesRow)
+    strides.pType.unstagedStoreJavaObjectAtAddress(curAddr, stridesRow, region)
 
   }
 }
