@@ -484,4 +484,6 @@ abstract class PType extends Serializable with Requiredness {
     assert(ct.length == 1)
     PCode(this, ct(0))
   }
+
+  def unstagedStoreJavaObjectAtAddress(addr: Long, annotation: Annotation): Unit = ???
 }
