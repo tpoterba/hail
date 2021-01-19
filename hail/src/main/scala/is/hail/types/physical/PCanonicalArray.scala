@@ -462,7 +462,6 @@ final case class PCanonicalArray(elementType: PType, required: Boolean = false) 
   private def deepRenameArray(t: TArray): PArray =
     PCanonicalArray(this.elementType.deepRename(t.elementType), this.required)
 
-
   def constructFromElements(cb: EmitCodeBuilder, region: Value[Region], length: Value[Int], deepCopy: Boolean)
     (f: (EmitCodeBuilder, Value[Int]) => IEmitCode): SIndexablePointerCode = {
 
@@ -505,4 +504,20 @@ final case class PCanonicalArray(elementType: PType, required: Boolean = false) 
     (addElement, finish)
   }
 
+  override def unstagedStoreJavaObjectAtAddress(addr: Long, annotation: Annotation, region: Region): Unit = {
+    // TODO Special case UnsafeIndexedSeq
+    val is = annotation.asInstanceOf[IndexedSeq[Annotation]]
+    val valueAddress = allocate(region, is.length)
+    assert(is.length > 0)
+    // TODO: Don't have to touch missing? Or do I?
+    initialize(valueAddress, is.length)
+    var i = 0
+    var curElementAddress = firstElementOffset(valueAddress, is.length)
+    while (i < is.length) {
+      elementType.unstagedStoreJavaObjectAtAddress(curElementAddress, is(i), region)
+      curElementAddress = nextElementAddress(curElementAddress)
+      i += 1
+    }
+    Region.storeAddress(addr, valueAddress)
+  }
 }
