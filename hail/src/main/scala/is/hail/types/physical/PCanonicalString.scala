@@ -77,6 +77,10 @@ class PCanonicalString(val required: Boolean) extends PString {
     cb += Region.storeAddress(addr, store(cb, region, value, deepCopy))
   }
 
+  override def unstagedStoreJavaObject(annotation: Annotation, region: Region): Long = {
+    fundamentalType.unstagedStoreJavaObject(annotation, region)
+  }
+
   override def unstagedStoreJavaObjectAtAddress(addr: Long, annotation: Annotation, region: Region): Unit = {
     fundamentalType.unstagedStoreJavaObjectAtAddress(addr, annotation.asInstanceOf[String].getBytes(), region)
   }

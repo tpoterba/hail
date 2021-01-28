@@ -62,6 +62,10 @@ final case class PCanonicalCall(required: Boolean = false) extends PCall {
     cb += Region.storeInt(addr, value.asInstanceOf[SCanonicalCallCode].call)
   }
 
+  override def unstagedStoreJavaObject(annotation: Annotation, region: Region): Long = {
+    representation.unstagedStoreJavaObject(annotation, region)
+  }
+
   override def unstagedStoreJavaObjectAtAddress(addr: Long, annotation: Annotation, region: Region): Unit = {
     representation.unstagedStoreJavaObjectAtAddress(addr, annotation, region)
   }

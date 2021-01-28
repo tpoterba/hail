@@ -250,6 +250,12 @@ final case class PCanonicalNDArray(elementType: PType, nDims: Int, required: Boo
 
   override def dataPArrayPointer(ndAddr: Code[Long]): Code[Long] = data.load(ndAddr)
 
+  override def unstagedStoreJavaObject(annotation: Annotation, region: Region): Long = {
+    val addr = this.representation.allocate(region)
+    unstagedStoreJavaObjectAtAddress(addr, annotation, region)
+    addr
+  }
+
   override def unstagedStoreJavaObjectAtAddress(addr: Long, a: Annotation, region: Region): Unit = {
     val aNDArray = a.asInstanceOf[NDArray]
     val shapeRow = Annotation.fromSeq(aNDArray.shape)
