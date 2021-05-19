@@ -1312,32 +1312,33 @@ class Emit[C](
         }
       case NDArrayShape(ndIR) =>
         emitI(ndIR).map(cb) { case pc: SNDArrayCode => pc.shape(cb) }
-      case x@NDArrayReindex(child, indexMap) =>
-        val childEC = emitI(child)
-        childEC.map(cb) { case pndCode: SNDArrayPointerCode =>
-          val childPType = pndCode.st.pType
-          val pndVal = pndCode.memoize(cb, "ndarray_reindex_child")
-          val childShape = pndVal.shapes(cb)
-          val childStrides = pndVal.strides(cb)
-
-          val pndAddr = SingleCodeSCode.fromSCode(cb, pndVal, region)
-          val dataArray = childPType.dataType.loadCheapPCode(cb, childPType.dataPArrayPointer(pndAddr.code.asInstanceOf[Code[Long]]))
-
-          val newShape = indexMap.map { childIndex =>
-            if (childIndex < childPType.nDims) childShape(childIndex) else const(1L)
-          }
-          val newStrides = indexMap.map { childIndex =>
-            if (childIndex < childPType.nDims) childStrides(childIndex) else const(0L)
-          }
-
-          val newPType = childPType.copy(nDims = indexMap.length)
-          newPType.constructByCopyingArray(
-            newShape,
-            newStrides,
-            dataArray,
-            cb,
-            region)
-        }
+      case x@NDArrayReindex(_, _) => newEmitDeforestedNDArrayI(x)
+//      case x@NDArrayReindex(child, indexMap) =>
+//        val childEC = emitI(child)
+//        childEC.map(cb) { case pndCode: SNDArrayPointerCode =>
+//          val childPType = pndCode.st.pType
+//          val pndVal = pndCode.memoize(cb, "ndarray_reindex_child")
+//          val childShape = pndVal.shapes(cb)
+//          val childStrides = pndVal.strides(cb)
+//
+//          val pndAddr = SingleCodeSCode.fromSCode(cb, pndVal, region)
+//          val dataArray = childPType.dataType.loadCheapPCode(cb, childPType.dataPArrayPointer(pndAddr.code.asInstanceOf[Code[Long]]))
+//
+//          val newShape = indexMap.map { childIndex =>
+//            if (childIndex < childPType.nDims) childShape(childIndex) else const(1L)
+//          }
+//          val newStrides = indexMap.map { childIndex =>
+//            if (childIndex < childPType.nDims) childStrides(childIndex) else const(0L)
+//          }
+//
+//          val newPType = childPType.copy(nDims = indexMap.length)
+//          newPType.constructByCopyingArray(
+//            newShape,
+//            newStrides,
+//            dataArray,
+//            cb,
+//            region)
+//        }
 
       case NDArrayRef(nd, idxs, errorId) =>
         val ndt = emitI(nd)
