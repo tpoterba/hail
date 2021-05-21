@@ -2510,7 +2510,7 @@ class Emit[C](
     result
   }
 
-  private def capturedReferences(ir: IR, cb: EmitCodeBuilder, env: Emit.E): Emit.E = {
+  def capturedReferences(ir: IR, cb: EmitCodeBuilder, env: Emit.E): Emit.E = {
     var ids = Set[String]()
 
     VisitIR(ir) {

@@ -818,6 +818,11 @@ class EmitMethodBuilder[C](
     }
   }
 
+  def getAllArgsAsCode(): IndexedSeq[Code[_]] = {
+    val add = if (mb.isStatic) 0 else 1
+    mb.parameterTypeInfo.zipWithIndex.map { case (ti, i) => mb.getArg(i + add)(ti).load() }
+  }
+
   def getPCodeParam(emitIndex: Int): SCode = {
     assert(mb.isStatic || emitIndex != 0)
     val static = (!mb.isStatic).toInt

@@ -488,7 +488,7 @@ class MethodBuilder[C](
     else {
       val static = (!isStatic).toInt
       assert(ti == parameterTypeInfo(i - static),
-        s"$ti != ${ parameterTypeInfo(i - static) }\n  params: $parameterTypeInfo")
+        s"$i - $static: $ti != ${ parameterTypeInfo(i - static) }\n  params: $parameterTypeInfo")
     }
     new LocalRef(lmethod.getParam(i))
   }

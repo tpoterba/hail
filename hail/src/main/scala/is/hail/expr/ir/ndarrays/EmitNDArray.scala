@@ -4,9 +4,10 @@ import is.hail.annotations.Region
 import is.hail.expr.ir._
 import is.hail.types.physical.{PCanonicalArray, PCanonicalNDArray, PInt64, PNumeric}
 import is.hail.types.physical.stypes.interfaces.{SNDArray, SNDArrayCode}
-import is.hail.types.physical.stypes.{SCode, SType}
+import is.hail.types.physical.stypes.{EmitType, SCode, SType, SingleCodeSCode}
 import is.hail.utils._
 import is.hail.asm4s._
+import is.hail.types.physical.stypes.concrete.{SNDArrayPointer, SNDArrayPointerCode}
 import is.hail.types.physical.stypes.interfaces._
 import is.hail.types.physical.stypes.primitives.{SFloat32, SFloat64, SInt32, SInt64}
 import is.hail.types.virtual.{TFloat32, TFloat64, TInt32, TInt64, TNDArray}
@@ -23,16 +24,17 @@ object EmitNDArray {
     container: Option[AggContainer]
   ): IEmitCode = {
 
-    def deforest(x: IR): IEmitCodeGen[NDArrayProducer] = {
+    def emitI(ir: IR, cb: EmitCodeBuilder, region: Value[Region] = region, env: Emit.E = env, container: Option[AggContainer] = container): IEmitCode = {
+      emitter.emitI(ir, cb, region, env, container, None)
+    }
 
-      def emitI(ir: IR, cb: EmitCodeBuilder, region: Value[Region] = region, env: Emit.E = env, container: Option[AggContainer] = container): IEmitCode = {
-        emitter.emitI(ir, cb, region, env, container, None)
-      }
+    def deforestTop(x: IR, cb: EmitCodeBuilder, region: Value[Region], env: Emit.E, container: Option[AggContainer], emitter: Emit[_]): IEmitCodeGen[NDArrayProducer] = {
+      def deforest(x: IR): IEmitCodeGen[NDArrayProducer] = deforestTop(x, cb, region, env, container, emitter)
 
       x match {
         case NDArrayMap(child, elemName, body) => {
           deforest(child).map(cb) { childProducer =>
-            val elemRef = cb.emb.newPresentEmitField("ndarray_map_element_name", childProducer.elementType)
+            val elemRef = cb.emb.newEmitField("ndarray_map_element_name", EmitType(childProducer.elementType, true))
             val bodyEnv = env.bind(elemName, elemRef)
             val bodyEC = EmitCode.fromI(cb.emb)(cb => emitI(body, cb, env = bodyEnv))
 
@@ -45,7 +47,7 @@ object EmitNDArray {
               override val stepAxis: IndexedSeq[(EmitCodeBuilder, Value[Long]) => Unit] = childProducer.stepAxis
 
               override def loadElementAtCurrentAddr(cb: EmitCodeBuilder): SCode = {
-                cb.assign(elemRef, childProducer.loadElementAtCurrentAddr(cb))
+                cb.assign(elemRef, IEmitCode.present(cb, childProducer.loadElementAtCurrentAddr(cb)))
                 bodyEC.toI(cb).get(cb, "NDArray map body cannot be missing")
               }
             }
@@ -61,8 +63,8 @@ object EmitNDArray {
               cb.append(newSetupShape)
 
 
-              val lElemRef = cb.emb.newPresentEmitField(lName, leftProducer.elementType)
-              val rElemRef = cb.emb.newPresentEmitField(rName, rightProducer.elementType)
+              val lElemRef = cb.emb.newEmitField(lName, EmitType(leftProducer.elementType, true))
+              val rElemRef = cb.emb.newEmitField(rName, EmitType(rightProducer.elementType, true))
               val bodyEnv = env.bind(lName, lElemRef)
                 .bind(rName, rElemRef)
               val bodyEC = EmitCode.fromI(cb.emb)(cb => emitI(body, cb, env = bodyEnv))
@@ -91,9 +93,9 @@ object EmitNDArray {
 
                 override def loadElementAtCurrentAddr(cb: EmitCodeBuilder): SCode = {
                   //cb.println("Load left element")
-                  cb.assign(lElemRef, leftBroadcasted.loadElementAtCurrentAddr(cb))
+                  cb.assign(lElemRef, IEmitCode.present(cb, leftBroadcasted.loadElementAtCurrentAddr(cb)))
                   //cb.println("Load right element")
-                  cb.assign(rElemRef, rightBroadcasted.loadElementAtCurrentAddr(cb))
+                  cb.assign(rElemRef, IEmitCode.present(cb, rightBroadcasted.loadElementAtCurrentAddr(cb)))
 
                   bodyEC.toI(cb).get(cb, "NDArrayMap2 body cannot be missing")
                 }
@@ -510,6 +512,7 @@ object EmitNDArray {
             val ndPv = ndPCode.asNDArray.memoize(cb, "deforestNDArray_fall_through_ndarray")
             val ndPvShape = ndPv.shapes(cb)
             val strides = ndPv.strides(cb)
+            val ndSt = ndPv.st.asInstanceOf[SNDArrayPointer]
             val counters = ndPvShape.indices.map(i => cb.newLocal[Long](s"ndarray_produceer_fall_through_idx_${i}"))
 
             new NDArrayProducer {
@@ -537,7 +540,7 @@ object EmitNDArray {
                 //cb.println("Fall through Counter values")
                 //cb.println(counters.map(_.toS.concat(" ")):_*)
                 // TODO: Safe to canonicalPType here?
-                val loaded = elementType.loadFrom(cb, region, ndPv.st.elementType.canonicalPType(), ndPv.firstDataAddress(cb) + offset)
+                val loaded = ndSt.pType.elementType.loadCheapPCode(cb, ndPv.firstDataAddress(cb) + offset)
                 val memoLoaded = loaded.memoize(cb, "temp_memo")
                 //cb.println("Looked up ", cb.strValue(memoLoaded))
                 memoLoaded.get
@@ -548,7 +551,51 @@ object EmitNDArray {
       }
     }
 
-    deforest(ndIR).map(cb)(ndap => ndap.toSCode(cb, PCanonicalNDArray(ndap.elementType.canonicalPType().setRequired(true), ndap.nDims), region))
+    ndIR match {
+      case NDArrayReindex(x: Ref, indexMap) =>
+        val childEC = emitI(x, cb)
+        childEC.map(cb) { case pndCode: SNDArrayPointerCode =>
+          val childPType = pndCode.st.pType
+          val pndVal = pndCode.memoize(cb, "ndarray_reindex_child")
+          val childShape = pndVal.shapes(cb)
+          val childStrides = pndVal.strides(cb)
+
+          val pndAddr = SingleCodeSCode.fromSCode(cb, pndVal, region)
+          val dataArray = childPType.dataType.loadCheapPCode(cb, childPType.dataPArrayPointer(pndAddr.code.asInstanceOf[Code[Long]]))
+
+          val newShape = indexMap.map { childIndex =>
+            if (childIndex < childPType.nDims) childShape(childIndex) else const(1L)
+          }
+          val newStrides = indexMap.map { childIndex =>
+            if (childIndex < childPType.nDims) childStrides(childIndex) else const(0L)
+          }
+
+          val newPType = childPType.copy(nDims = indexMap.length)
+          newPType.constructByCopyingArray(
+            newShape,
+            newStrides,
+            dataArray,
+            cb,
+            region)
+        }
+
+      case _ =>
+        var readField: EmitSettable = null
+        val mb = cb.emb.genEmitMethod("deforest_nda", cb.emb.emitParamTypes ++ FastIndexedSeq[ParamType](classInfo[Region]), UnitInfo)
+        val newEnv = emitter.capturedReferences(ndIR, cb, env)
+
+        mb.voidWithBuilder { cb =>
+          val e = deforestTop(ndIR, cb, mb.getCodeParam[Region](cb.emb.emitParamTypes.length), newEnv, container, emitter)
+            .map(cb)(ndap => ndap.toSCode(cb, PCanonicalNDArray(ndap.elementType.canonicalPType().setRequired(true), ndap.nDims), region))
+
+          readField = mb.ecb.newEmitField("nda_deforest_field", e.emitType)
+          cb.assign(readField, e)
+        }
+        cb += (mb.mb.invoke(cb.emb.getAllArgsAsCode() ++ FastIndexedSeq[Code[_]](region.get): _*)).asInstanceOf[Code[Unit]]
+
+        readField.load.toI(cb)
+    }
+
   }
 
   def createBroadcastMask(cb: EmitCodeBuilder, shape: IndexedSeq[Value[Long]]): IndexedSeq[Value[Long]] = {
